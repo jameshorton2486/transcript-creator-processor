@@ -31,9 +31,12 @@ export const transcribeAudio = async (
     console.log(`Transcribing ${file.name} with Deepgram`);
     console.log('Options:', transcriptionOptions);
     
-    // Make the API call
+    // Make the API call - Convert arrayBuffer to Buffer for Deepgram
+    // Use the Buffer.from method to create a Buffer from the Uint8Array
+    const buffer = Buffer.from(arrayBuffer);
+    
     const response = await deepgram.listen.prerecorded.transcribeFile(
-      new Uint8Array(arrayBuffer),
+      buffer,
       {
         mimetype: file.type,
         options: transcriptionOptions
