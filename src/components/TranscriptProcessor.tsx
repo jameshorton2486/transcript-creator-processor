@@ -3,9 +3,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Wand2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { PUNCTUATION_RULES } from "@/lib/config";
+import { ProcessingOptions } from "@/components/ProcessingOptions";
 
 interface TranscriptProcessorProps {
   transcript: string;
@@ -18,6 +20,8 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
     correctPunctuation: true,
     formatSpeakers: true,
     identifyParties: true,
+    extractEntities: true,
+    preserveFormatting: true,
   });
   const { toast } = useToast();
 
@@ -85,63 +89,69 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
 
   return (
     <Card className="bg-white">
-      <CardContent className="pt-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Processing Options</h3>
-          
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="correctPunctuation" 
-                checked={options.correctPunctuation}
-                onCheckedChange={(checked) => 
-                  setOptions({...options, correctPunctuation: checked === true})
-                }
-              />
-              <Label htmlFor="correctPunctuation">Correct punctuation and capitalization</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="formatSpeakers" 
-                checked={options.formatSpeakers}
-                onCheckedChange={(checked) => 
-                  setOptions({...options, formatSpeakers: checked === true})
-                }
-              />
-              <Label htmlFor="formatSpeakers">Format speaker labels</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="identifyParties" 
-                checked={options.identifyParties}
-                onCheckedChange={(checked) => 
-                  setOptions({...options, identifyParties: checked === true})
-                }
-              />
-              <Label htmlFor="identifyParties">Identify parties and legal terms</Label>
-            </div>
-          </div>
-          
-          <Button 
-            className="w-full" 
-            onClick={processTranscript} 
-            disabled={!transcript || isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Process Transcript
-              </>
-            )}
-          </Button>
+      <CardHeader className="pb-2">
+        <CardTitle>Process Transcript</CardTitle>
+        <CardDescription>Apply formatting and corrections to the transcript</CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <ProcessingOptions 
+          options={{
+            correctPunctuation: options.correctPunctuation,
+            extractEntities: options.extractEntities,
+            preserveFormatting: options.preserveFormatting
+          }}
+          onChange={(newOptions) => {
+            setOptions({
+              ...options,
+              ...newOptions
+            });
+          }}
+        />
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="formatSpeakers" 
+            checked={options.formatSpeakers}
+            onCheckedChange={(checked) => 
+              setOptions({...options, formatSpeakers: checked === true})
+            }
+          />
+          <Label htmlFor="formatSpeakers">Format speaker labels</Label>
         </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="identifyParties" 
+            checked={options.identifyParties}
+            onCheckedChange={(checked) => 
+              setOptions({...options, identifyParties: checked === true})
+            }
+          />
+          <Label htmlFor="identifyParties">Identify parties and legal terms</Label>
+        </div>
+        
+        <div className="text-xs text-slate-500 mt-2">
+          <p>Using {PUNCTUATION_RULES.length} punctuation rules for transcript correction</p>
+        </div>
+        
+        <Button 
+          className="w-full" 
+          onClick={processTranscript} 
+          disabled={!transcript || isProcessing}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Wand2 className="mr-2 h-4 w-4" />
+              Process Transcript
+            </>
+          )}
+        </Button>
       </CardContent>
     </Card>
   );

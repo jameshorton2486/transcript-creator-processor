@@ -62,3 +62,17 @@ export const DEFAULT_PROCESSING_OPTIONS: ProcessingOptions = {
   preserveFormatting: true,
   extractEntities: true
 };
+
+// Version information
+export const APP_INFO = {
+  name: "Legal Transcript Processor",
+  version: "1.0.0",
+  description: "Process, transcribe, and extract information from legal transcripts"
+};
+
+// API settings
+export const API_SETTINGS = {
+  openaiModel: "gpt-4o",
+  maxTokens: 4000,
+  tokensPerMinute: 3500
+};
