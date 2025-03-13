@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -9,7 +8,7 @@ import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { transcribeAudio, extractTranscriptText } from "@/lib/deepgramService";
+import { transcribeAudio, extractTranscriptText } from "@/lib/googleTranscribeService";
 
 interface AudioTranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any) => void;
@@ -28,11 +27,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       const selectedFile = e.target.files[0];
       setError(null);
       
-      // Check if file is audio or video
       if (selectedFile.type.startsWith("audio/") || selectedFile.type.startsWith("video/")) {
         setFile(selectedFile);
-        
-        // Log file info
         console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
       } else {
         setError("Invalid file type. Please select an audio or video file.");
@@ -67,10 +63,10 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     }
 
     if (!apiKey) {
-      setError("Deepgram API key is required for transcription.");
+      setError("Google API key is required for transcription.");
       toast({
         title: "API Key Required",
-        description: "Please enter your Deepgram API key.",
+        description: "Please enter your Google API key.",
         variant: "destructive",
       });
       return;
@@ -80,14 +76,9 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setError(null);
     
     try {
-      // Call the Deepgram service to transcribe the audio
       const response = await transcribeAudio(file, apiKey, options);
-      
-      // Extract the transcript text
       const transcriptText = extractTranscriptText(response);
-      
       onTranscriptCreated(transcriptText, response);
-      
       toast({
         title: "Transcription complete",
         description: "The audio has been successfully transcribed.",
@@ -114,11 +105,11 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="api-key">Deepgram API Key</Label>
+          <Label htmlFor="api-key">Google API Key</Label>
           <Input 
             id="api-key"
             type="password" 
-            placeholder="Enter your Deepgram API key" 
+            placeholder="Enter your Google API key" 
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             className="mt-1"
@@ -235,7 +226,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       </CardContent>
       
       <CardFooter className="bg-slate-50 text-xs text-slate-500 italic">
-        Transcription powered by Deepgram API. Processing may take a few minutes for larger files.
+        Transcription powered by Google Live Transcribe. Processing may take a few minutes for larger files.
       </CardFooter>
     </Card>
   );
