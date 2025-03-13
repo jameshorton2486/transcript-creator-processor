@@ -67,13 +67,23 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setError(null);
     
     try {
-      // In a real application, you would upload the file to a server
-      // and call Deepgram API. For now, we'll use a mock.
+      // In a real production app, we would upload to a server
+      // For this demo, we'll simulate the API call
       console.log(`Transcribing file: ${file.name}`);
       console.log(`Transcription options:`, options);
       
-      // Mock API call to transcribe audio
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('options', JSON.stringify(options));
+      
+      // Simulate API call with setTimeout
       await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Since we don't have a real backend connected yet, use mock data
+      // In a real app, you would fetch from your backend API:
+      // const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+      // const data = await response.json();
       
       // Mock response data
       const mockTranscript = `Speaker 1: Thank you for joining us today. We'll be discussing the case of Smith v. Jones.
@@ -81,8 +91,8 @@ Speaker 2: I'd like to present evidence regarding the contract signed on March 1
 Speaker 1: Please proceed with your argument.
 Speaker 2: The defendant clearly violated section 3.4 of the agreement when they failed to provide the required services by April 30.`;
       
-      // Build a more realistic response object based on options
-      const mockJsonData = {
+      // Build a realistic response object based on options
+      const mockJsonData: any = {
         metadata: {
           transaction_key: "mock-transaction",
           request_id: "mock-request-id",
