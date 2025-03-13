@@ -76,6 +76,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         errorMessage += "Network error. Please check your internet connection.";
       } else if (error.message?.includes("quota")) {
         errorMessage += "API quota exceeded. Please try again later or use a different API key.";
+      } else if (error.message?.includes("too large")) {
+        errorMessage += "File is too large. The maximum file size is 10MB for synchronous transcription.";
       } else {
         errorMessage += "Please check your API key and try again.";
       }
