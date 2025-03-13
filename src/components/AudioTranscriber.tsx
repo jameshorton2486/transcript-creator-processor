@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Mic, FileAudio } from "lucide-react";
+import { Loader2, Mic, FileAudio, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface AudioTranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any) => void;
@@ -12,15 +13,22 @@ interface AudioTranscriberProps {
 export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      setError(null);
+      
       // Check if file is audio or video
       if (selectedFile.type.startsWith("audio/") || selectedFile.type.startsWith("video/")) {
         setFile(selectedFile);
+        
+        // Log file info
+        console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
       } else {
+        setError("Invalid file type. Please select an audio or video file.");
         toast({
           title: "Invalid file type",
           description: "Please select an audio or video file.",
@@ -30,8 +38,19 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     }
   };
 
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes("audio/")) {
+      return <Mic className="h-4 w-4" />;
+    } else if (mimeType.includes("video/")) {
+      return <FileAudio className="h-4 w-4" />;
+    } else {
+      return <FileAudio className="h-4 w-4" />;
+    }
+  };
+
   const transcribeAudio = async () => {
     if (!file) {
+      setError("No file selected. Please select an audio or video file first.");
       toast({
         title: "No file selected",
         description: "Please select an audio or video file first.",
@@ -41,9 +60,12 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     }
 
     setIsLoading(true);
+    setError(null);
+    
     try {
       // In a real application, you would upload the file to a server
       // and call Deepgram API. For now, we'll use a mock.
+      console.log(`Transcribing file: ${file.name}`);
       
       // Mock API call to transcribe audio
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -89,6 +111,7 @@ Speaker 2: The defendant clearly violated section 3.4 of the agreement when they
       });
     } catch (error) {
       console.error("Transcription error:", error);
+      setError("Failed to transcribe file. Please try again or select a different file.");
       toast({
         title: "Transcription failed",
         description: "There was an error transcribing your audio. Please try again.",
@@ -120,12 +143,29 @@ Speaker 2: The defendant clearly violated section 3.4 of the agreement when they
               <Mic className="h-4 w-4" />
               Select Audio File
             </label>
+            <p className="text-xs text-slate-400 mt-2">
+              Supports MP3, WAV, FLAC, M4A and most audio/video formats
+            </p>
           </div>
           
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
           {file && (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-slate-700">Selected file:</p>
+            <div className="mt-4 p-3 bg-slate-50 rounded-md">
+              <p className="text-sm font-medium text-slate-700 flex items-center">
+                {getFileIcon(file.type)}
+                <span className="ml-2">Selected file:</span>
+              </p>
               <p className="text-sm text-slate-500 truncate">{file.name}</p>
+              <p className="text-xs text-slate-400">
+                {file.type} • {(file.size / 1024 / 1024).toFixed(2)} MB
+              </p>
             </div>
           )}
           

@@ -2,7 +2,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, FileText } from "lucide-react";
 
 interface TranscriptViewerProps {
   text: string;
@@ -53,10 +53,22 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
     }
   };
 
+  // Function to format the transcript for better display
+  const formatTranscript = (text: string) => {
+    // Highlight speaker labels
+    return text.replace(
+      /(Speaker \d+:|THE COURT:|[A-Z]+'S COUNSEL:)/g, 
+      '<span class="font-bold text-blue-600">$1</span>'
+    );
+  };
+
   return (
     <div className="border rounded-md">
       <div className="flex justify-between items-center p-3 border-b bg-slate-50">
-        <h3 className="font-medium text-slate-700">Transcript</h3>
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-slate-500" />
+          <h3 className="font-medium text-slate-700">Transcript</h3>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -79,9 +91,10 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
         </div>
       </div>
       <ScrollArea className="h-[500px] p-4">
-        <div className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed">
-          {text || "No text available"}
-        </div>
+        <div 
+          className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: formatTranscript(text || "No text available") }}
+        />
       </ScrollArea>
     </div>
   );

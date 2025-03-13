@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, MagicWand } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -136,7 +136,7 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
               </>
             ) : (
               <>
-                <MagicWand className="mr-2 h-4 w-4" />
+                <Wand2 className="mr-2 h-4 w-4" />
                 Process Transcript
               </>
             )}
