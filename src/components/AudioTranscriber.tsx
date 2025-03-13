@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -66,7 +67,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       setError("Google API key is required for transcription.");
       toast({
         title: "API Key Required",
-        description: "Please enter your Google API key.",
+        description: "Please enter your Google Speech-to-Text API key.",
         variant: "destructive",
       });
       return;
@@ -78,17 +79,35 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     try {
       const response = await transcribeAudio(file, apiKey, options);
       const transcriptText = extractTranscriptText(response);
+      
+      if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
+        throw new Error("Failed to extract transcript from the API response.");
+      }
+      
       onTranscriptCreated(transcriptText, response);
       toast({
         title: "Transcription complete",
         description: "The audio has been successfully transcribed.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Transcription error:", error);
-      setError("Failed to transcribe file. Please check your API key and try again.");
+      
+      let errorMessage = "Failed to transcribe file. ";
+      
+      if (error.message?.includes("API key")) {
+        errorMessage += "Please check your API key is valid.";
+      } else if (error.message?.includes("Network") || error.message?.includes("fetch")) {
+        errorMessage += "Network error. Please check your internet connection.";
+      } else if (error.message?.includes("quota")) {
+        errorMessage += "API quota exceeded. Please try again later or use a different API key.";
+      } else {
+        errorMessage += "Please check your API key and try again.";
+      }
+      
+      setError(errorMessage);
       toast({
         title: "Transcription failed",
-        description: "There was an error transcribing your audio. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

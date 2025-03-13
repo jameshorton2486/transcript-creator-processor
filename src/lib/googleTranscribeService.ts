@@ -1,7 +1,7 @@
 
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from './config';
 
-// This service handles communication with Google Live Transcribe API
+// This service handles communication with Google Speech-to-Text API
 export const transcribeAudio = async (
   file: File, 
   apiKey: string,
@@ -10,6 +10,7 @@ export const transcribeAudio = async (
   try {
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
+    const base64Audio = arrayBufferToBase64(arrayBuffer);
     
     // Set up transcription options based on our default options
     const transcriptionOptions = {
@@ -22,47 +23,137 @@ export const transcribeAudio = async (
     };
     
     // Log what we're doing
-    console.log(`Transcribing ${file.name} with Google Live Transcribe`);
+    console.log(`Transcribing ${file.name} with Google Speech-to-Text`);
     console.log('Options:', transcriptionOptions);
     
-    // Mock API call - In a real implementation, you would:
-    // 1. Format the audio data for Google's Speech-to-Text API
-    // 2. Make a fetch request to the Google API endpoint
-    // 3. Process the response
+    // Prepare request body for Google Speech-to-Text API
+    const requestBody = {
+      config: {
+        encoding: "LINEAR16",
+        sampleRateHertz: 16000,
+        languageCode: transcriptionOptions.language,
+        enableAutomaticPunctuation: transcriptionOptions.punctuate,
+        enableSpeakerDiarization: transcriptionOptions.diarize,
+        diarizationSpeakerCount: 2, // Default to 2 speakers, can be adjusted
+        model: "latest_long",
+      },
+      audio: {
+        content: base64Audio
+      }
+    };
     
-    // This is a placeholder for the real API implementation
-    // In a production app, you would use the actual Google Speech-to-Text API
-    const mockResponse = await mockGoogleTranscription(file, transcriptionOptions);
+    // Make request to Google Speech-to-Text API
+    const response = await fetch(
+      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
     
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Google API error:', errorData);
+      throw new Error(`Google API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+    
+    const data = await response.json();
     console.log('Google transcription completed successfully');
-    return mockResponse;
+    
+    // Format Google's response to our app's expected format
+    return formatGoogleResponse(data);
   } catch (error) {
     console.error('Google transcription error:', error);
     throw error;
   }
 };
 
-// Mock function to simulate Google API response
-// In a real application, this would be replaced with actual API calls
-const mockGoogleTranscription = async (file: File, options: any) => {
-  // Simulate processing delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+// Helper function to convert ArrayBuffer to base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
   
-  // Create a mock response that mimics Google Speech-to-Text response format
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  
+  return window.btoa(binary);
+};
+
+// Format the Google Speech-to-Text response to match our app's expected format
+const formatGoogleResponse = (googleResponse: any) => {
+  if (!googleResponse.results || googleResponse.results.length === 0) {
+    return {
+      results: {
+        transcripts: [{ transcript: "No transcript available", confidence: 0 }],
+        channels: [{ alternatives: [{ transcript: "No transcript available", confidence: 0 }] }]
+      }
+    };
+  }
+
+  // Extract the transcript text from all results
+  let fullTranscript = '';
+  let speakerNumber = 1;
+  const speakerMap: Record<number, number> = {};
+  
+  // Process all results to create a full transcript with speaker labels
+  googleResponse.results.forEach((result: any, index: number) => {
+    if (result.alternatives && result.alternatives.length > 0) {
+      const transcript = result.alternatives[0].transcript || '';
+      
+      // If speaker diarization is available
+      if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
+        let currentSpeaker = -1;
+        let currentText = '';
+        
+        result.alternatives[0].words.forEach((word: any) => {
+          const speakerId = word.speakerTag || 0;
+          
+          // Map Google speaker tags to our format (Speaker 1, Speaker 2, etc.)
+          if (!speakerMap[speakerId]) {
+            speakerMap[speakerId] = speakerNumber++;
+          }
+          
+          // If speaker changed, add the previous segment
+          if (currentSpeaker !== -1 && currentSpeaker !== speakerId) {
+            fullTranscript += `Speaker ${speakerMap[currentSpeaker]}: ${currentText.trim()}\n`;
+            currentText = '';
+          }
+          
+          currentSpeaker = speakerId;
+          currentText += ` ${word.word}`;
+        });
+        
+        // Add the last segment
+        if (currentText.trim()) {
+          fullTranscript += `Speaker ${speakerMap[currentSpeaker]}: ${currentText.trim()}\n`;
+        }
+      } else {
+        // No speaker diarization, just add the transcript with a default speaker
+        fullTranscript += `Speaker ${speakerNumber}: ${transcript.trim()}\n`;
+      }
+    }
+  });
+  
+  // Format the response to match our expected format
   return {
     results: {
       transcripts: [
         {
-          transcript: "Speaker 1: Thank you for joining us today. We'll be discussing the case of Smith v. Jones.\nSpeaker 2: I'd like to present evidence regarding the contract signed on March 15, 2023.\nSpeaker 1: Please proceed with your argument.\nSpeaker 2: The defendant clearly violated section 3.4 of the agreement when they failed to provide the required services by April 30.",
-          confidence: 0.95
+          transcript: fullTranscript,
+          confidence: googleResponse.results[0]?.alternatives[0]?.confidence || 0.8
         }
       ],
       channels: [
         {
           alternatives: [
             {
-              transcript: "Speaker 1: Thank you for joining us today. We'll be discussing the case of Smith v. Jones.\nSpeaker 2: I'd like to present evidence regarding the contract signed on March 15, 2023.\nSpeaker 1: Please proceed with your argument.\nSpeaker 2: The defendant clearly violated section 3.4 of the agreement when they failed to provide the required services by April 30.",
-              confidence: 0.95
+              transcript: fullTranscript,
+              confidence: googleResponse.results[0]?.alternatives[0]?.confidence || 0.8
             }
           ]
         }

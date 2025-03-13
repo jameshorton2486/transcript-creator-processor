@@ -55,11 +55,30 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
 
   // Function to format the transcript for better display
   const formatTranscript = (text: string) => {
-    // Highlight speaker labels
-    return text.replace(
-      /(Speaker \d+:|THE COURT:|[A-Z]+'S COUNSEL:)/g, 
-      '<span class="font-bold text-blue-600">$1</span>'
-    );
+    if (!text) return "No text available";
+    
+    // Highlight speaker labels with different colors for each speaker
+    let formattedText = text;
+    const speakerRegex = /(Speaker \d+:|THE COURT:|[A-Z]+'S COUNSEL:)/g;
+    
+    // Get all unique speakers
+    const speakers = Array.from(new Set(text.match(speakerRegex) || []));
+    const colors = ['text-blue-600', 'text-green-600', 'text-purple-600', 'text-red-600', 'text-amber-600'];
+    
+    // Replace each speaker with a colored version
+    speakers.forEach((speaker, index) => {
+      const colorClass = colors[index % colors.length];
+      const escapedSpeaker = speaker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      formattedText = formattedText.replace(
+        new RegExp(`(${escapedSpeaker})`, 'g'),
+        `<span class="font-bold ${colorClass}">$1</span>`
+      );
+    });
+    
+    // Add styling for paragraph breaks
+    formattedText = formattedText.replace(/\n/g, '<br />');
+    
+    return formattedText;
   };
 
   return (
@@ -93,7 +112,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
       <ScrollArea className="h-[500px] p-4">
         <div 
           className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: formatTranscript(text || "No text available") }}
+          dangerouslySetInnerHTML={{ __html: formatTranscript(text) }}
         />
       </ScrollArea>
     </div>
