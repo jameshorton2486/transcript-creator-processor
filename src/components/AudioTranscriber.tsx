@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Mic, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
 import { transcribeAudio, extractTranscriptText } from "@/lib/googleTranscribeService";
 import { FileSelector } from "@/components/audio/FileSelector";
@@ -21,11 +22,14 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState(DEFAULT_TRANSCRIPTION_OPTIONS);
   const [apiKey, setApiKey] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const { toast } = useToast();
 
   const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
     setError(null);
+    setIsBatchProcessing(selectedFile.size > 10 * 1024 * 1024);
   };
 
   const transcribeAudioFile = async () => {
@@ -51,9 +55,26 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
 
     setIsLoading(true);
     setError(null);
+    setProgress(0);
     
     try {
-      const response = await transcribeAudio(file, apiKey, options);
+      const isLargeFile = file.size > 10 * 1024 * 1024;
+      
+      if (isLargeFile) {
+        toast({
+          title: "Processing large file",
+          description: "Your file will be processed in batches. This may take several minutes.",
+        });
+        setIsBatchProcessing(true);
+      }
+      
+      const response = await transcribeAudio(
+        file, 
+        apiKey, 
+        options, 
+        isLargeFile ? setProgress : undefined
+      );
+      
       const transcriptText = extractTranscriptText(response);
       
       if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
@@ -77,7 +98,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       } else if (error.message?.includes("quota")) {
         errorMessage += "API quota exceeded. Please try again later or use a different API key.";
       } else if (error.message?.includes("too large")) {
-        errorMessage += "File is too large. The maximum file size is 10MB for synchronous transcription.";
+        errorMessage += "This file is too large for direct processing. The application will try to process it in batches.";
       } else {
         errorMessage += "Please check your API key and try again.";
       }
@@ -90,8 +111,14 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       });
     } finally {
       setIsLoading(false);
+      setIsBatchProcessing(false);
+      setProgress(0);
     }
   };
+
+  // Calculate estimated file size in MB
+  const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
+  const isLargeFile = file && file.size > 10 * 1024 * 1024;
 
   return (
     <Card className="bg-white">
@@ -110,6 +137,30 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           onFileSelected={handleFileSelected}
           isLoading={isLoading}
         />
+        
+        {file && isLargeFile && !isLoading && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Large File Detected</AlertTitle>
+            <AlertDescription className="text-amber-800">
+              This {fileSizeMB} MB file exceeds the 10MB limit for direct API processing. 
+              It will be automatically processed in batches. This may take several minutes.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {isLoading && isBatchProcessing && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Processing in batches</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            <p className="text-xs text-slate-500 italic">
+              Large files are processed in chunks. Please be patient.
+            </p>
+          </div>
+        )}
         
         {error && (
           <Alert variant="destructive" className="mt-4">
@@ -132,7 +183,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Transcribing...
+              {isBatchProcessing ? `Processing (${progress}%)` : "Transcribing..."}
             </>
           ) : (
             <>
@@ -144,7 +195,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       </CardContent>
       
       <CardFooter className="bg-slate-50 text-xs text-slate-500 italic">
-        Transcription powered by Google Live Transcribe. Processing may take a few minutes for larger files.
+        Transcription powered by Google Live Transcribe. Can process files up to 6 hours long. 
+        Larger files will be processed in batches.
       </CardFooter>
     </Card>
   );

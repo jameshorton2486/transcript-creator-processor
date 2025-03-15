@@ -1,5 +1,7 @@
 
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from './config';
+import { Progress } from '@/components/ui/progress';
+import { float32ArrayToWav, fileToAudioBuffer, splitAudioBuffer, calculateOptimalChunkDuration } from './audioProcessor';
 
 // New function to test if the API key is valid by making a minimal request
 export const testApiKey = async (apiKey: string): Promise<boolean> => {
@@ -28,16 +30,39 @@ export const testApiKey = async (apiKey: string): Promise<boolean> => {
 export const transcribeAudio = async (
   file: File, 
   apiKey: string,
+  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  onProgress?: (progress: number) => void
+) => {
+  try {
+    // Check if file is too large for synchronous processing
+    const isLargeFile = file.size > 10 * 1024 * 1024;
+    
+    // Log what we're doing
+    console.log(`Transcribing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) with Google Speech-to-Text`);
+    console.log('Options:', options);
+    
+    if (!isLargeFile) {
+      // For smaller files, use the existing synchronous method
+      return await transcribeSingleFile(file, apiKey, options);
+    } else {
+      // For large files, use batch processing
+      return await transcribeBatchedAudio(file, apiKey, options, onProgress);
+    }
+  } catch (error) {
+    console.error('Google transcription error:', error);
+    throw error;
+  }
+};
+
+// Process a single file (original method for files under 10MB)
+const transcribeSingleFile = async (
+  file: File, 
+  apiKey: string,
   options = DEFAULT_TRANSCRIPTION_OPTIONS
 ) => {
   try {
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
-    
-    // For large files, check if we're exceeding the API limit (10MB for sync requests)
-    if (arrayBuffer.byteLength > 10 * 1024 * 1024) {
-      throw new Error("File is too large for synchronous transcription. The API limit is 10MB.");
-    }
     
     const base64Audio = arrayBufferToBase64(arrayBuffer);
     
@@ -50,10 +75,6 @@ export const transcribeAudio = async (
       numerals: options.numerals,
       language: 'en-US'
     };
-    
-    // Log what we're doing
-    console.log(`Transcribing ${file.name} with Google Speech-to-Text`);
-    console.log('Options:', transcriptionOptions);
     
     // Prepare request body for Google Speech-to-Text API
     const requestBody = {
@@ -95,9 +116,126 @@ export const transcribeAudio = async (
     // Format Google's response to our app's expected format
     return formatGoogleResponse(data);
   } catch (error) {
-    console.error('Google transcription error:', error);
+    console.error('Transcription error:', error);
     throw error;
   }
+};
+
+// New method to handle large files through batch processing
+const transcribeBatchedAudio = async (
+  file: File, 
+  apiKey: string,
+  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  onProgress?: (progress: number) => void
+) => {
+  try {
+    console.log('Processing large file in batches...');
+    onProgress?.(0); // Initialize progress
+    
+    // Convert file to AudioBuffer
+    const audioBuffer = await fileToAudioBuffer(file);
+    const fileDurationSec = audioBuffer.duration;
+    console.log(`Audio duration: ${fileDurationSec} seconds`);
+    
+    // Calculate optimal chunk size based on file size and duration
+    const optimalChunkDuration = calculateOptimalChunkDuration(file.size, fileDurationSec);
+    console.log(`Using chunk duration of ${optimalChunkDuration} seconds`);
+    
+    // Split audio into chunks
+    const audioChunks = splitAudioBuffer(audioBuffer, optimalChunkDuration);
+    console.log(`Split audio into ${audioChunks.length} chunks`);
+    
+    // Convert chunks to WAV files
+    const wavBlobs = audioChunks.map(chunk => 
+      float32ArrayToWav(chunk, audioBuffer.sampleRate)
+    );
+    
+    // Process each chunk
+    const results = [];
+    for (let i = 0; i < wavBlobs.length; i++) {
+      const chunkFile = new File(
+        [wavBlobs[i]], 
+        `${file.name.split('.')[0]}_chunk${i}.wav`, 
+        { type: 'audio/wav' }
+      );
+      
+      // Update progress
+      onProgress?.(Math.round((i / wavBlobs.length) * 100));
+      console.log(`Processing chunk ${i+1}/${wavBlobs.length}...`);
+      
+      // Transcribe this chunk
+      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options);
+      results.push(chunkResult);
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Combine all results
+    onProgress?.(100);
+    return combineTranscriptionResults(results);
+  } catch (error) {
+    console.error('Batched transcription error:', error);
+    throw error;
+  }
+};
+
+// Combine multiple transcription results into a single result
+const combineTranscriptionResults = (results: any[]): any => {
+  if (results.length === 0) {
+    return {
+      results: {
+        transcripts: [{ transcript: "No transcript available", confidence: 0 }],
+        channels: [{ alternatives: [{ transcript: "No transcript available", confidence: 0 }] }]
+      }
+    };
+  }
+  
+  // Combine all transcripts with proper spacing
+  let combinedTranscript = '';
+  let confidenceSum = 0;
+  
+  results.forEach((result, index) => {
+    if (result.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
+      const transcript = result.results.channels[0].alternatives[0].transcript;
+      combinedTranscript += transcript;
+      
+      // Add a newline if not the last chunk and if the transcript doesn't end with one
+      if (index < results.length - 1 && !transcript.trim().endsWith('\n')) {
+        combinedTranscript += '\n';
+      }
+      
+      // Accumulate confidence scores
+      if (result.results?.channels?.[0]?.alternatives?.[0]?.confidence) {
+        confidenceSum += result.results.channels[0].alternatives[0].confidence;
+      }
+    }
+  });
+  
+  // Calculate average confidence
+  const avgConfidence = results.length > 0 ? confidenceSum / results.length : 0;
+  
+  // Return in the expected format
+  return {
+    results: {
+      transcripts: [
+        {
+          transcript: combinedTranscript,
+          confidence: avgConfidence
+        }
+      ],
+      channels: [
+        {
+          alternatives: [
+            {
+              transcript: combinedTranscript,
+              confidence: avgConfidence
+            }
+          ]
+        }
+      ]
+    }
+  };
 };
 
 // Helper function to convert ArrayBuffer to base64
