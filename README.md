@@ -1,69 +1,70 @@
-# Welcome to your Lovable project
 
-## Project info
+# Legal Transcript Creator & Processor
 
-**URL**: https://lovable.dev/projects/8fc8d755-7ff4-417b-87b0-fd9b61fe4597
+This application helps with processing and creating legal transcripts from audio recordings.
 
-## How can I edit this code?
+## Quick Setup
 
-There are several ways of editing your application.
+1. **Clone the repository**:
+   ```
+   git clone https://github.com/jameshorton2486/transcript-creator-processor.git
+   cd transcript-creator-processor
+   ```
 
-**Use Lovable**
+2. **Install dependencies**:
+   ```
+   npm install
+   ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8fc8d755-7ff4-417b-87b0-fd9b61fe4597) and start prompting.
+3. **Start the development server**:
+   ```
+   npm run dev
+   ```
 
-Changes made via Lovable will be committed automatically to this repo.
+4. **Access the application**:
+   Open your browser and go to `http://localhost:5173`
 
-**Use your preferred IDE**
+## Required API Keys
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+This application uses Google Speech-to-Text API for transcription:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Speech-to-Text API
+4. Create an API key under "Credentials"
+5. Enter this API key in the application when prompted
 
-Follow these steps:
+## How to Use
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Transcribe Audio**:
+   - Enter your Google API key
+   - Upload an audio file (supports MP3, WAV, FLAC, OGG)
+   - Select transcription options
+   - Click "Transcribe Audio"
+   - For files larger than 10MB, the application will automatically process them in batches
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. **Process Transcript**:
+   - After transcription, use the processing options to format and clean up the transcript
+   - Apply punctuation corrections, speaker formatting, and entity extraction
+   - The processed transcript will appear in the "Processed Transcript" tab
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. **Export Results**:
+   - Use the download button to save transcripts as text files
+   - JSON data is also available for export
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## Troubleshooting
 
-**Edit a file directly in GitHub**
+- **API Key Issues**: Ensure your Google API key has Speech-to-Text permissions enabled
+- **Large File Processing**: Large files are split into chunks. If processing fails, try a smaller file first
+- **Unsupported Format**: If your file isn't recognized, convert it to MP3 or WAV using a tool like Audacity
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Logs and Debugging
 
-**Use GitHub Codespaces**
+The application logs important events to the browser console. Press F12 to open developer tools and select the Console tab to view logs.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## File Size Limitations
 
-## What technologies are used for this project?
+- Files under 10MB are processed directly
+- Files over 10MB are automatically split into chunks
+- Maximum recommended file size: 500MB (approximately 6 hours of audio)
 
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/8fc8d755-7ff4-417b-87b0-fd9b61fe4597) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)

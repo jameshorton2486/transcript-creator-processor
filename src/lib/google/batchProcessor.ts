@@ -2,7 +2,12 @@
 // Module for batch processing of large audio files
 import { formatGoogleResponse, combineTranscriptionResults } from './responseFormatter';
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
-import { float32ArrayToWav, fileToAudioBuffer, splitAudioBuffer, calculateOptimalChunkDuration } from '../audioProcessor';
+import { 
+  fileToAudioBuffer, 
+  splitAudioBuffer, 
+  calculateOptimalChunkDuration, 
+  float32ArrayToWav
+} from '../audio';
 
 /**
  * Process a single file (for files under 10MB)

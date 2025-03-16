@@ -1,24 +1,25 @@
 
 /**
- * Converts Float32Array audio data to WAV format as Blob
+ * Converts a Float32Array to a WAV file blob
  */
 export const float32ArrayToWav = (
-  samples: Float32Array,
+  audioData: Float32Array, 
   sampleRate: number = 16000
 ): Blob => {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  // Create a buffer for the WAV file
+  const buffer = new ArrayBuffer(44 + audioData.length * 2);
   const view = new DataView(buffer);
-  
-  // Write WAV header
+
+  // Write the WAV header
   // "RIFF" chunk descriptor
   writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
+  view.setUint32(4, 36 + audioData.length * 2, true);
   writeString(view, 8, 'WAVE');
   
   // "fmt " sub-chunk
   writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // subchunk1size
-  view.setUint16(20, 1, true); // audio format (1 = PCM)
+  view.setUint32(16, 16, true); // fmt chunk size
+  view.setUint16(20, 1, true); // audio format (1 for PCM)
   view.setUint16(22, 1, true); // number of channels
   view.setUint32(24, sampleRate, true); // sample rate
   view.setUint32(28, sampleRate * 2, true); // byte rate
@@ -27,25 +28,24 @@ export const float32ArrayToWav = (
   
   // "data" sub-chunk
   writeString(view, 36, 'data');
-  view.setUint32(40, samples.length * 2, true);
+  view.setUint32(40, audioData.length * 2, true);
   
-  // Write audio data
-  floatTo16BitPCM(view, 44, samples);
+  // Write the PCM samples
+  const volume = 0.9; // Adjust volume as needed
+  let index = 44;
+  for (let i = 0; i < audioData.length; i++) {
+    // Convert float to int
+    const sample = Math.max(-1, Math.min(1, audioData[i])) * volume;
+    view.setInt16(index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    index += 2;
+  }
   
   return new Blob([buffer], { type: 'audio/wav' });
 };
 
-// Helper function to write a string to a DataView
+// Helper function to write strings to DataView
 const writeString = (view: DataView, offset: number, string: string): void => {
   for (let i = 0; i < string.length; i++) {
     view.setUint8(offset + i, string.charCodeAt(i));
-  }
-};
-
-// Helper function to convert Float32Array to 16-bit PCM
-const floatTo16BitPCM = (output: DataView, offset: number, input: Float32Array): void => {
-  for (let i = 0; i < input.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
   }
 };
