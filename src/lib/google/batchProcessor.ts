@@ -1,4 +1,3 @@
-
 // Module for batch processing of large audio files
 import { formatGoogleResponse, combineTranscriptionResults } from './responseFormatter';
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
@@ -54,14 +53,21 @@ export const transcribeSingleFile = async (
         sampleRateHertz: 16000,
         languageCode: transcriptionOptions.language,
         enableAutomaticPunctuation: transcriptionOptions.punctuate,
-        enableSpeakerDiarization: transcriptionOptions.diarize,
-        diarizationSpeakerCount: 2, // Default to 2 speakers, can be adjusted
         model: "latest_long",
       },
       audio: {
         content: base64Audio
       }
     };
+    
+    // Add diarization config if enabled (using the updated API format)
+    if (transcriptionOptions.diarize) {
+      requestBody.config.diarizationConfig = {
+        enableSpeakerDiarization: true,
+        minSpeakerCount: 2,
+        maxSpeakerCount: 8
+      };
+    }
     
     // Remove sampleRateHertz for MP3 files as Google auto-detects it
     if (encoding === "MP3" || encoding === "OGG_OPUS") {
