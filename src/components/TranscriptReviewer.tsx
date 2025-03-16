@@ -1,10 +1,24 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+
+interface TrainingRule {
+  id: string;
+  name: string;
+  description: string;
+  rule: string;
+}
+
+interface TrainingExample {
+  id: string;
+  incorrect: string;
+  corrected: string;
+  createdAt: number;
+}
 
 interface TranscriptReviewerProps {
   transcript: string;
@@ -21,7 +35,22 @@ export const TranscriptReviewer = ({
 }: TranscriptReviewerProps) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [showApiInput, setShowApiInput] = useState<boolean>(false);
+  const [rules, setRules] = useState<TrainingRule[]>([]);
+  const [examples, setExamples] = useState<TrainingExample[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Load saved rules and examples from localStorage
+    const savedRules = localStorage.getItem("transcriptRules");
+    if (savedRules) {
+      setRules(JSON.parse(savedRules));
+    }
+    
+    const savedExamples = localStorage.getItem("transcriptExamples");
+    if (savedExamples) {
+      setExamples(JSON.parse(savedExamples));
+    }
+  }, []);
 
   const reviewTranscript = async () => {
     if (!transcript) {
@@ -46,19 +75,61 @@ export const TranscriptReviewer = ({
     try {
       // In a real application, this would call OpenAI API
       // For now, we'll simulate the AI review with a timeout and mock improvements
-      
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Mock AI improvements to the transcript
+      // Start with the original transcript
       let reviewedText = transcript;
       
-      // Simple mock improvements for demonstration purposes
+      // Apply custom rules (in a real app, this would be done more intelligently via AI)
+      if (rules.length > 0) {
+        toast({
+          title: "Applying custom rules",
+          description: `Applying ${rules.length} custom rules to transcript...`,
+        });
+        
+        // Mock rule application (simple text replacements)
+        // In a real implementation, this would use more sophisticated NLP techniques
+        rules.forEach(rule => {
+          if (rule.name.toLowerCase().includes("capitalize")) {
+            reviewedText = reviewedText.replace(/\bcourt\b/g, "Court");
+          }
+          
+          if (rule.name.toLowerCase().includes("date")) {
+            reviewedText = reviewedText.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, "January $1, $3");
+          }
+          
+          if (rule.name.toLowerCase().includes("speaker")) {
+            reviewedText = reviewedText
+              .replace(/Speaker 1:/g, "THE COURT:")
+              .replace(/Speaker 2:/g, "PLAINTIFF'S COUNSEL:")
+              .replace(/Speaker 3:/g, "DEFENDANT'S COUNSEL:");
+          }
+        });
+      }
+      
+      // Apply learning from examples (in a real app, this would be done with ML)
+      if (examples.length > 0) {
+        toast({
+          title: "Applying learned patterns",
+          description: `Applying patterns from ${examples.length} training examples...`,
+        });
+        
+        // Very simple simulation of learning from examples
+        // In a real implementation, this would use more sophisticated techniques
+        examples.forEach(example => {
+          // Find obvious patterns from examples and apply them
+          if (example.incorrect.includes("vs.") && example.corrected.includes("v.")) {
+            reviewedText = reviewedText.replace(/\bvs\.\b/g, "v.");
+          }
+          
+          if (example.incorrect.includes("gonna") && example.corrected.includes("going to")) {
+            reviewedText = reviewedText.replace(/\bgonna\b/g, "going to");
+          }
+        });
+      }
+      
+      // Apply standard improvements
       reviewedText = reviewedText
-        .replace(/Speaker 1:/g, "THE COURT:")
-        .replace(/Speaker 2:/g, "PLAINTIFF'S COUNSEL:")
-        .replace(/Speaker 3:/g, "DEFENDANT'S COUNSEL:")
-        .replace(/Speaker 4:/g, "WITNESS:")
-        .replace(/Speaker 5:/g, "COURT REPORTER:")
         .replace(/\b(\w+) vs\. (\w+)/g, "$1 v. $2")
         .replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, "January $1, $3")
         .replace(/\b(\d{1,2}):(\d{1,2})\b/g, "$1:$2 o'clock")
@@ -96,7 +167,14 @@ export const TranscriptReviewer = ({
     <Card className="bg-white">
       <CardHeader className="pb-2">
         <CardTitle>AI Transcript Review</CardTitle>
-        <CardDescription>Use AI to enhance and correct the transcript</CardDescription>
+        <CardDescription>
+          Use AI to enhance and correct the transcript 
+          {(rules.length > 0 || examples.length > 0) && (
+            <span className="text-green-600 font-medium">
+              {" "}• Using {rules.length} rules & {examples.length} examples
+            </span>
+          )}
+        </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-4">
@@ -134,6 +212,7 @@ export const TranscriptReviewer = ({
             <>
               <Sparkles className="mr-2 h-4 w-4" />
               Review Transcript with AI
+              {(rules.length > 0 || examples.length > 0) && ` (${rules.length + examples.length} rules/examples)`}
             </>
           )}
         </Button>
