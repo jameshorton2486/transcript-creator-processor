@@ -46,8 +46,24 @@ export const transcribeSingleFile = async (
     
     console.log(`Using encoding: ${encoding} for file type: ${file.type}`);
     
-    // Prepare request body for Google Speech-to-Text API
-    const requestBody = {
+    // Prepare request body for Google Speech-to-Text API with a more flexible type
+    const requestBody: {
+      config: {
+        encoding: string;
+        sampleRateHertz?: number;
+        languageCode: string;
+        enableAutomaticPunctuation: boolean;
+        model: string;
+        diarizationConfig?: {
+          enableSpeakerDiarization: boolean;
+          minSpeakerCount: number;
+          maxSpeakerCount: number;
+        };
+      };
+      audio: {
+        content: string;
+      };
+    } = {
       config: {
         encoding: encoding,
         sampleRateHertz: 16000,
