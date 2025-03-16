@@ -24,15 +24,32 @@ export const transcribeAudio = async (
     console.log('Options:', options);
     
     if (customTerms && customTerms.length > 0) {
-      console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
-    }
-    
-    if (!isLargeFile) {
-      // For smaller files, use the existing synchronous method
-      return await transcribeSingleFile(file, apiKey, options, customTerms);
+      console.log(`Using ${customTerms.length} custom terms for speech adaptation: ${customTerms.slice(0, 5).join(', ')}${customTerms.length > 5 ? '...' : ''}`);
+      
+      // Add speech adaptation to options if custom terms are provided
+      const optionsWithSpeechAdaptation = {
+        ...options,
+        speechContexts: [{
+          phrases: customTerms,
+          boost: 15.0  // Boost confidence of these words
+        }]
+      };
+      
+      if (!isLargeFile) {
+        // For smaller files, use the existing synchronous method
+        return await transcribeSingleFile(file, apiKey, optionsWithSpeechAdaptation, customTerms);
+      } else {
+        // For large files, use batch processing
+        return await transcribeBatchedAudio(file, apiKey, optionsWithSpeechAdaptation, onProgress, customTerms);
+      }
     } else {
-      // For large files, use batch processing
-      return await transcribeBatchedAudio(file, apiKey, options, onProgress, customTerms);
+      if (!isLargeFile) {
+        // For smaller files, use the existing synchronous method
+        return await transcribeSingleFile(file, apiKey, options, customTerms);
+      } else {
+        // For large files, use batch processing
+        return await transcribeBatchedAudio(file, apiKey, options, onProgress, customTerms);
+      }
     }
   } catch (error) {
     console.error('Google transcription error:', error);

@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUploader } from "@/components/FileUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 interface TerminologyExtractorProps {
   onTermsExtracted: (terms: string[]) => void;
@@ -15,6 +16,7 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
   const [file, setFile] = useState<File | null>(null);
   const [extractedTerms, setExtractedTerms] = useState<string[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
 
   const handleFileChange = (selectedFile: File | null) => {
@@ -22,6 +24,13 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
     // Reset terms when a new file is selected
     setExtractedTerms([]);
   };
+
+  useEffect(() => {
+    // Reset progress when extraction starts/stops
+    if (!isExtracting) {
+      setProgress(0);
+    }
+  }, [isExtracting]);
 
   const extractTerminology = async () => {
     if (!file) {
@@ -34,17 +43,44 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
     }
 
     setIsExtracting(true);
+    setProgress(10); // Start progress indication
 
     try {
-      // Read the file content
-      const text = await readFileContent(file);
+      // Determine file type and extract content accordingly
+      let text = "";
+      
+      if (file.type === "application/pdf") {
+        setProgress(20);
+        toast({
+          title: "Processing PDF",
+          description: "Extracting text from PDF document...",
+        });
+        text = await extractTextFromPDF(file);
+      } 
+      else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || 
+               file.type === "application/msword") {
+        setProgress(20);
+        toast({
+          title: "Processing Word document",
+          description: "Extracting text from Word document...",
+        });
+        text = await extractTextFromWord(file);
+      } 
+      else {
+        // Plain text or other supported text formats
+        text = await readFileContent(file);
+      }
+      
+      setProgress(60);
       
       // Extract potential terms (names, legal terms, etc.)
       const terms = extractPotentialTerms(text);
       
+      setProgress(90);
       setExtractedTerms(terms);
       onTermsExtracted(terms);
       
+      setProgress(100);
       toast({
         title: "Terminology extracted",
         description: `${terms.length} terms extracted from the document.`,
@@ -53,7 +89,8 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
       console.error("Error extracting terminology:", error);
       toast({
         title: "Extraction failed",
-        description: "Failed to extract terminology from the document.",
+        description: "Failed to extract terminology from the document. " + 
+                     (error instanceof Error ? error.message : "Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -67,7 +104,41 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
     onTermsExtracted(updatedTerms);
   };
 
-  // Helper function to read file content
+  // Extract text from PDF file using pdf.js
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = "";
+      
+      // Extract text from each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(" ");
+        text += pageText + " ";
+      }
+      
+      return text;
+    } catch (error) {
+      console.error("Error extracting text from PDF:", error);
+      throw new Error("Failed to extract text from PDF file");
+    }
+  };
+
+  // Extract text from Word document
+  const extractTextFromWord = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await window.mammoth.extractRawText({ arrayBuffer });
+      return result.value;
+    } catch (error) {
+      console.error("Error extracting text from Word document:", error);
+      throw new Error("Failed to extract text from Word document");
+    }
+  };
+
+  // Helper function to read file content for text files
   const readFileContent = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -143,8 +214,15 @@ export const TerminologyExtractor = ({ onTermsExtracted }: TerminologyExtractorP
         <FileUploader
           onFileChange={handleFileChange}
           file={file}
-          acceptedFileTypes=".txt,.pdf,.docx"
+          acceptedFileTypes=".txt,.pdf,.docx,.doc"
         />
+        
+        {isExtracting && (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">Extracting terminology...</p>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
         
         <Button 
           onClick={extractTerminology} 

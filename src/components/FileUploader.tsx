@@ -50,6 +50,21 @@ export const FileUploader = ({
     }
   };
 
+  // Get readable file type for display
+  const getFileTypeDisplay = (file: File): string => {
+    if (file.type === "application/pdf") {
+      return "PDF Document";
+    } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      return "Word Document (.docx)";
+    } else if (file.type === "application/msword") {
+      return "Word Document (.doc)";
+    } else if (file.type === "text/plain") {
+      return "Text File";
+    } else {
+      return file.type || "Unknown file type";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div
@@ -83,7 +98,7 @@ export const FileUploader = ({
           <>
             <FileUp className="h-10 w-10 text-slate-400 mb-2" />
             <p className="font-medium text-slate-600 mb-1">
-              Drag and drop your transcript file
+              Drag and drop your document file
             </p>
             <p className="text-sm text-slate-500 mb-3">
               or click to browse files
@@ -111,7 +126,7 @@ export const FileUploader = ({
         <div className="p-3 bg-slate-100 rounded-md">
           <p className="text-xs text-slate-600">
             <span className="font-medium">File info: </span>
-            {file.type || "Unknown type"} • Last modified:{" "}
+            {getFileTypeDisplay(file)} • Last modified:{" "}
             {new Date(file.lastModified).toLocaleDateString()}
           </p>
         </div>
