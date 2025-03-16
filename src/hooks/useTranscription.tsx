@@ -12,6 +12,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   const [apiKey, setApiKey] = useState("");
   const [progress, setProgress] = useState(0);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [customTerms, setCustomTerms] = useState<string[]>([]);
   const { toast } = useToast();
 
   const handleFileSelected = (selectedFile: File) => {
@@ -64,11 +65,16 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       
       console.log(`Starting transcription for file: ${file.name} (${file.type})`);
       
+      if (customTerms.length > 0) {
+        console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
+      }
+      
       const response = await transcribeAudio(
         file, 
         apiKey, 
         options, 
-        isLargeFile ? setProgress : undefined
+        isLargeFile ? setProgress : undefined,
+        customTerms
       );
       
       console.log("Transcription response received:", response);
@@ -124,11 +130,13 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     apiKey,
     progress,
     isBatchProcessing,
+    customTerms,
     handleFileSelected,
     transcribeAudioFile,
     setOptions,
     setApiKey,
-    setError
+    setError,
+    setCustomTerms
   };
 };
 

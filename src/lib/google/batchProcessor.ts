@@ -1,3 +1,4 @@
+
 // Module for batch processing of large audio files
 import { formatGoogleResponse, combineTranscriptionResults } from './responseFormatter';
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
@@ -14,7 +15,8 @@ import {
 export const transcribeSingleFile = async (
   file: File, 
   apiKey: string,
-  options = DEFAULT_TRANSCRIPTION_OPTIONS
+  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  customTerms: string[] = []
 ) => {
   try {
     console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
@@ -59,6 +61,10 @@ export const transcribeSingleFile = async (
           minSpeakerCount: number;
           maxSpeakerCount: number;
         };
+        speechContexts?: {
+          phrases: string[];
+          boost?: number;
+        }[];
       };
       audio: {
         content: string;
@@ -83,6 +89,16 @@ export const transcribeSingleFile = async (
         minSpeakerCount: 2,
         maxSpeakerCount: 8
       };
+    }
+    
+    // Add speech contexts if custom terms are provided
+    if (customTerms && customTerms.length > 0) {
+      requestBody.config.speechContexts = [{
+        phrases: customTerms,
+        boost: 15.0 // Provide a significant boost for these custom terms
+      }];
+      
+      console.log(`Added ${customTerms.length} custom terms to speech context`);
     }
     
     // Remove sampleRateHertz for MP3 files as Google auto-detects it
@@ -143,7 +159,8 @@ export const transcribeBatchedAudio = async (
   file: File, 
   apiKey: string,
   options = DEFAULT_TRANSCRIPTION_OPTIONS,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  customTerms: string[] = []
 ) => {
   try {
     console.log('Processing large file in batches...');
@@ -157,7 +174,7 @@ export const transcribeBatchedAudio = async (
         // For MP3 files less than 50MB, try direct upload
         if (file.size < 50 * 1024 * 1024) {
           onProgress?.(10); // Show some initial progress
-          const result = await transcribeSingleFile(file, apiKey, options);
+          const result = await transcribeSingleFile(file, apiKey, options, customTerms);
           onProgress?.(100);
           return result;
         }
@@ -200,7 +217,7 @@ export const transcribeBatchedAudio = async (
       console.log(`Processing chunk ${i+1}/${wavBlobs.length}...`);
       
       // Transcribe this chunk
-      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options);
+      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
       results.push(chunkResult);
       
       // Small delay to avoid rate limiting

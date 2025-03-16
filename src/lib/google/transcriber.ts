@@ -12,7 +12,8 @@ export const transcribeAudio = async (
   file: File, 
   apiKey: string,
   options = DEFAULT_TRANSCRIPTION_OPTIONS,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  customTerms: string[] = []
 ) => {
   try {
     // Check if file is too large for synchronous processing
@@ -22,12 +23,16 @@ export const transcribeAudio = async (
     console.log(`Transcribing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) with Google Speech-to-Text`);
     console.log('Options:', options);
     
+    if (customTerms && customTerms.length > 0) {
+      console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
+    }
+    
     if (!isLargeFile) {
       // For smaller files, use the existing synchronous method
-      return await transcribeSingleFile(file, apiKey, options);
+      return await transcribeSingleFile(file, apiKey, options, customTerms);
     } else {
       // For large files, use batch processing
-      return await transcribeBatchedAudio(file, apiKey, options, onProgress);
+      return await transcribeBatchedAudio(file, apiKey, options, onProgress, customTerms);
     }
   } catch (error) {
     console.error('Google transcription error:', error);
