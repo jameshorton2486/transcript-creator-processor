@@ -1,74 +1,95 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { FileText, CheckCircle, Loader2 } from "lucide-react";
+import { FileUploader } from "./FileUploader";
 
 interface DocumentTerminologyExtractorProps {
   documentFile: File | null;
+  documentFiles: File[];
   onTermsExtracted: (terms: string[]) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  onFilesChange: (files: File[]) => void;
 }
 
 export const DocumentTerminologyExtractor = ({
   documentFile,
+  documentFiles,
   onTermsExtracted,
   isLoading,
-  setIsLoading
+  setIsLoading,
+  onFilesChange
 }: DocumentTerminologyExtractorProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [progress, setProgress] = useState<number>(0);
+  const [processedFiles, setProcessedFiles] = useState<number>(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (documentFile) {
-      processDocument(documentFile);
+    if (documentFiles.length > 0) {
+      processDocuments(documentFiles);
+    } else if (documentFile) {
+      processDocuments([documentFile]);
     }
-  }, [documentFile]);
+  }, [documentFiles, documentFile]);
 
-  const processDocument = async (file: File) => {
+  const processDocuments = async (files: File[]) => {
+    if (files.length === 0) return;
+    
     setIsLoading(true);
-    setProgress(10);
+    setProgress(0);
+    setProcessedFiles(0);
     
     try {
-      let text = "";
+      let allText = "";
       
-      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-        text = await extractTextFromPDF(file);
-      } else if (
-        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || 
-        file.name.endsWith(".docx") ||
-        file.type === "application/msword" ||
-        file.name.endsWith(".doc")
-      ) {
-        text = await extractTextFromWord(file);
-      } else {
-        throw new Error("Unsupported file format. Please upload a PDF or Word document.");
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setProcessedFiles(i);
+        
+        // Update progress based on current file and total files
+        const fileProgress = (i / files.length) * 100;
+        setProgress(fileProgress);
+        
+        let fileText = "";
+        
+        if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+          fileText = await extractTextFromPDF(file);
+        } else if (
+          file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || 
+          file.name.endsWith(".docx") ||
+          file.type === "application/msword" ||
+          file.name.endsWith(".doc")
+        ) {
+          fileText = await extractTextFromWord(file);
+        } else {
+          console.warn(`Unsupported file format: ${file.type} - ${file.name}`);
+          continue;
+        }
+        
+        allText += fileText + "\n\n";
       }
       
-      setProgress(70);
-      setExtractedText(text);
+      setExtractedText(allText);
       
       // Extract potential terms (words that might be important)
-      const terms = extractPotentialTermsFromText(text);
+      const terms = extractPotentialTermsFromText(allText);
       setProgress(100);
       
       if (terms.length > 0) {
         onTermsExtracted(terms);
         toast({
           title: "Terminology Extracted",
-          description: `Successfully extracted ${terms.length} terms from the document.`,
+          description: `Successfully extracted ${terms.length} terms from ${files.length} document${files.length > 1 ? 's' : ''}.`,
         });
       } else {
         toast({
           title: "No Terms Found",
-          description: "Could not find any significant terms in the document.",
+          description: "Could not find any significant terms in the documents.",
           variant: "destructive",
         });
       }
@@ -76,7 +97,7 @@ export const DocumentTerminologyExtractor = ({
       console.error("Document processing error:", error);
       toast({
         title: "Processing Error",
-        description: error instanceof Error ? error.message : "Failed to process document",
+        description: error instanceof Error ? error.message : "Failed to process documents",
         variant: "destructive",
       });
     } finally {
@@ -122,26 +143,67 @@ export const DocumentTerminologyExtractor = ({
     // Split into words
     const words = cleanedText.split(/\s+/).filter(word => word.length > 0);
     
-    // Filter out common words and short words (less than 4 characters)
-    const commonWords = new Set(['the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but', 'his', 'from', 'they', 'say', 'her', 'she', 'will', 'one', 'all', 'would', 'there', 'their', 'what', 'out', 'about', 'who', 'get', 'which', 'when', 'make', 'can', 'like', 'time', 'just', 'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 'some', 'could', 'them', 'see', 'other', 'than', 'then', 'now', 'look', 'only', 'come', 'its', 'over', 'think', 'also', 'back', 'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 'way', 'even', 'new', 'want', 'because', 'any', 'these', 'give', 'day', 'most', 'been']);
+    // Define a comprehensive list of common words to filter out
+    const commonWords = new Set([
+      // Common legal terms to exclude
+      'number', 'date', 'location', 'witness', 'videographer', 'interpreter', 
+      'attorney', 'info', 'present', 'insured', 'name', 'insurer', 'claim', 
+      'policy', 'loss', 'exhibits', 'description', 'jose', 'zambrano', 
+      'friday', 'depo', 'notes', 'page',
+      
+      // Common English words
+      'the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 
+      'but', 'his', 'from', 'they', 'say', 'her', 'she', 'will', 'one', 
+      'all', 'would', 'there', 'their', 'what', 'out', 'about', 'who', 
+      'get', 'which', 'when', 'make', 'can', 'like', 'time', 'just', 
+      'him', 'know', 'take', 'people', 'into', 'year', 'your', 'good', 
+      'some', 'could', 'them', 'see', 'other', 'than', 'then', 'now', 
+      'look', 'only', 'come', 'its', 'over', 'think', 'also', 'back', 
+      'after', 'use', 'two', 'how', 'our', 'work', 'first', 'well', 
+      'way', 'even', 'new', 'want', 'because', 'any', 'these', 'give', 
+      'day', 'most', 'been', 'much', 'does', 'those', 'off', 'again',
+      'down', 'should', 'still', 'find', 'through', 'same', 'said'
+    ]);
     
-    const filteredWords = words.filter(word => 
-      word.length >= 4 && 
-      !commonWords.has(word) && 
-      isNaN(Number(word))
-    );
+    // First pass: identify proper nouns (capitalized words not at the beginning of sentences)
+    const properNouns = new Set<string>();
+    const wordRegex = /\b([A-Z][a-z]+)\b(?!\s*[\.!\?])/g;
+    let match;
     
-    // Count frequency
+    while ((match = wordRegex.exec(text)) !== null) {
+      if (!commonWords.has(match[1].toLowerCase())) {
+        properNouns.add(match[1]);
+      }
+    }
+    
+    // Second pass: find important words by frequency
     const wordFrequency: {[key: string]: number} = {};
-    filteredWords.forEach(word => {
-      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+    words.forEach(word => {
+      if (!commonWords.has(word) && word.length >= 3 && isNaN(Number(word))) {
+        wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+      }
     });
     
     // Get unique words sorted by frequency
-    const uniqueWords = Object.keys(wordFrequency).sort((a, b) => wordFrequency[b] - wordFrequency[a]);
+    const frequentWords = Object.keys(wordFrequency)
+      .filter(word => wordFrequency[word] >= 2) // Only words that appear at least twice
+      .sort((a, b) => wordFrequency[b] - wordFrequency[a]);
     
-    // Take the top 50 words or all if less than 50
-    return uniqueWords.slice(0, 50);
+    // Combine proper nouns and frequent words
+    const combinedTerms = [...properNouns, ...frequentWords];
+    
+    // Remove duplicates (case-insensitive)
+    const lowerCaseMap = new Map<string, string>();
+    combinedTerms.forEach(term => {
+      const lowerTerm = term.toLowerCase();
+      // Keep the capitalized version if it exists
+      if (!lowerCaseMap.has(lowerTerm) || term[0] === term[0].toUpperCase()) {
+        lowerCaseMap.set(lowerTerm, term);
+      }
+    });
+    
+    // Return unique terms (up to 50)
+    return Array.from(lowerCaseMap.values()).slice(0, 75);
   };
 
   if (isLoading) {
@@ -149,31 +211,31 @@ export const DocumentTerminologyExtractor = ({
       <div className="space-y-4 py-4">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <p className="text-sm">Processing document...</p>
+          <p className="text-sm">
+            Processing {documentFiles.length > 0 ? `document ${processedFiles + 1} of ${documentFiles.length}` : 'document'}...
+          </p>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
     );
   }
 
-  if (!documentFile) {
-    return (
-      <div className="text-sm text-slate-500 flex items-center gap-2 py-2">
-        <FileText className="h-4 w-4" />
-        <p>Upload a document to extract terminology</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-green-600">
-        <CheckCircle className="h-4 w-4" />
-        <p>Document processed successfully</p>
-      </div>
+      <FileUploader 
+        files={documentFiles}
+        onFileChange={onFilesChange}
+        acceptedFileTypes=".pdf,.docx,.doc"
+        multiple={true}
+      />
       
       {extractedText && (
         <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            <p>Documents processed successfully</p>
+          </div>
+          
           <Label htmlFor="extracted-text">Extracted Text Preview</Label>
           <Textarea
             id="extracted-text"
