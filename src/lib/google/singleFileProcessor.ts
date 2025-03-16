@@ -144,3 +144,6 @@ export const transcribeSingleFile = async (
     throw error;
   }
 };
+
+// Alias for backward compatibility
+export const processSingleFile = transcribeSingleFile;

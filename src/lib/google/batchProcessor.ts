@@ -89,3 +89,6 @@ export const transcribeBatchedAudio = async (
     throw error;
   }
 };
+
+// Alias for backward compatibility
+export const processBatchFile = transcribeBatchedAudio;

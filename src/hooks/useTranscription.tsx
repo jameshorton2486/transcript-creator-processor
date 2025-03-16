@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
@@ -22,7 +23,9 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   };
 
   const handleDocumentFilesChange = (files: File[]) => {
-    setDocumentFiles(files);
+    if (files && files.length > 0) {
+      setDocumentFiles(files);
+    }
   };
 
   const transcribeAudioFile = async () => {
