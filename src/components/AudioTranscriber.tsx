@@ -11,7 +11,7 @@ import { TranscribeButton } from "@/components/audio/TranscribeButton";
 import { useTranscription } from "@/hooks/useTranscription";
 
 interface AudioTranscriberProps {
-  onTranscriptCreated: (transcript: string, jsonData: any) => void;
+  onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
 }
 
 export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps) => {
@@ -28,7 +28,10 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setOptions,
     setApiKey,
     setError
-  } = useTranscription(onTranscriptCreated);
+  } = useTranscription((transcript, jsonData) => {
+    // Pass the file along with the transcript and JSON data
+    onTranscriptCreated(transcript, jsonData, file);
+  });
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
