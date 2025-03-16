@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
-import { transcribeAudio, extractTranscriptText } from "@/lib/googleTranscribeService";
+import { transcribeAudio, extractTranscriptText } from "@/lib/google";
 import { FileSelector } from "@/components/audio/FileSelector";
 import { TranscriptionOptionsSelector } from "@/components/audio/TranscriptionOptions";
 import { ApiKeyInput } from "@/components/audio/ApiKeyInput";

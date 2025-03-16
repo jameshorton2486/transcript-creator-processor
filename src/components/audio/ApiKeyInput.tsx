@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { testApiKey } from "@/lib/googleTranscribeService";
+import { testApiKey } from "@/lib/google";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ApiKeyInputProps {
