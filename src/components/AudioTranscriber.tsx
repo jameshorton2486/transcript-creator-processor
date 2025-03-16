@@ -119,7 +119,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
                 </p>
                 
                 <FileUploader
-                  file={documentFile}
+                  files={documentFile ? [documentFile] : []}
                   onFileChange={handleDocumentUpload}
                   acceptedFileTypes=".pdf,.docx,.doc"
                 />
