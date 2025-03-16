@@ -24,7 +24,12 @@ describe('transcribeAudio', () => {
   });
   
   it('should process a small file with singleFileProcessor', async () => {
-    const mockResponse = { results: [{ alternatives: [{ transcript: 'Test transcript' }] }] };
+    const mockResponse = { 
+      results: {
+        transcripts: [{ transcript: 'Test transcript', confidence: 0.9 }],
+        channels: [{ alternatives: [{ transcript: 'Test transcript', confidence: 0.9 }] }]
+      }
+    };
     vi.mocked(singleFileProcessor.transcribeSingleFile).mockResolvedValue(mockResponse);
     
     // Create a small file (less than 10MB)
@@ -44,7 +49,12 @@ describe('transcribeAudio', () => {
   });
   
   it('should process a large file with batchProcessor', async () => {
-    const mockResponse = { results: [{ alternatives: [{ transcript: 'Test batch transcript' }] }] };
+    const mockResponse = { 
+      results: {
+        transcripts: [{ transcript: 'Test batch transcript', confidence: 0.9 }],
+        channels: [{ alternatives: [{ transcript: 'Test batch transcript', confidence: 0.9 }] }]
+      }
+    };
     vi.mocked(batchProcessor.transcribeBatchedAudio).mockResolvedValue(mockResponse);
     
     // Create a large file (more than 10MB)

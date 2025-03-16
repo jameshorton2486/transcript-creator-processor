@@ -26,14 +26,15 @@ describe('processBatchFile', () => {
       new File([chunk2], 'chunk2.wav', { type: 'audio/wav' })
     ]);
     
-    // Mock singleFileProcessor to return transcription results
+    // Mock singleFileProcessor to return transcription results with the correct format
     vi.mocked(singleFileProcessor.transcribeSingleFile).mockImplementation(
       async (file) => {
         const chunkNumber = file.name.includes('1') ? '1' : '2';
         return {
-          results: [{
-            alternatives: [{ transcript: `Transcript for chunk ${chunkNumber}` }]
-          }]
+          results: {
+            transcripts: [{ transcript: `Transcript for chunk ${chunkNumber}`, confidence: 0.95 }],
+            channels: [{ alternatives: [{ transcript: `Transcript for chunk ${chunkNumber}`, confidence: 0.95 }] }]
+          }
         };
       }
     );
@@ -52,7 +53,8 @@ describe('processBatchFile', () => {
     expect(mockProgressCallback).toHaveBeenCalled();
     
     // Verify the result contains transcripts from both chunks
-    expect(result.results.length).toBeGreaterThan(0);
+    expect(result.results.transcripts.length).toBeGreaterThan(0);
+    expect(result.results.channels.length).toBeGreaterThan(0);
   });
   
   it('should pass custom terms to each chunk processor', async () => {
@@ -67,7 +69,10 @@ describe('processBatchFile', () => {
     // Make the second chunk fail
     vi.mocked(singleFileProcessor.transcribeSingleFile)
       .mockResolvedValueOnce({
-        results: [{ alternatives: [{ transcript: 'Transcript for chunk 1' }] }]
+        results: {
+          transcripts: [{ transcript: 'Transcript for chunk 1', confidence: 0.9 }],
+          channels: [{ alternatives: [{ transcript: 'Transcript for chunk 1', confidence: 0.9 }] }]
+        }
       })
       .mockRejectedValueOnce(new Error('Failed to process chunk'));
     
@@ -77,7 +82,7 @@ describe('processBatchFile', () => {
     const result = await transcribeBatchedAudio(mockFile, mockApiKey, DEFAULT_TRANSCRIPTION_OPTIONS, mockProgressCallback);
     
     // Verify the error was logged
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to process chunk'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Batched transcription error'));
   });
   
   // Test the alias
@@ -87,7 +92,8 @@ describe('processBatchFile', () => {
     // Verify audioSplitter was called
     expect(audioSplitter.splitAudioIntoChunks).toHaveBeenCalledWith(mockFile);
     
-    // Verify the result contains transcripts from both chunks
-    expect(result.results.length).toBeGreaterThan(0);
+    // Verify the result contains transcripts
+    expect(result.results.transcripts.length).toBeGreaterThan(0);
+    expect(result.results.channels.length).toBeGreaterThan(0);
   });
 });

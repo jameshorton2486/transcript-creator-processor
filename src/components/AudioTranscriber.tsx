@@ -58,9 +58,11 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setCustomTerms(customTerms.filter(term => term !== termToRemove));
   };
 
-  const handleDocumentUpload = async (file: File | null) => {
-    if (!file) return;
+  const handleDocumentUpload = (files: File[]) => {
+    if (!files.length) return;
     
+    // Just use the first file for now for backward compatibility
+    const file = files[0];
     setDocumentFile(file);
     setIsExtractingTerms(true);
     
