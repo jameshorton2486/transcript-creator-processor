@@ -11,18 +11,25 @@ declare global {
   }
 }
 
-// Initialize libraries
+// Initialize document processing libraries
 export const initDocumentProcessors = () => {
-  // Configure PDF.js
-  const pdfjsVersion = pdfjs.version;
-  console.log(`PDF.js version ${pdfjsVersion} initialized`);
-  
-  // Set the PDF.js worker source
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf-worker.js';
-  
-  // Make libraries available globally
-  window.pdfjsLib = pdfjs;
-  window.mammoth = mammoth;
-  
-  console.log('Document processing libraries initialized');
+  try {
+    // Configure PDF.js
+    const pdfjsVersion = pdfjs.version;
+    console.log(`PDF.js version ${pdfjsVersion} initialized`);
+    
+    // Set the PDF.js worker source
+    const workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    
+    // Make libraries available globally
+    window.pdfjsLib = pdfjs;
+    window.mammoth = mammoth;
+    
+    console.log('Document processing libraries initialized');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize document processing libraries:', error);
+    return false;
+  }
 };
