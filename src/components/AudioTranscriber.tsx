@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
-import { transcribeAudio, extractTranscriptText } from "@/lib/google";
+import { transcribeAudio, extractTranscriptText, testApiKey } from "@/lib/google";
 import { FileSelector } from "@/components/audio/FileSelector";
 import { TranscriptionOptionsSelector } from "@/components/audio/TranscriptionOptions";
 import { ApiKeyInput } from "@/components/audio/ApiKeyInput";
@@ -58,6 +58,12 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setProgress(0);
     
     try {
+      // First, verify the API key is valid
+      const isKeyValid = await testApiKey(apiKey);
+      if (!isKeyValid) {
+        throw new Error("API key is invalid or unauthorized");
+      }
+      
       const isLargeFile = file.size > 10 * 1024 * 1024;
       
       if (isLargeFile) {
@@ -68,12 +74,16 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         setIsBatchProcessing(true);
       }
       
+      console.log(`Starting transcription for file: ${file.name} (${file.type})`);
+      
       const response = await transcribeAudio(
         file, 
         apiKey, 
         options, 
         isLargeFile ? setProgress : undefined
       );
+      
+      console.log("Transcription response received:", response);
       
       const transcriptText = extractTranscriptText(response);
       
@@ -99,8 +109,10 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         errorMessage += "API quota exceeded. Please try again later or use a different API key.";
       } else if (error.message?.includes("too large")) {
         errorMessage += "This file is too large for direct processing. The application will try to process it in batches.";
+      } else if (error.message?.includes("unsupported file type")) {
+        errorMessage += "The file format is not supported. Please use MP3, WAV, FLAC, or OGG format.";
       } else {
-        errorMessage += "Please check your API key and try again.";
+        errorMessage += `Error details: ${error.message || "Unknown error"}`;
       }
       
       setError(errorMessage);

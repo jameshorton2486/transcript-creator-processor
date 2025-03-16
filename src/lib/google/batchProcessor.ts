@@ -13,6 +13,8 @@ export const transcribeSingleFile = async (
   options = DEFAULT_TRANSCRIPTION_OPTIONS
 ) => {
   try {
+    console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+    
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     
@@ -28,10 +30,22 @@ export const transcribeSingleFile = async (
       language: 'en-US'
     };
     
+    // Detect audio encoding based on file type
+    let encoding = "LINEAR16"; // Default for WAV
+    if (file.type.includes("mp3") || file.name.toLowerCase().endsWith(".mp3")) {
+      encoding = "MP3";
+    } else if (file.type.includes("flac") || file.name.toLowerCase().endsWith(".flac")) {
+      encoding = "FLAC";
+    } else if (file.type.includes("ogg") || file.name.toLowerCase().endsWith(".ogg")) {
+      encoding = "OGG_OPUS";
+    }
+    
+    console.log(`Using encoding: ${encoding} for file type: ${file.type}`);
+    
     // Prepare request body for Google Speech-to-Text API
     const requestBody = {
       config: {
-        encoding: "LINEAR16",
+        encoding: encoding,
         sampleRateHertz: 16000,
         languageCode: transcriptionOptions.language,
         enableAutomaticPunctuation: transcriptionOptions.punctuate,
@@ -43,6 +57,13 @@ export const transcribeSingleFile = async (
         content: base64Audio
       }
     };
+    
+    // Remove sampleRateHertz for MP3 files as Google auto-detects it
+    if (encoding === "MP3" || encoding === "OGG_OPUS") {
+      delete requestBody.config.sampleRateHertz;
+    }
+    
+    console.log('Sending request to Google Speech API...');
     
     // Make request to Google Speech-to-Text API
     const response = await fetch(
@@ -100,6 +121,25 @@ export const transcribeBatchedAudio = async (
   try {
     console.log('Processing large file in batches...');
     onProgress?.(0); // Initialize progress
+    
+    // For MP3 files, we need a different approach since we can't easily split them
+    // We'll convert to WAV for processing, which may be less efficient but more reliable
+    if (file.type.includes("mp3") || file.name.toLowerCase().endsWith(".mp3")) {
+      console.log("MP3 file detected, processing as single file with direct upload");
+      try {
+        // For MP3 files less than 50MB, try direct upload
+        if (file.size < 50 * 1024 * 1024) {
+          onProgress?.(10); // Show some initial progress
+          const result = await transcribeSingleFile(file, apiKey, options);
+          onProgress?.(100);
+          return result;
+        }
+        // For larger MP3 files, we need to convert to WAV first
+      } catch (error) {
+        console.error("Direct MP3 upload failed, falling back to conversion:", error);
+        // Continue with the normal flow
+      }
+    }
     
     // Convert file to AudioBuffer
     const audioBuffer = await fileToAudioBuffer(file);
