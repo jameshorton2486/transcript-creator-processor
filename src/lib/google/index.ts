@@ -4,3 +4,5 @@ export * from './apiTester';
 export * from './transcriber';
 export * from './responseFormatter';
 export * from './batchProcessor';
+export * from './singleFileProcessor';
+
