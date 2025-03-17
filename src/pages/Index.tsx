@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { TranscriptViewer } from "@/components/TranscriptViewer";
@@ -69,7 +68,6 @@ const Index = () => {
     });
   };
 
-  // Extract entities from the processed transcript for the entities tab
   const mockEntities = {
     "People": ["Smith", "Jones"],
     "Organizations": ["Court"],
@@ -77,7 +75,6 @@ const Index = () => {
     "Legal Terms": ["Contract", "Section 3.4", "Evidence", "Case No. 2023-CV-12345"]
   };
 
-  // Determine which transcript to display as the current active one
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
 
   return (
@@ -93,8 +90,8 @@ const Index = () => {
         </Tabs>
         
         {activeTab === "transcribe" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5 space-y-6">
               <AudioTranscriber 
                 onTranscriptCreated={handleTranscriptCreated} 
               />
@@ -142,11 +139,11 @@ const Index = () => {
               )}
             </div>
             
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-7 h-full">
               {(originalTranscript || processedTranscript || aiReviewedTranscript) ? (
-                <Card>
-                  <CardContent className="p-6">
-                    <Tabs defaultValue={aiReviewedTranscript ? "ai-reviewed" : processedTranscript ? "processed" : "original"}>
+                <Card className="h-full">
+                  <CardContent className="p-6 h-full">
+                    <Tabs defaultValue={aiReviewedTranscript ? "ai-reviewed" : processedTranscript ? "processed" : "original"} className="h-full flex flex-col">
                       <TabsList className="mb-4">
                         {originalTranscript && (
                           <TabsTrigger value="original">Original Transcript</TabsTrigger>
@@ -165,52 +162,54 @@ const Index = () => {
                         )}
                       </TabsList>
                       
-                      {originalTranscript && (
-                        <TabsContent value="original">
-                          <TranscriptViewer 
-                            text={originalTranscript} 
-                            fileName="original_transcript" 
-                          />
-                        </TabsContent>
-                      )}
-                      
-                      {processedTranscript && (
-                        <TabsContent value="processed">
-                          <TranscriptViewer 
-                            text={processedTranscript} 
-                            fileName="processed_transcript" 
-                          />
-                        </TabsContent>
-                      )}
-                      
-                      {aiReviewedTranscript && (
-                        <TabsContent value="ai-reviewed">
-                          <TranscriptViewer 
-                            text={aiReviewedTranscript} 
-                            fileName="ai_reviewed_transcript" 
-                          />
-                        </TabsContent>
-                      )}
-                      
-                      {jsonData && (
-                        <TabsContent value="json">
-                          <TranscriptViewer 
-                            text={JSON.stringify(jsonData, null, 2)} 
-                            fileName="transcript_data.json" 
-                          />
-                        </TabsContent>
-                      )}
-                      
-                      {currentTranscript && (
-                        <TabsContent value="entities">
-                          <EntityDisplay entities={mockEntities} />
-                        </TabsContent>
-                      )}
+                      <div className="flex-1">
+                        {originalTranscript && (
+                          <TabsContent value="original" className="h-full">
+                            <TranscriptViewer 
+                              text={originalTranscript} 
+                              fileName="original_transcript" 
+                            />
+                          </TabsContent>
+                        )}
+                        
+                        {processedTranscript && (
+                          <TabsContent value="processed" className="h-full">
+                            <TranscriptViewer 
+                              text={processedTranscript} 
+                              fileName="processed_transcript" 
+                            />
+                          </TabsContent>
+                        )}
+                        
+                        {aiReviewedTranscript && (
+                          <TabsContent value="ai-reviewed" className="h-full">
+                            <TranscriptViewer 
+                              text={aiReviewedTranscript} 
+                              fileName="ai_reviewed_transcript" 
+                            />
+                          </TabsContent>
+                        )}
+                        
+                        {jsonData && (
+                          <TabsContent value="json" className="h-full">
+                            <TranscriptViewer 
+                              text={JSON.stringify(jsonData, null, 2)} 
+                              fileName="transcript_data.json" 
+                            />
+                          </TabsContent>
+                        )}
+                        
+                        {currentTranscript && (
+                          <TabsContent value="entities" className="h-full">
+                            <EntityDisplay entities={mockEntities} />
+                          </TabsContent>
+                        )}
+                      </div>
                     </Tabs>
                   </CardContent>
                 </Card>
               ) : (
-                <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center min-h-[500px] text-center text-gray-500">
+                <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center min-h-[600px] text-center text-gray-500">
                   <h3 className="text-lg font-medium">No transcript yet</h3>
                   <p className="mt-2">Upload an audio file and click "Transcribe Audio" to begin.</p>
                 </div>

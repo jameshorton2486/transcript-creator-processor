@@ -82,7 +82,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
   };
 
   return (
-    <div className="border rounded-md">
+    <div className="border rounded-md h-full flex flex-col">
       <div className="flex justify-between items-center p-3 border-b bg-slate-50">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-slate-500" />
@@ -109,7 +109,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
           </Button>
         </div>
       </div>
-      <ScrollArea className="h-[500px] p-4">
+      <ScrollArea className="flex-1 p-4 min-h-[600px]">
         <div 
           className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: formatTranscript(text) }}
