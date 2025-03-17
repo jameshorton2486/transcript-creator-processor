@@ -90,6 +90,14 @@ export const transcribeSingleFile = async (
     };
     
     console.log('Sending request to Google Speech API...');
+    console.log('Request config:', JSON.stringify({
+      encoding: config.encoding,
+      sampleRateHertz: config.sampleRateHertz,
+      languageCode: config.languageCode,
+      useEnhanced: config.useEnhanced,
+      enableSpeakerDiarization: !!config.diarizationConfig?.enableSpeakerDiarization,
+      hasCustomTerms: !!config.speechContexts && config.speechContexts.length > 0
+    }));
     
     // Make request to Google Speech-to-Text API
     const response = await fetch(
@@ -110,10 +118,19 @@ export const transcribeSingleFile = async (
     }
     
     const data = await response.json();
-    console.log('Google transcription completed successfully');
+    console.log('Google transcription raw response received:', data);
+    
+    // Validate API response
+    if (!data || !data.results || data.results.length === 0) {
+      console.error('Empty or invalid response from Google API:', data);
+      throw new Error('No transcription results returned from Google API. The audio file may not contain recognizable speech or the format may be unsupported.');
+    }
     
     // Format Google's response to our app's expected format
-    return formatGoogleResponse(data);
+    const formattedResponse = formatGoogleResponse(data);
+    console.log('Formatted response:', formattedResponse);
+    
+    return formattedResponse;
   } catch (error) {
     console.error('Transcription error:', error);
     throw error;

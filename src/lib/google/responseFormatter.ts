@@ -1,5 +1,4 @@
-
-// Module for formatting Google Speech API responses
+// Module for formatting Google Speech-to-Text responses
 
 /**
  * Format the Google Speech-to-Text response to match our app's expected format
@@ -83,21 +82,28 @@ export const formatGoogleResponse = (googleResponse: any) => {
 
 /**
  * Extract plain text transcript from Google response
+ * Now with better error handling and response format detection
  */
 export const extractTranscriptText = (response: any): string => {
   try {
-    // First attempt: standard format expected by our app
-    if (response?.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
-      return response.results.channels[0].alternatives[0].transcript;
+    if (!response) {
+      console.warn('Empty response received from the API');
+      return "No transcript available";
     }
     
-    // Second attempt: direct from Google API format
-    if (response?.results?.transcripts?.[0]?.transcript) {
-      return response.results.transcripts[0].transcript;
-    }
+    // Log the response structure for debugging
+    console.log('Extracting transcript from response structure:', 
+      JSON.stringify({
+        hasResults: !!response.results,
+        resultsLength: response.results?.length,
+        hasTranscripts: !!response.results?.transcripts,
+        hasChannels: !!response.results?.channels,
+        responseType: typeof response
+      })
+    );
     
-    // Third attempt: raw Google API response format
-    if (response?.results && Array.isArray(response.results) && response.results.length > 0) {
+    // First attempt: direct Google API response format (most common)
+    if (response.results && Array.isArray(response.results) && response.results.length > 0) {
       let fullText = '';
       response.results.forEach((result: any) => {
         if (result.alternatives && result.alternatives.length > 0) {
@@ -109,11 +115,27 @@ export const extractTranscriptText = (response: any): string => {
       }
     }
     
+    // Second attempt: standard format expected by our app
+    if (response.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
+      return response.results.channels[0].alternatives[0].transcript;
+    }
+    
+    // Third attempt: our app's transcript format
+    if (response.results?.transcripts?.[0]?.transcript) {
+      return response.results.transcripts[0].transcript;
+    }
+    
+    // Additional check for another potential format
+    if (typeof response === 'string' && response.length > 0) {
+      return response;
+    }
+    
     // If we've reached here, no transcript is available
     console.warn('No valid transcript format found in response:', response);
     return "No transcript available";
   } catch (error) {
-    console.error('Error extracting transcript text:', error, 'From response:', response);
+    console.error('Error extracting transcript text:', error);
+    console.error('Response that caused error:', JSON.stringify(response, null, 2));
     return "Error extracting transcript";
   }
 };
@@ -180,8 +202,9 @@ export const combineTranscriptionResults = (results: any[]): any => {
 
 /**
  * Helper function to convert ArrayBuffer to base64
+ * But rename it to avoid conflict with the same function in audio/index.ts
  */
-export const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+export const responseFormatterBase64 = (buffer: ArrayBuffer): string => {
   let binary = '';
   const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;
