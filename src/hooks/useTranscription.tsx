@@ -99,10 +99,19 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       
       console.log("Transcription response received:", response);
       
+      // Enhanced validation of the transcript
       const transcriptText = extractTranscriptText(response);
       
       if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
         console.error("Failed to extract transcript from response:", response);
+        
+        // Check for empty results which might indicate audio decoding issues
+        if (!response.results || 
+            (response.results.channels?.[0]?.alternatives?.[0]?.transcript === "No transcript available" && 
+             response.results.transcripts?.[0]?.transcript === "No transcript available")) {
+          throw new Error("Unable to decode audio data. Try a different audio format or use the direct upload option.");
+        }
+        
         throw new Error("Failed to extract transcript from the API response.");
       }
       
@@ -149,7 +158,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       } else if (error.message?.includes("sample_rate_hertz") || error.message?.includes("sample rate")) {
         errorMessage += "Sample rate mismatch detected. The system will attempt to correct this automatically.";
       } else if (error.message?.includes("Unable to decode") || error.message?.includes("decode audio")) {
-        errorMessage += "Your browser couldn't decode this audio format. The system will try direct upload.";
+        errorMessage += "Your browser couldn't decode this audio format. Try uploading a different format like MP3.";
       } else if (error.message?.includes("permission") || error.message?.includes("permission_denied")) {
         errorMessage += "Google API permission denied. Ensure your API key has access to Speech-to-Text.";
       } else if (error.message?.includes("insufficient") || error.message?.includes("billing")) {

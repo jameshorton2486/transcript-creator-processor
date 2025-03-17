@@ -86,16 +86,34 @@ export const formatGoogleResponse = (googleResponse: any) => {
  */
 export const extractTranscriptText = (response: any): string => {
   try {
-    if (!response || !response.results || !response.results.channels || 
-        response.results.channels.length === 0 || 
-        !response.results.channels[0].alternatives || 
-        response.results.channels[0].alternatives.length === 0) {
-      return "No transcript available";
+    // First attempt: standard format expected by our app
+    if (response?.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
+      return response.results.channels[0].alternatives[0].transcript;
     }
     
-    return response.results.channels[0].alternatives[0].transcript || "No transcript available";
+    // Second attempt: direct from Google API format
+    if (response?.results?.transcripts?.[0]?.transcript) {
+      return response.results.transcripts[0].transcript;
+    }
+    
+    // Third attempt: raw Google API response format
+    if (response?.results && Array.isArray(response.results) && response.results.length > 0) {
+      let fullText = '';
+      response.results.forEach((result: any) => {
+        if (result.alternatives && result.alternatives.length > 0) {
+          fullText += result.alternatives[0].transcript + ' ';
+        }
+      });
+      if (fullText.trim()) {
+        return fullText.trim();
+      }
+    }
+    
+    // If we've reached here, no transcript is available
+    console.warn('No valid transcript format found in response:', response);
+    return "No transcript available";
   } catch (error) {
-    console.error('Error extracting transcript text:', error);
+    console.error('Error extracting transcript text:', error, 'From response:', response);
     return "Error extracting transcript";
   }
 };
@@ -142,7 +160,7 @@ export const combineTranscriptionResults = (results: any[]): any => {
     results: {
       transcripts: [
         {
-          transcript: combinedTranscript,
+          transcript: combinedTranscript || "No transcript available",
           confidence: avgConfidence
         }
       ],
@@ -150,7 +168,7 @@ export const combineTranscriptionResults = (results: any[]): any => {
         {
           alternatives: [
             {
-              transcript: combinedTranscript,
+              transcript: combinedTranscript || "No transcript available",
               confidence: avgConfidence
             }
           ]

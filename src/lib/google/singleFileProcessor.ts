@@ -46,17 +46,36 @@ export const transcribeSingleFile = async (
     } else {
       // Standard flow with preprocessing and sample rate detection
       console.log("Starting audio preprocessing...");
-      const preprocessedAudio = await preprocessAudioFile(file);
-      console.log("Audio preprocessing complete");
+      try {
+        const preprocessedAudio = await preprocessAudioFile(file);
+        console.log("Audio preprocessing complete");
 
-      // Detect actual sample rate from the audio file
-      console.log("Detecting audio sample rate...");
-      const audioContext = getAudioContext();
-      const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
-      actualSampleRate = audioBuffer.sampleRate;
-      console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
-      
-      base64Audio = arrayBufferToBase64(preprocessedAudio);
+        // Detect actual sample rate from the audio file
+        console.log("Detecting audio sample rate...");
+        const audioContext = getAudioContext();
+        
+        try {
+          const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
+          actualSampleRate = audioBuffer.sampleRate;
+          console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
+          
+          base64Audio = arrayBufferToBase64(preprocessedAudio);
+        } catch (decodeError) {
+          console.error("Browser failed to decode audio, falling back to direct upload:", decodeError);
+          // If browser decoding fails, fall back to direct upload
+          const rawBuffer = await file.arrayBuffer();
+          base64Audio = arrayBufferToBase64(rawBuffer);
+          actualSampleRate = getStandardSampleRate(encoding);
+          console.log(`Using standard sample rate: ${actualSampleRate} Hz after decode error`);
+        }
+      } catch (preprocessError) {
+        console.error("Audio preprocessing failed, using direct upload:", preprocessError);
+        // If preprocessing fails, fall back to direct upload
+        const rawBuffer = await file.arrayBuffer();
+        base64Audio = arrayBufferToBase64(rawBuffer);
+        actualSampleRate = getStandardSampleRate(encoding);
+        console.log(`Using standard sample rate: ${actualSampleRate} Hz after preprocessing error`);
+      }
     }
     
     // Build configuration for the API request
