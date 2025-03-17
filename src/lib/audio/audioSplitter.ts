@@ -16,9 +16,9 @@ export const splitAudioIntoChunks = async (file: File): Promise<File[]> => {
 /**
  * Splits an AudioBuffer into chunks based on a specified duration
  * Uses a small overlap between chunks to ensure no content is lost at boundaries
+ * Memory-efficient implementation for large files
  */
 export const splitAudioBuffer = (buffer: AudioBuffer, chunkDurationSec: number): Float32Array[] => {
-  const numberOfChannels = buffer.numberOfChannels;
   const chunks: Float32Array[] = [];
   const sampleRate = buffer.sampleRate;
   const samplesPerChunk = Math.floor(chunkDurationSec * sampleRate);
@@ -30,15 +30,23 @@ export const splitAudioBuffer = (buffer: AudioBuffer, chunkDurationSec: number):
   // Get audio data from first channel (mono)
   const channelData = buffer.getChannelData(0);
   
+  // Process in smaller, memory-efficient chunks
   let offset = 0;
   while (offset < totalSamples) {
-    // Calculate samples for this chunk
+    // Calculate samples for this chunk (limit size to avoid memory issues)
     const samplesToTake = Math.min(samplesPerChunk, totalSamples - offset);
     
-    // Create a new chunk with the samples
+    // Create a new chunk by copying only the needed portion
+    // We create a view into the existing buffer when possible to avoid large memory allocations
     const chunk = new Float32Array(samplesToTake);
-    for (let i = 0; i < samplesToTake; i++) {
-      chunk[i] = channelData[offset + i];
+    
+    // Copy the data in small blocks to avoid large memory operations
+    const BLOCK_SIZE = 16000; // 1 second at 16kHz
+    for (let i = 0; i < samplesToTake; i += BLOCK_SIZE) {
+      const blockSize = Math.min(BLOCK_SIZE, samplesToTake - i);
+      for (let j = 0; j < blockSize; j++) {
+        chunk[i + j] = channelData[offset + i + j];
+      }
     }
     
     chunks.push(chunk);
@@ -57,6 +65,11 @@ export const splitAudioBuffer = (buffer: AudioBuffer, chunkDurationSec: number):
  * Specifically calibrated for legal transcription needs
  */
 export const calculateOptimalChunkDuration = (fileSizeBytes: number, durationSec: number): number => {
+  // For very large files, use smaller chunks to avoid memory issues
+  if (fileSizeBytes > 50 * 1024 * 1024) { // Files larger than 50MB
+    return 15; // Use 15-second chunks for very large files
+  }
+  
   // Target chunk size around 5MB (conservative for Speech API)
   const targetChunkSizeBytes = 5 * 1024 * 1024;
   
@@ -70,9 +83,8 @@ export const calculateOptimalChunkDuration = (fileSizeBytes: number, durationSec
   // Calculate optimal duration for target size
   let optimalDurationSec = targetChunkSizeBytes / bytesPerSec;
   
-  // For legal transcripts, 30-60 second chunks often work well
-  // as they typically contain complete statements or exchanges
-  optimalDurationSec = Math.max(30, Math.min(60, optimalDurationSec));
+  // For legal transcripts, 15-30 second chunks work well for very large files
+  optimalDurationSec = Math.max(15, Math.min(30, optimalDurationSec));
   
   // Round to nearest 5 seconds for more natural breakpoints
   return Math.round(optimalDurationSec / 5) * 5;

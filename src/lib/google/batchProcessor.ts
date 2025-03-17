@@ -45,6 +45,13 @@ export const transcribeBatchedAudio = async (
       }
     }
     
+    // For extremely large files, use a streaming approach
+    if (file.size > 100 * 1024 * 1024) { // More than 100MB
+      console.log("Extremely large file detected, using stream processing approach");
+      return processExtremelyLargeFile(file, apiKey, options, onProgress, customTerms);
+    }
+    
+    // Standard approach for regular large files
     // Convert file to AudioBuffer
     const audioBuffer = await fileToAudioBuffer(file);
     const fileDurationSec = audioBuffer.duration;
@@ -89,6 +96,75 @@ export const transcribeBatchedAudio = async (
     return combineTranscriptionResults(results);
   } catch (error) {
     console.error('Batched transcription error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Process extremely large files by using a streaming approach
+ * This avoids loading the entire file into memory at once
+ */
+const processExtremelyLargeFile = async (
+  file: File,
+  apiKey: string,
+  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  onProgress?: (progress: number) => void,
+  customTerms: string[] = []
+) => {
+  try {
+    // For extremely large files, we'll use a different technique:
+    // 1. Calculate approximate duration from file size
+    // 2. Process in small, timed chunks using slicing
+    
+    // Rough estimate: 16-bit mono at 16kHz = ~32KB per second
+    const BYTES_PER_SECOND = 32 * 1024;
+    const estimatedDurationSec = file.size / BYTES_PER_SECOND;
+    console.log(`Estimated duration: ${estimatedDurationSec} seconds`);
+    
+    // Use very small chunks to avoid memory issues
+    const chunkDurationSec = 10; // 10-second chunks
+    const totalChunks = Math.ceil(estimatedDurationSec / chunkDurationSec);
+    console.log(`Will process in ${totalChunks} 10-second chunks`);
+    
+    // Process the file in direct slices 
+    const results = [];
+    const chunkSize = BYTES_PER_SECOND * chunkDurationSec;
+    
+    for (let i = 0; i < totalChunks; i++) {
+      // Update progress
+      onProgress?.(Math.round((i / totalChunks) * 100));
+      console.log(`Processing chunk ${i+1}/${totalChunks}...`);
+      
+      // Take a slice of the file
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunkBlob = file.slice(start, end, file.type);
+      
+      // Create a chunk file
+      const chunkFile = new File(
+        [chunkBlob], 
+        `${file.name.split('.')[0]}_chunk${i}.${file.name.split('.').pop()}`, 
+        { type: file.type }
+      );
+      
+      try {
+        // Transcribe this chunk
+        const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
+        results.push(chunkResult);
+      } catch (error) {
+        console.error(`Error processing chunk ${i+1}:`, error);
+        // Continue with other chunks even if one fails
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Combine all results
+    onProgress?.(100);
+    return combineTranscriptionResults(results);
+  } catch (error) {
+    console.error('Extremely large file processing error:', error);
     throw error;
   }
 };

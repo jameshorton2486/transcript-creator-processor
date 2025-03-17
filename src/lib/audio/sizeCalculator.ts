@@ -1,3 +1,4 @@
+
 // Maximum size for a single batch (10MB is Google's sync API limit, but we want to be safe)
 export const MAX_BATCH_SIZE_BYTES = 9 * 1024 * 1024; // 9MB to be safe
 
@@ -18,6 +19,11 @@ export const calculateOptimalChunkDuration = (
   fileSize: number, 
   durationSec: number
 ): number => {
+  // For very large files, use smaller chunks to avoid memory issues
+  if (fileSize > 50 * 1024 * 1024) { // Files larger than 50MB
+    return 10; // Use 10-second chunks for very large files
+  }
+  
   const bytesPerSecond = fileSize / durationSec;
   const optimalDurationSec = MAX_BATCH_SIZE_BYTES / bytesPerSecond;
   
