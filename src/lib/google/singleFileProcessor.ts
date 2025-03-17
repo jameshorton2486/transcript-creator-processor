@@ -1,6 +1,7 @@
 
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { formatGoogleResponse } from './responseFormatter';
+import { preprocessAudioFile } from '../audio/preprocessor';
 
 /**
  * Converts ArrayBuffer to base64 string
@@ -29,10 +30,12 @@ export const transcribeSingleFile = async (
   try {
     console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
     
-    // Convert File to ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
+    // Preprocess audio to improve quality for better transcription
+    console.log("Starting audio preprocessing...");
+    const preprocessedAudio = await preprocessAudioFile(file);
+    console.log("Audio preprocessing complete");
     
-    const base64Audio = arrayBufferToBase64(arrayBuffer);
+    const base64Audio = arrayBufferToBase64(preprocessedAudio);
     
     // Set up transcription options based on our default options
     const transcriptionOptions = {
@@ -45,16 +48,9 @@ export const transcribeSingleFile = async (
     };
     
     // Detect audio encoding based on file type
-    let encoding = "LINEAR16"; // Default for WAV
-    if (file.type.includes("mp3") || file.name.toLowerCase().endsWith(".mp3")) {
-      encoding = "MP3";
-    } else if (file.type.includes("flac") || file.name.toLowerCase().endsWith(".flac")) {
-      encoding = "FLAC";
-    } else if (file.type.includes("ogg") || file.name.toLowerCase().endsWith(".ogg")) {
-      encoding = "OGG_OPUS";
-    }
+    let encoding = "LINEAR16"; // Default for WAV (preprocessed audio is in WAV format)
     
-    console.log(`Using encoding: ${encoding} for file type: ${file.type}`);
+    console.log(`Using encoding: ${encoding} for preprocessed audio`);
     
     // Prepare request body for Google Speech-to-Text API with a more flexible type
     const requestBody: {
@@ -73,6 +69,8 @@ export const transcribeSingleFile = async (
           phrases: string[];
           boost?: number;
         }[];
+        profanityFilter?: boolean;
+        useEnhanced?: boolean;
       };
       audio: {
         content: string;
@@ -84,6 +82,7 @@ export const transcribeSingleFile = async (
         languageCode: transcriptionOptions.language,
         enableAutomaticPunctuation: transcriptionOptions.punctuate,
         model: "latest_long",
+        useEnhanced: true, // Use enhanced model for better quality
       },
       audio: {
         content: base64Audio
@@ -99,19 +98,49 @@ export const transcribeSingleFile = async (
       };
     }
     
-    // Add speech contexts if custom terms are provided
+    // Enhanced speech adaptation with customTerms and improvements for legal terminology
     if (customTerms && customTerms.length > 0) {
+      // Add speech contexts with a higher boost for legal terms
       requestBody.config.speechContexts = [{
         phrases: customTerms,
-        boost: 15.0 // Provide a significant boost for these custom terms
+        boost: 20.0 // Increased boost for legal terminology
       }];
       
-      console.log(`Added ${customTerms.length} custom terms to speech context`);
-    }
-    
-    // Remove sampleRateHertz for MP3 files as Google auto-detects it
-    if (encoding === "MP3" || encoding === "OGG_OPUS") {
-      delete requestBody.config.sampleRateHertz;
+      // For legal transcripts, we might also want to add common legal phrases
+      // even if not explicitly provided in custom terms
+      const commonLegalTerms = [
+        "plaintiff", "defendant", "counsel", "objection", "sustained", 
+        "overruled", "witness", "testimony", "exhibit", "evidence",
+        "deposition", "affidavit", "stipulation", "pursuant to"
+      ];
+      
+      // Filter out any duplicates
+      const additionalTerms = commonLegalTerms.filter(term => 
+        !customTerms.includes(term)
+      );
+      
+      if (additionalTerms.length > 0) {
+        requestBody.config.speechContexts.push({
+          phrases: additionalTerms,
+          boost: 10.0 // Lower boost for common legal terms
+        });
+      }
+      
+      console.log(`Added ${customTerms.length} custom terms and ${additionalTerms.length} common legal terms to speech context`);
+    } else {
+      // If no custom terms provided, still add common legal terminology
+      const commonLegalTerms = [
+        "plaintiff", "defendant", "counsel", "objection", "sustained", 
+        "overruled", "witness", "testimony", "exhibit", "evidence",
+        "deposition", "affidavit", "stipulation", "pursuant to"
+      ];
+      
+      requestBody.config.speechContexts = [{
+        phrases: commonLegalTerms,
+        boost: 10.0
+      }];
+      
+      console.log(`Added ${commonLegalTerms.length} common legal terms to speech context`);
     }
     
     console.log('Sending request to Google Speech API...');

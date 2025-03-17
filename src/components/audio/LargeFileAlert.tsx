@@ -1,5 +1,5 @@
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Volume2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface LargeFileAlertProps {
@@ -17,6 +17,7 @@ export const LargeFileAlert = ({ isVisible, fileSizeMB }: LargeFileAlertProps) =
       <AlertDescription className="text-amber-800">
         This {fileSizeMB} MB file exceeds the direct processing limit. 
         It will be automatically processed in batches with optimized segments for legal transcription.
+        Audio will be preprocessed for clarity and quality improvement.
         Files up to 200MB are supported.
       </AlertDescription>
     </Alert>

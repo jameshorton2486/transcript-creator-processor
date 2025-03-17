@@ -3,6 +3,7 @@
 
 export * from "./audioContext";
 export * from "./wavConverter";
+export * from "./preprocessor";
 
 // Export from sizeCalculator but not audioSplitter's version
 export { 
@@ -14,3 +15,4 @@ export {
 // Export from audioSplitter but avoid the naming conflict
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
+

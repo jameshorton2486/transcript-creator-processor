@@ -37,6 +37,10 @@ export interface TranscriptionOptions {
   paragraphs: boolean;
   utterances: boolean;
   numerals: boolean;
+  normalize?: boolean;  // Volume normalization
+  noiseReduction?: boolean;  // Noise reduction
+  autoChunk?: boolean;  // Automatic chunking of long audio
+  enhancedModel?: boolean;  // Use enhanced speech recognition model
 }
 
 export const DEFAULT_TRANSCRIPTION_OPTIONS: TranscriptionOptions = {
@@ -44,7 +48,11 @@ export const DEFAULT_TRANSCRIPTION_OPTIONS: TranscriptionOptions = {
   diarize: true,
   paragraphs: true,
   utterances: true,
-  numerals: true
+  numerals: true,
+  normalize: true,
+  noiseReduction: true,
+  autoChunk: true,
+  enhancedModel: true
 };
 
 export interface ProcessingOptions {
@@ -75,4 +83,25 @@ export const API_SETTINGS = {
   openaiModel: "gpt-4o",
   maxTokens: 4000,
   tokensPerMinute: 3500
+};
+
+// Legal terminology boost settings
+export const LEGAL_TERMINOLOGY = {
+  commonTerms: [
+    // Court roles
+    "judge", "counsel", "attorney", "lawyer", "plaintiff", "defendant", "witness", 
+    "prosecutor", "bailiff", "clerk", "court reporter", "jury", "juror",
+    
+    // Procedural terms
+    "objection", "sustained", "overruled", "motion", "petition", "filing",
+    "evidence", "exhibit", "testimony", "deposition", "affidavit", "stipulation",
+    
+    // Legal document types
+    "brief", "pleading", "subpoena", "warrant", "summons", "complaint", "indictment",
+    
+    // Common phrases
+    "Your Honor", "May it please the court", "for the record", "counsel table", 
+    "sworn in", "under oath", "beyond reasonable doubt", "preponderance of evidence"
+  ],
+  boostLevel: 15 // Default boost level for legal terminology
 };
