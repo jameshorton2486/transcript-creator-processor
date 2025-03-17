@@ -28,6 +28,12 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("sample_rate_hertz") || error.includes("sample rate")) {
     displayError = "Audio sample rate issue";
     additionalMessage = "The application had trouble determining the correct sample rate of your audio file. This has been fixed in the latest update. Please try again, and if the issue persists, try converting your audio to a standard format like MP3 at 44.1 kHz or 48 kHz.";
+  } else if (error.includes("Unable to decode audio data") || error.includes("EncodingError")) {
+    displayError = "Audio decoding error";
+    additionalMessage = "Your browser couldn't decode this audio format. The system will automatically try direct upload to Google's API. If the problem persists, try converting your audio to MP3 format, which is widely supported.";
+  } else if (error.includes("FLAC")) {
+    displayError = "FLAC processing issue";
+    additionalMessage = "There was a problem processing your FLAC file. Try converting it to MP3 format for better compatibility, or ensure your FLAC file is properly formatted.";
   }
   
   return (

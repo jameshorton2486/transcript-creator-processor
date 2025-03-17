@@ -26,24 +26,63 @@ export const transcribeSingleFile = async (
   file: File, 
   apiKey: string,
   options = DEFAULT_TRANSCRIPTION_OPTIONS,
-  customTerms: string[] = []
+  customTerms: string[] = [],
+  skipBrowserDecoding: boolean = false
 ) => {
   try {
     console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
     
-    // Preprocess audio to improve quality for better transcription
-    console.log("Starting audio preprocessing...");
-    const preprocessedAudio = await preprocessAudioFile(file);
-    console.log("Audio preprocessing complete");
-
-    // Detect actual sample rate from the audio file
-    console.log("Detecting audio sample rate...");
-    const audioContext = getAudioContext();
-    const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
-    const actualSampleRate = audioBuffer.sampleRate;
-    console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
+    let base64Audio;
+    let actualSampleRate;
+    let encoding = "LINEAR16"; // Default for WAV
     
-    const base64Audio = arrayBufferToBase64(preprocessedAudio);
+    // Determine encoding based on file type
+    const fileType = file.type.toLowerCase();
+    const fileName = file.name.toLowerCase();
+    
+    if (fileType.includes("flac") || fileName.endsWith(".flac")) {
+      encoding = "FLAC";
+      console.log("FLAC format detected, using FLAC encoding");
+    } else if (fileType.includes("mp3") || fileName.endsWith(".mp3")) {
+      encoding = "MP3";
+      console.log("MP3 format detected, using MP3 encoding");
+    } else if (fileType.includes("ogg") || fileName.endsWith(".ogg") || fileName.endsWith(".oga")) {
+      encoding = "OGG_OPUS";
+      console.log("OGG format detected, using OGG_OPUS encoding");
+    }
+    
+    if (skipBrowserDecoding || encoding === "FLAC") {
+      // For FLAC files or when browser decoding should be skipped, 
+      // use direct upload without browser decoding
+      console.log("Using direct upload without browser audio processing");
+      const rawBuffer = await file.arrayBuffer();
+      base64Audio = arrayBufferToBase64(rawBuffer);
+      
+      // Use standard sample rates based on file type
+      if (encoding === "FLAC") {
+        actualSampleRate = 48000; // Common default for FLAC
+      } else if (encoding === "MP3") {
+        actualSampleRate = 44100; // Common default for MP3
+      } else {
+        actualSampleRate = 16000; // Fallback
+      }
+      
+      console.log(`Using standard sample rate: ${actualSampleRate} Hz for direct upload`);
+    } else {
+      // Standard flow with preprocessing and sample rate detection
+      console.log("Starting audio preprocessing...");
+      const preprocessedAudio = await preprocessAudioFile(file);
+      console.log("Audio preprocessing complete");
+
+      // Detect actual sample rate from the audio file
+      console.log("Detecting audio sample rate...");
+      const audioContext = getAudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
+      actualSampleRate = audioBuffer.sampleRate;
+      console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
+      
+      base64Audio = arrayBufferToBase64(preprocessedAudio);
+    }
     
     // Set up transcription options based on our default options
     const transcriptionOptions = {
@@ -55,10 +94,7 @@ export const transcribeSingleFile = async (
       language: 'en-US'
     };
     
-    // Detect audio encoding based on file type
-    let encoding = "LINEAR16"; // Default for WAV (preprocessed audio is in WAV format)
-    
-    console.log(`Using encoding: ${encoding} for preprocessed audio with sample rate: ${actualSampleRate} Hz`);
+    console.log(`Using encoding: ${encoding} with sample rate: ${actualSampleRate} Hz`);
     
     // Prepare request body for Google Speech-to-Text API with a more flexible type
     const requestBody: {

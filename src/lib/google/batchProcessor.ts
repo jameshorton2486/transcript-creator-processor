@@ -26,9 +26,31 @@ export const transcribeBatchedAudio = async (
     console.log('Processing large file in batches...');
     onProgress?.(0); // Initialize progress
     
-    // For MP3 files, we need a different approach since we can't easily split them
-    // We'll convert to WAV for processing, which may be less efficient but more reliable
-    if (file.type.includes("mp3") || file.name.toLowerCase().endsWith(".mp3")) {
+    // Determine file type and choose appropriate processing method
+    const fileType = file.type.toLowerCase();
+    const fileName = file.name.toLowerCase();
+    const isFlac = fileType.includes("flac") || fileName.endsWith(".flac");
+    const isMp3 = fileType.includes("mp3") || fileName.endsWith(".mp3");
+    
+    console.log(`File format detected: ${fileType || 'Unknown, using filename: ' + fileName}`);
+    
+    // For FLAC files, use direct upload since browser audio context often can't decode them
+    if (isFlac) {
+      console.log("FLAC file detected, using direct API upload");
+      try {
+        // Always use direct upload for FLAC files to avoid browser decoding issues
+        onProgress?.(10); // Show some initial progress
+        const result = await transcribeSingleFile(file, apiKey, options, customTerms, true); // Pass flag to skip browser decoding
+        onProgress?.(100);
+        return result;
+      } catch (error) {
+        console.error("Direct FLAC upload failed:", error);
+        throw new Error(`Unable to process FLAC file: ${error.message}`);
+      }
+    }
+    
+    // For MP3 files, we need a different approach since splitting can be tricky
+    if (isMp3) {
       console.log("MP3 file detected, processing as single file with direct upload");
       try {
         // For MP3 files less than 200MB, try direct upload
@@ -52,11 +74,12 @@ export const transcribeBatchedAudio = async (
     }
     
     try {
-      // Standard approach for regular large files
+      // Standard approach for regular large files that can be decoded by browser
       // Convert file to AudioBuffer
+      console.log("Attempting to decode audio file with browser's AudioContext...");
       const audioBuffer = await fileToAudioBuffer(file);
       const fileDurationSec = audioBuffer.duration;
-      console.log(`Audio duration: ${fileDurationSec} seconds`);
+      console.log(`Audio duration: ${fileDurationSec} seconds, sample rate: ${audioBuffer.sampleRate} Hz`);
       
       // Calculate optimal chunk size based on file size and duration
       const optimalChunkDuration = calculateOptimalChunkDuration(file.size, fileDurationSec);
@@ -70,7 +93,19 @@ export const transcribeBatchedAudio = async (
       return await processChunks(audioChunks, audioBuffer.sampleRate, file.name, apiKey, options, onProgress, customTerms);
     } catch (error) {
       console.error("Error in standard processing:", error);
-      if (error.message && error.message.includes("buffer allocation failed")) {
+      if (error.name === "EncodingError" || error.message?.includes("Unable to decode audio data")) {
+        console.log("Browser cannot decode this audio format, falling back to direct API upload");
+        try {
+          // Fall back to direct upload without preprocessing
+          onProgress?.(10);
+          const result = await transcribeSingleFile(file, apiKey, options, customTerms, true); // Skip browser decoding
+          onProgress?.(100);
+          return result;
+        } catch (directError) {
+          console.error("Direct upload fallback failed:", directError);
+          throw directError;
+        }
+      } else if (error.message && error.message.includes("buffer allocation failed")) {
         // If we hit a memory error, fall back to the streaming approach
         console.log("Memory error detected, falling back to stream processing approach");
         return processExtremelyLargeFile(file, apiKey, options, onProgress, customTerms);
