@@ -12,13 +12,13 @@ export const ProgressIndicator = ({ progress, isVisible }: ProgressIndicatorProp
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span>Processing in memory-efficient batches</span>
+        <span>Processing audio with dynamic sample rate detection</span>
         <span>{progress}%</span>
       </div>
       <Progress value={progress} className="h-2" />
       <p className="text-xs text-slate-500 italic">
-        Files are processed in small segments to preserve browser memory. 
-        Each segment is processed individually, then combined for the final result.
+        Audio is being processed with auto-detected sample rate for optimal transcription quality.
+        Large files are processed in small segments to preserve browser memory.
       </p>
     </div>
   );

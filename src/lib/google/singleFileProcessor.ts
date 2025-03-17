@@ -2,6 +2,7 @@
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { formatGoogleResponse } from './responseFormatter';
 import { preprocessAudioFile } from '../audio/preprocessor';
+import { getAudioContext, fileToAudioBuffer } from '../audio/audioContext';
 
 /**
  * Converts ArrayBuffer to base64 string
@@ -34,6 +35,13 @@ export const transcribeSingleFile = async (
     console.log("Starting audio preprocessing...");
     const preprocessedAudio = await preprocessAudioFile(file);
     console.log("Audio preprocessing complete");
+
+    // Detect actual sample rate from the audio file
+    console.log("Detecting audio sample rate...");
+    const audioContext = getAudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
+    const actualSampleRate = audioBuffer.sampleRate;
+    console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
     
     const base64Audio = arrayBufferToBase64(preprocessedAudio);
     
@@ -50,13 +58,13 @@ export const transcribeSingleFile = async (
     // Detect audio encoding based on file type
     let encoding = "LINEAR16"; // Default for WAV (preprocessed audio is in WAV format)
     
-    console.log(`Using encoding: ${encoding} for preprocessed audio`);
+    console.log(`Using encoding: ${encoding} for preprocessed audio with sample rate: ${actualSampleRate} Hz`);
     
     // Prepare request body for Google Speech-to-Text API with a more flexible type
     const requestBody: {
       config: {
         encoding: string;
-        sampleRateHertz?: number;
+        sampleRateHertz: number;
         languageCode: string;
         enableAutomaticPunctuation: boolean;
         model: string;
@@ -78,7 +86,7 @@ export const transcribeSingleFile = async (
     } = {
       config: {
         encoding: encoding,
-        sampleRateHertz: 16000,
+        sampleRateHertz: actualSampleRate, // Use detected sample rate instead of hardcoded value
         languageCode: transcriptionOptions.language,
         enableAutomaticPunctuation: transcriptionOptions.punctuate,
         model: "latest_long",

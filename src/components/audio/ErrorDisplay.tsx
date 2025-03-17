@@ -25,6 +25,9 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("unsupported file type")) {
     displayError = "Unsupported file format";
     additionalMessage = "Please use a common audio format like MP3, WAV, FLAC, or M4A.";
+  } else if (error.includes("sample_rate_hertz") || error.includes("sample rate")) {
+    displayError = "Audio sample rate issue";
+    additionalMessage = "The application had trouble determining the correct sample rate of your audio file. This has been fixed in the latest update. Please try again, and if the issue persists, try converting your audio to a standard format like MP3 at 44.1 kHz or 48 kHz.";
   }
   
   return (
