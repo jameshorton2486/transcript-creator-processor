@@ -1,5 +1,4 @@
 
-import { Badge } from "@/components/ui/badge";
 import { 
   Card, 
   CardContent, 
@@ -7,7 +6,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { EntityTypeSection } from "./EntityTypeSection";
 
 interface RawEntitiesCardProps {
   entities: Record<string, string[]>;
@@ -26,20 +25,13 @@ export const RawEntitiesCard = ({ entities }: RawEntitiesCardProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {entityTypes.map((entityType) => (
-            <div key={entityType}>
-              <h4 className="text-sm font-medium mb-2">{entityType}</h4>
-              <div className="flex flex-wrap gap-2">
-                {entities[entityType].map((entity, index) => (
-                  <Badge key={index} variant="secondary" className="bg-slate-100 text-slate-800">
-                    {entity}
-                  </Badge>
-                ))}
-              </div>
-              {entityType !== entityTypes[entityTypes.length - 1] && (
-                <Separator className="mt-3" />
-              )}
-            </div>
+          {entityTypes.map((entityType, index) => (
+            <EntityTypeSection
+              key={entityType}
+              entityType={entityType}
+              entities={entities[entityType]}
+              isLast={index === entityTypes.length - 1}
+            />
           ))}
         </div>
       </CardContent>
