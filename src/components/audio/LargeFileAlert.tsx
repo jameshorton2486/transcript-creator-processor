@@ -11,7 +11,7 @@ export const LargeFileAlert = ({ isVisible, fileSizeMB }: LargeFileAlertProps) =
   if (!isVisible) return null;
   
   return (
-    <Alert className="bg-amber-50 border-amber-200">
+    <Alert className="bg-amber-50 border-amber-200 h-full">
       <AlertCircle className="h-4 w-4 text-amber-600" />
       <AlertTitle className="text-amber-800">Large File Processing</AlertTitle>
       <AlertDescription className="text-amber-800">

@@ -89,11 +89,14 @@ export const TranscribeTab = ({
     });
   };
 
-  const mockEntities = {
-    "People": ["Smith", "Jones"],
-    "Organizations": ["Court"],
+  // Define mock entities based on the format you provided
+  const mockEntities = jsonData?.entities || {
+    "People": ["Jose Orlando Flores Zambrano", "Angelina Neys Cerro", "Michael Stanislaw Mulik", "Antionette Serwaa Hayford"],
+    "Organizations": ["DC Law, PLLC", "Deas & Associates", "S.A. Legal Solutions"],
     "Dates": ["March 15, 2023", "April 30"],
-    "Legal Terms": ["Contract", "Section 3.4", "Evidence", "Case No. 2023-CV-12345"]
+    "Legal Terms": ["Contract", "Section 3.4", "Evidence", "Case No. D-1-GN-23-008700"],
+    "Courts": ["201st Judicial District"],
+    "Locations": ["Travis County, Texas", "Austin, Texas", "San Antonio, Texas"],
   };
 
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
@@ -101,54 +104,56 @@ export const TranscribeTab = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-5 space-y-6">
-        <AudioTranscriber 
-          onTranscriptCreated={handleTranscriptCreated} 
-        />
-        
-        {originalTranscript && (
-          <TranscriptProcessor 
-            transcript={originalTranscript} 
-            onProcessed={handleTranscriptProcessed} 
+        <div className="h-full flex flex-col">
+          <AudioTranscriber 
+            onTranscriptCreated={handleTranscriptCreated} 
           />
-        )}
-        
-        {(processedTranscript || originalTranscript) && (
-          <TranscriptReviewer
-            transcript={processedTranscript || originalTranscript}
-            onReviewComplete={handleAiReviewCompleted}
-            isLoading={isReviewing}
-            setIsLoading={setIsReviewing}
-          />
-        )}
-        
-        {(originalTranscript || processedTranscript || aiReviewedTranscript) && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear Transcript and Files
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove all transcript data and uploaded files from the current session.
-                  This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={clearWorkspace}>
-                  Clear Everything
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+          
+          {originalTranscript && (
+            <TranscriptProcessor 
+              transcript={originalTranscript} 
+              onProcessed={handleTranscriptProcessed} 
+            />
+          )}
+          
+          {(processedTranscript || originalTranscript) && (
+            <TranscriptReviewer
+              transcript={processedTranscript || originalTranscript}
+              onReviewComplete={handleAiReviewCompleted}
+              isLoading={isReviewing}
+              setIsLoading={setIsReviewing}
+            />
+          )}
+          
+          {(originalTranscript || processedTranscript || aiReviewedTranscript) && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Transcript and Files
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all transcript data and uploaded files from the current session.
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearWorkspace}>
+                    Clear Everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
       
-      <div className="lg:col-span-7 h-full">
+      <div className="lg:col-span-7 h-[calc(100vh-12rem)]">
         {(originalTranscript || processedTranscript || aiReviewedTranscript) ? (
           <Card className="h-full">
             <CardContent className="p-6 h-full">
@@ -171,7 +176,7 @@ export const TranscribeTab = ({
                   )}
                 </TabsList>
                 
-                <div className="flex-1">
+                <div className="flex-1 h-full overflow-hidden">
                   {originalTranscript && (
                     <TabsContent value="original" className="h-full">
                       <TranscriptViewer 
@@ -218,7 +223,7 @@ export const TranscribeTab = ({
             </CardContent>
           </Card>
         ) : (
-          <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center min-h-[600px] text-center text-gray-500">
+          <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center h-full text-center text-gray-500">
             <h3 className="text-lg font-medium">No transcript yet</h3>
             <p className="mt-2">Upload an audio file and click "Transcribe Audio" to begin.</p>
           </div>

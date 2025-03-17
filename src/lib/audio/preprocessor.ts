@@ -1,232 +1,212 @@
+// Function to handle audio preprocessing
+
+import { getAudioContext } from "./audioContext";
 
 /**
- * Audio preprocessing utilities for improving audio quality before transcription
- */
-
-/**
- * Normalizes audio volume to improve consistency
+ * Normalizes the audio volume to ensure consistent loudness across the file
  * @param audioBuffer The audio buffer to normalize
- * @param targetLevel Target level for normalization (default -3dB)
+ * @returns A new audio buffer with normalized volume
  */
-export const normalizeAudio = (audioBuffer: AudioBuffer, targetLevel: number = -3): AudioBuffer => {
-  const audioCtx = new AudioContext();
-  const normalizedBuffer = audioCtx.createBuffer(
-    audioBuffer.numberOfChannels,
-    audioBuffer.length,
+export const normalizeAudio = async (audioBuffer: AudioBuffer): Promise<AudioBuffer> => {
+  const audioContext = getAudioContext();
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const normalizedBuffer = audioContext.createBuffer(
+    numberOfChannels,
+    length,
     audioBuffer.sampleRate
   );
-  
-  // Process each channel
-  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-    const inputData = audioBuffer.getChannelData(channel);
-    const outputData = normalizedBuffer.getChannelData(channel);
-    
-    // Find peak amplitude
-    let peak = 0;
-    for (let i = 0; i < inputData.length; i++) {
-      const abs = Math.abs(inputData[i]);
-      if (abs > peak) {
-        peak = abs;
+
+  // Find the peak amplitude across all channels
+  let maxPeak = 0;
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const channelData = audioBuffer.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      const absValue = Math.abs(channelData[i]);
+      if (absValue > maxPeak) {
+        maxPeak = absValue;
       }
     }
-    
-    // Calculate gain based on target level
-    // Convert target level from dB to linear gain
-    const targetGain = Math.pow(10, targetLevel/20);
-    const gainFactor = peak > 0 ? targetGain / peak : 1;
-    
-    // Apply gain to each sample
-    for (let i = 0; i < inputData.length; i++) {
-      outputData[i] = inputData[i] * gainFactor;
+  }
+
+  // Target level for normalization (keep some headroom to avoid clipping)
+  const targetLevel = 0.9;
+  const gainFactor = maxPeak > 0 ? targetLevel / maxPeak : 1;
+
+  // Apply normalization
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const originalData = audioBuffer.getChannelData(channel);
+    const normalizedData = normalizedBuffer.getChannelData(channel);
+
+    for (let i = 0; i < length; i++) {
+      normalizedData[i] = originalData[i] * gainFactor;
     }
   }
-  
+
   return normalizedBuffer;
 };
 
 /**
- * Simple noise gate to reduce background noise
+ * Reduces noise in the audio signal using a simple noise gate technique
  * @param audioBuffer The audio buffer to process
- * @param threshold Threshold below which audio is considered noise (0-1)
+ * @param threshold Noise gate threshold (typical values: 0.01-0.05)
+ * @returns A new audio buffer with reduced noise
  */
-export const applyNoiseGate = (audioBuffer: AudioBuffer, threshold: number = 0.01): AudioBuffer => {
-  const audioCtx = new AudioContext();
-  const processedBuffer = audioCtx.createBuffer(
-    audioBuffer.numberOfChannels,
-    audioBuffer.length,
+export const reduceNoise = async (audioBuffer: AudioBuffer, threshold = 0.02): Promise<AudioBuffer> => {
+  const audioContext = getAudioContext();
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const processedBuffer = audioContext.createBuffer(
+    numberOfChannels,
+    length,
     audioBuffer.sampleRate
   );
-  
-  // Process each channel
-  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-    const inputData = audioBuffer.getChannelData(channel);
-    const outputData = processedBuffer.getChannelData(channel);
-    
-    // Apply noise gate
-    for (let i = 0; i < inputData.length; i++) {
-      // If sample amplitude is below threshold, reduce it significantly
-      if (Math.abs(inputData[i]) < threshold) {
-        outputData[i] = 0; // Gate is closed
+
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const originalData = audioBuffer.getChannelData(channel);
+    const processedData = processedBuffer.getChannelData(channel);
+
+    // Simple noise gate implementation
+    for (let i = 0; i < length; i++) {
+      if (Math.abs(originalData[i]) < threshold) {
+        // Apply soft transition to avoid harsh cuts
+        processedData[i] = originalData[i] * (Math.abs(originalData[i]) / threshold);
       } else {
-        outputData[i] = inputData[i]; // Gate is open
+        processedData[i] = originalData[i];
       }
     }
   }
-  
+
   return processedBuffer;
 };
 
 /**
- * Simple DC offset removal
+ * Removes DC offset from the audio signal
  * @param audioBuffer The audio buffer to process
+ * @returns A new audio buffer with DC offset removed
  */
-export const removeDCOffset = (audioBuffer: AudioBuffer): AudioBuffer => {
-  const audioCtx = new AudioContext();
-  const processedBuffer = audioCtx.createBuffer(
-    audioBuffer.numberOfChannels,
-    audioBuffer.length,
+export const removeDCOffset = async (audioBuffer: AudioBuffer): Promise<AudioBuffer> => {
+  const audioContext = getAudioContext();
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  const processedBuffer = audioContext.createBuffer(
+    numberOfChannels,
+    length,
     audioBuffer.sampleRate
   );
-  
-  // Process each channel
-  for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-    const inputData = audioBuffer.getChannelData(channel);
-    const outputData = processedBuffer.getChannelData(channel);
-    
-    // Calculate DC offset (average amplitude)
+
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const originalData = audioBuffer.getChannelData(channel);
+    const processedData = processedBuffer.getChannelData(channel);
+
+    // Calculate the DC offset (mean value of the signal)
     let sum = 0;
-    for (let i = 0; i < inputData.length; i++) {
-      sum += inputData[i];
+    for (let i = 0; i < length; i++) {
+      sum += originalData[i];
     }
-    const dcOffset = sum / inputData.length;
-    
-    // Remove DC offset
-    for (let i = 0; i < inputData.length; i++) {
-      outputData[i] = inputData[i] - dcOffset;
+    const dcOffset = sum / length;
+
+    // Remove the DC offset
+    for (let i = 0; i < length; i++) {
+      processedData[i] = originalData[i] - dcOffset;
     }
   }
-  
+
   return processedBuffer;
 };
 
 /**
- * Applies all preprocessing steps in a sensible order
+ * Apply all preprocessing steps to an audio buffer to improve transcription quality
  * @param audioBuffer The audio buffer to process
+ * @returns A processed audio buffer ready for transcription
  */
 export const preprocessAudio = async (audioBuffer: AudioBuffer): Promise<AudioBuffer> => {
-  console.log("Preprocessing audio for improved transcription quality...");
+  // Apply processing chain
+  // 1. First remove DC offset
+  let processedBuffer = await removeDCOffset(audioBuffer);
   
-  // 1. Remove any DC offset first
-  let processedBuffer = removeDCOffset(audioBuffer);
+  // 2. Then normalize to ensure consistent volume
+  processedBuffer = await normalizeAudio(processedBuffer);
   
-  // 2. Apply noise gate to reduce background noise
-  processedBuffer = applyNoiseGate(processedBuffer, 0.01);
-  
-  // 3. Normalize audio volume last
-  processedBuffer = normalizeAudio(processedBuffer, -3);
-  
-  console.log("Audio preprocessing complete");
+  // 3. Finally reduce noise
+  processedBuffer = await reduceNoise(processedBuffer, 0.015);
+
   return processedBuffer;
 };
 
 /**
- * Process an audio file with all preprocessing steps
- * @param file Audio file to process
+ * Preprocess an audio file for improved transcription quality
+ * @param file Audio file to preprocess
+ * @returns Processed audio as ArrayBuffer
  */
 export const preprocessAudioFile = async (file: File): Promise<ArrayBuffer> => {
-  try {
-    // Create audio context
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Convert file to array buffer
-    const arrayBuffer = await file.arrayBuffer();
-    
-    // Decode audio data
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
-    // Apply preprocessing
-    const processedBuffer = await preprocessAudio(audioBuffer);
-    
-    // Convert back to WAV format
-    const wavBlob = await audioBufferToWav(processedBuffer);
-    return await wavBlob.arrayBuffer();
-  } catch (error) {
-    console.error("Error preprocessing audio:", error);
-    throw error;
-  }
+  const audioContext = getAudioContext();
+  const arrayBuffer = await file.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  
+  // Apply all preprocessing steps
+  const processedBuffer = await preprocessAudio(audioBuffer);
+  
+  // Convert back to WAV
+  const waveBlob = await audioBufferToWav(processedBuffer);
+  return await waveBlob.arrayBuffer();
 };
 
 /**
- * Convert AudioBuffer to WAV format
+ * Convert an AudioBuffer to WAV format
+ * @param audioBuffer The audio buffer to convert
+ * @returns A Blob containing WAV data
  */
-const audioBufferToWav = async (buffer: AudioBuffer): Promise<Blob> => {
-  // Get audio data from all channels and convert to Float32Array
-  const numberOfChannels = buffer.numberOfChannels;
-  const length = buffer.length * numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const bitsPerSample = 16;
-  const bytesPerSample = bitsPerSample / 8;
-  
-  // Create the WAV file header
-  const headerLength = 44;
-  const dataLength = length * bytesPerSample;
-  const fileLength = headerLength + dataLength;
-  
-  const arrayBuffer = new ArrayBuffer(fileLength);
-  const view = new DataView(arrayBuffer);
-  
-  // RIFF identifier
-  writeString(view, 0, 'RIFF');
-  // file length minus RIFF identifier length and file description length
-  view.setUint32(4, fileLength - 8, true);
-  // RIFF type
-  writeString(view, 8, 'WAVE');
-  // format chunk identifier
-  writeString(view, 12, 'fmt ');
-  // format chunk length
-  view.setUint32(16, 16, true);
-  // sample format (raw)
-  view.setUint16(20, 1, true);
-  // channel count
-  view.setUint16(22, numberOfChannels, true);
-  // sample rate
-  view.setUint32(24, sampleRate, true);
-  // byte rate (sample rate * block align)
-  view.setUint32(28, sampleRate * numberOfChannels * bytesPerSample, true);
-  // block align (channel count * bytes per sample)
-  view.setUint16(32, numberOfChannels * bytesPerSample, true);
-  // bits per sample
-  view.setUint16(34, bitsPerSample, true);
-  // data chunk identifier
-  writeString(view, 36, 'data');
-  // data chunk length
-  view.setUint32(40, dataLength, true);
-  
-  // Write the PCM samples
-  const channelData = new Array(numberOfChannels);
-  for (let i = 0; i < numberOfChannels; i++) {
-    channelData[i] = buffer.getChannelData(i);
+export const audioBufferToWav = (audioBuffer: AudioBuffer): Blob => {
+  const numOfChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length * numOfChannels * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  const channels = [];
+  let offset = 0;
+  let pos = 0;
+
+  // Extract channels
+  for (let i = 0; i < numOfChannels; i++) {
+    channels.push(audioBuffer.getChannelData(i));
   }
-  
-  let offset = 44;
-  for (let i = 0; i < buffer.length; i++) {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      // Clamp the value to the 16-bit range
-      const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
-      // Scale to 16-bit integer
-      const value = (sample < 0) ? sample * 0x8000 : sample * 0x7FFF;
-      view.setInt16(offset, value, true);
-      offset += bytesPerSample;
+
+  // Write WAV header
+  // "RIFF" chunk descriptor
+  writeString(view, offset, 'RIFF'); offset += 4;
+  view.setUint32(offset, 36 + audioBuffer.length * numOfChannels * 2, true); offset += 4;
+  writeString(view, offset, 'WAVE'); offset += 4;
+
+  // "fmt " sub-chunk
+  writeString(view, offset, 'fmt '); offset += 4;
+  view.setUint32(offset, 16, true); offset += 4; // 16 for PCM
+  view.setUint16(offset, 1, true); offset += 2; // PCM format
+  view.setUint16(offset, numOfChannels, true); offset += 2; // Num of channels
+  view.setUint32(offset, audioBuffer.sampleRate, true); offset += 4; // Sample rate
+  view.setUint32(offset, audioBuffer.sampleRate * 4, true); offset += 4; // Byte rate
+  view.setUint16(offset, numOfChannels * 2, true); offset += 2; // Block align
+  view.setUint16(offset, 16, true); offset += 2; // Bits per sample
+
+  // "data" sub-chunk
+  writeString(view, offset, 'data'); offset += 4;
+  view.setUint32(offset, audioBuffer.length * numOfChannels * 2, true); offset += 4;
+
+  // Write interleaved audio data
+  for (let i = 0; i < audioBuffer.length; i++) {
+    for (let channel = 0; channel < numOfChannels; channel++) {
+      // Convert float32 to int16
+      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+      const int16Sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(offset, int16Sample, true);
+      offset += 2;
     }
   }
-  
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
+
+  return new Blob([buffer], { type: 'audio/wav' });
 };
 
-// Helper function to write a string to a DataView
-function writeString(view: DataView, offset: number, string: string) {
+const writeString = (view: DataView, offset: number, string: string): void => {
   for (let i = 0; i < string.length; i++) {
     view.setUint8(offset + i, string.charCodeAt(i));
   }
-}
-
+};
