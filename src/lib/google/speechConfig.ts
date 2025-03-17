@@ -35,7 +35,7 @@ export const buildRequestConfig = (
   } = {
     encoding: encoding,
     sampleRateHertz: sampleRate,
-    languageCode: options.language || 'en-US',
+    languageCode: 'en-US', // Default to en-US as the TranscriptionOptions doesn't have a language property
     enableAutomaticPunctuation: options.punctuate,
     model: "latest_long",
     useEnhanced: true, // Use enhanced model for better quality
