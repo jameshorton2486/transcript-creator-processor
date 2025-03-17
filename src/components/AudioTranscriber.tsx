@@ -16,6 +16,9 @@ import { X, Upload, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { FileUploader } from "@/components/FileUploader";
 
+// Increased file size threshold to 200MB
+const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
+
 interface AudioTranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
 }
@@ -47,7 +50,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
-  const isLargeFile = file && file.size > 10 * 1024 * 1024;
+  const isLargeFile = file && file.size > LARGE_FILE_THRESHOLD;
 
   const handleTermsExtracted = (terms: string[]) => {
     setCustomTerms(terms);
@@ -159,7 +162,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         )}
         
         <LargeFileAlert 
-          isVisible={!!file && isLargeFile && !isLoading} 
+          isVisible={!!file && file.size > 10 * 1024 * 1024 && !isLoading} 
           fileSizeMB={fileSizeMB}
         />
         
@@ -185,8 +188,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       </CardContent>
       
       <CardFooter className="bg-slate-50 text-xs text-slate-500 italic">
-        Transcription powered by Google Live Transcribe. Can process files up to 6 hours long. 
-        Larger files will be processed in batches.
+        Optimized for legal transcripts. Supports files up to 200MB with automatic batch processing.
+        Larger files will be divided into optimal segments for accurate transcription.
       </CardFooter>
     </Card>
   );

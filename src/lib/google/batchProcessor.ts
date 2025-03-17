@@ -9,6 +9,9 @@ import {
 } from '../audio';
 import { transcribeSingleFile } from './singleFileProcessor';
 
+// Increased from 50MB to 200MB
+const MAX_FILE_SIZE = 200 * 1024 * 1024;
+
 /**
  * Process audio in batches for larger files
  */
@@ -28,8 +31,8 @@ export const transcribeBatchedAudio = async (
     if (file.type.includes("mp3") || file.name.toLowerCase().endsWith(".mp3")) {
       console.log("MP3 file detected, processing as single file with direct upload");
       try {
-        // For MP3 files less than 50MB, try direct upload
-        if (file.size < 50 * 1024 * 1024) {
+        // For MP3 files less than 200MB, try direct upload
+        if (file.size < MAX_FILE_SIZE) {
           onProgress?.(10); // Show some initial progress
           const result = await transcribeSingleFile(file, apiKey, options, customTerms);
           onProgress?.(100);

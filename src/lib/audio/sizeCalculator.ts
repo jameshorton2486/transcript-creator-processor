@@ -1,5 +1,4 @@
-
-// Maximum size for a single batch (10MB is Google's sync API limit)
+// Maximum size for a single batch (10MB is Google's sync API limit, but we want to be safe)
 export const MAX_BATCH_SIZE_BYTES = 9 * 1024 * 1024; // 9MB to be safe
 
 /**
@@ -12,6 +11,8 @@ export const estimateWavFileSize = (durationSec: number, sampleRate: number = 16
 
 /**
  * Calculates optimal chunk duration based on MAX_BATCH_SIZE_BYTES
+ * For legal transcriptions, we aim for optimal sentence boundaries
+ * which typically occur around 30-60 second intervals
  */
 export const calculateOptimalChunkDuration = (
   fileSize: number, 
@@ -20,6 +21,18 @@ export const calculateOptimalChunkDuration = (
   const bytesPerSecond = fileSize / durationSec;
   const optimalDurationSec = MAX_BATCH_SIZE_BYTES / bytesPerSecond;
   
-  // Ensure the duration is at least 5 seconds and at most 60 seconds
-  return Math.max(5, Math.min(60, Math.floor(optimalDurationSec)));
+  // For legal transcripts, we want to aim for natural breaks
+  // Sentences in legal contexts tend to be longer, so aim for 30-60 second chunks
+  // which typically contain complete thoughts or statements
+  
+  // If the calculated optimal duration is less than 15 seconds, use 15 seconds
+  // If it's more than 60 seconds, use 60 seconds
+  // Otherwise, round to the nearest 5 seconds for more natural breaks
+  
+  let adjustedDuration = Math.max(15, Math.min(60, Math.floor(optimalDurationSec)));
+  
+  // Round to nearest 5 seconds for more natural breakpoints
+  adjustedDuration = Math.round(adjustedDuration / 5) * 5;
+  
+  return adjustedDuration;
 };

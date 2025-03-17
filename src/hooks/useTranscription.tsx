@@ -4,6 +4,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
 import { transcribeAudio, testApiKey } from "@/lib/google";
 
+// Increased file size threshold from 10MB to 200MB
+const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
+
 export const useTranscription = (onTranscriptCreated: (transcript: string, jsonData: any) => void) => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +22,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
     setError(null);
-    setIsBatchProcessing(selectedFile.size > 10 * 1024 * 1024);
+    setIsBatchProcessing(selectedFile.size > LARGE_FILE_THRESHOLD);
   };
 
   const handleDocumentFilesChange = (files: File[]) => {
@@ -60,7 +63,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
         throw new Error("API key is invalid or unauthorized");
       }
       
-      const isLargeFile = file.size > 10 * 1024 * 1024;
+      const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
       
       if (isLargeFile) {
         toast({
