@@ -8,10 +8,13 @@ import {
 } from '../audio';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { processChunks, processExtremelyLargeFile } from './chunkProcessor';
+import { detectAudioEncoding, splitFileIntoChunks } from './audioEncoding';
 
 // Increased from 50MB to 200MB
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
 const MEMORY_EFFICIENT_THRESHOLD = 50 * 1024 * 1024;
+// Google API has a hard 10MB limit for request payloads
+const GOOGLE_API_PAYLOAD_LIMIT = 10 * 1024 * 1024;
 
 /**
  * Process audio in batches for larger files with memory-efficient approach
@@ -30,23 +33,63 @@ export const transcribeBatchedAudio = async (
     // Determine file type and choose appropriate processing method
     const fileType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
-    const isFlac = fileType.includes("flac") || fileName.endsWith(".flac");
-    const isMp3 = fileType.includes("mp3") || fileName.endsWith(".mp3");
+    const { encoding } = detectAudioEncoding(file);
+    const isFlac = encoding === "FLAC";
+    const isMp3 = encoding === "MP3";
     
     console.log(`File format detected: ${fileType || 'Unknown, using filename: ' + fileName}`);
+    console.log(`File size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
     
-    // For FLAC files, use direct upload since browser audio context often can't decode them
+    // Special handling for FLAC files
     if (isFlac) {
-      console.log("FLAC file detected, using direct API upload");
-      try {
-        // Always use direct upload for FLAC files to avoid browser decoding issues
-        onProgress?.(10); // Show some initial progress
-        const result = await transcribeSingleFile(file, apiKey, options, customTerms, true); 
-        onProgress?.(100);
-        return result;
-      } catch (error) {
-        console.error("Direct FLAC upload failed:", error);
-        throw new Error(`Unable to process FLAC file: ${error.message}`);
+      console.log("FLAC file detected");
+      
+      // For FLAC files that exceed Google's 10MB request limit, we need to split them
+      if (file.size > GOOGLE_API_PAYLOAD_LIMIT) {
+        console.log(`Large FLAC file (${(file.size / (1024 * 1024)).toFixed(2)} MB) detected, using binary chunking`);
+        onProgress?.(5);
+        
+        try {
+          // Split the FLAC file into binary chunks (not audio chunks - just raw binary splits)
+          // Each chunk will be treated as its own FLAC file segment
+          const binaryChunks = await splitFileIntoChunks(file, GOOGLE_API_PAYLOAD_LIMIT * 0.9);
+          console.log(`Split FLAC file into ${binaryChunks.length} binary chunks`);
+          
+          // Process each binary chunk and collect results
+          const results = [];
+          for (let i = 0; i < binaryChunks.length; i++) {
+            const chunkProgress = (i / binaryChunks.length) * 100;
+            onProgress?.(5 + chunkProgress * 0.9); // 5-95% progress
+            
+            console.log(`Processing FLAC chunk ${i+1}/${binaryChunks.length}`);
+            
+            // Create a temporary Blob/File for each chunk
+            const chunkBlob = new Blob([binaryChunks[i]], { type: 'audio/flac' });
+            const chunkFile = new File([chunkBlob], `chunk-${i}.flac`, { type: 'audio/flac' });
+            
+            // Process each chunk as a separate FLAC file
+            const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms, true);
+            results.push(chunkResult);
+          }
+          
+          onProgress?.(100);
+          return combineTranscriptionResults(results);
+        } catch (error) {
+          console.error("FLAC binary chunking failed:", error);
+          throw new Error(`Unable to process large FLAC file: ${error.message}`);
+        }
+      } else {
+        // For smaller FLAC files that fit within the 10MB limit
+        console.log("FLAC file is under 10MB, using direct API upload");
+        try {
+          onProgress?.(10);
+          const result = await transcribeSingleFile(file, apiKey, options, customTerms, true); 
+          onProgress?.(100);
+          return result;
+        } catch (error) {
+          console.error("Direct FLAC upload failed:", error);
+          throw new Error(`Unable to process FLAC file: ${error.message}`);
+        }
       }
     }
     
