@@ -21,6 +21,12 @@ export const ProgressIndicator = ({ progress, isVisible }: ProgressIndicatorProp
         The system automatically adjusts processing methods based on your file format (MP3, WAV, FLAC, etc.)
         for the best transcription quality.
       </p>
+      <div className="mt-2 text-xs text-slate-600 grid grid-cols-2 gap-x-4 gap-y-1">
+        <div>✓ Dynamic sample rate detection</div>
+        <div>✓ Batch processing for large files</div>
+        <div>✓ Memory-efficient processing</div>
+        <div>✓ Direct API upload fallback</div>
+      </div>
     </div>
   );
 };

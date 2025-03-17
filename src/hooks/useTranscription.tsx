@@ -23,6 +23,9 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     setFile(selectedFile);
     setError(null);
     setIsBatchProcessing(selectedFile.size > LARGE_FILE_THRESHOLD);
+    
+    // Log file info for diagnostics
+    console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
   };
 
   const handleDocumentFilesChange = (files: File[]) => {
@@ -56,6 +59,12 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     setError(null);
     setProgress(0);
     
+    // Log transcription start with detailed info
+    console.log(`Transcription started for: ${file.name}`);
+    console.log(`File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`Transcription options:`, options);
+    console.log(`Custom terms: ${customTerms.length} terms provided`);
+    
     try {
       // First, verify the API key is valid
       const isKeyValid = await testApiKey(apiKey);
@@ -71,6 +80,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
           description: "Your file will be processed in batches. This may take several minutes.",
         });
         setIsBatchProcessing(true);
+        console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)} MB) - using batch processing`);
       }
       
       console.log(`Starting transcription for file: ${file.name} (${file.type})`);
@@ -92,6 +102,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       const transcriptText = extractTranscriptText(response);
       
       if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
+        console.error("Failed to extract transcript from response:", response);
         throw new Error("Failed to extract transcript from the API response.");
       }
       
@@ -100,8 +111,28 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
         title: "Transcription complete",
         description: "The audio has been successfully transcribed.",
       });
+      
+      // Log successful completion
+      console.log("Transcription completed successfully");
+      console.log(`Transcript length: ${transcriptText.length} characters`);
     } catch (error: any) {
       console.error("Transcription error:", error);
+      
+      // Enhanced error logging with context
+      const errorContext = {
+        file: {
+          name: file.name,
+          type: file.type,
+          size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        },
+        options,
+        customTermsCount: customTerms.length,
+        timestamp: new Date().toISOString(),
+        errorMessage: error.message,
+        errorStack: error.stack,
+      };
+      
+      console.error("Detailed error context:", errorContext);
       
       let errorMessage = "Failed to transcribe file. ";
       
@@ -115,6 +146,14 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
         errorMessage += "This file is too large for direct processing. The application will try to process it in batches.";
       } else if (error.message?.includes("unsupported file type")) {
         errorMessage += "The file format is not supported. Please use MP3, WAV, FLAC, or OGG format.";
+      } else if (error.message?.includes("sample_rate_hertz") || error.message?.includes("sample rate")) {
+        errorMessage += "Sample rate mismatch detected. The system will attempt to correct this automatically.";
+      } else if (error.message?.includes("Unable to decode") || error.message?.includes("decode audio")) {
+        errorMessage += "Your browser couldn't decode this audio format. The system will try direct upload.";
+      } else if (error.message?.includes("permission") || error.message?.includes("permission_denied")) {
+        errorMessage += "Google API permission denied. Ensure your API key has access to Speech-to-Text.";
+      } else if (error.message?.includes("insufficient") || error.message?.includes("billing")) {
+        errorMessage += "Insufficient privileges. Check if billing is enabled for your Google Cloud project.";
       } else {
         errorMessage += `Error details: ${error.message || "Unknown error"}`;
       }
@@ -129,6 +168,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       setIsLoading(false);
       setIsBatchProcessing(false);
       setProgress(0);
+      console.log("Transcription process completed (success or error)");
     }
   };
 

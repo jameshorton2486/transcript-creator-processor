@@ -34,7 +34,29 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("FLAC")) {
     displayError = "FLAC processing issue";
     additionalMessage = "There was a problem processing your FLAC file. Try converting it to MP3 format for better compatibility, or ensure your FLAC file is properly formatted.";
+  } else if (error.includes("insufficient")) {
+    displayError = "API privileges insufficient";
+    additionalMessage = "Your Google Cloud account doesn't have sufficient privileges to use the Speech-to-Text API. Check that the API is enabled in your Google Cloud Console and that your API key has the correct permissions.";
+  } else if (error.includes("rate limit") || error.includes("429")) {
+    displayError = "API rate limit exceeded";
+    additionalMessage = "You've hit Google's rate limiting. Wait a few minutes before trying again, or reduce the frequency of your requests.";
+  } else if (error.includes("authentication") || error.includes("auth")) {
+    displayError = "Authentication error";
+    additionalMessage = "Your Google API key may be invalid or expired. Try generating a new API key from the Google Cloud Console.";
+  } else if (error.includes("empty") || error.includes("no results")) {
+    displayError = "No transcription results";
+    additionalMessage = "Google's API couldn't detect any speech in the audio file. Check that your audio file contains audible speech and try again.";
+  } else if (error.includes("timeout")) {
+    displayError = "Request timeout";
+    additionalMessage = "The transcription request took too long to complete. Try using a shorter audio file or improving your network connection.";
   }
+  
+  // Log detailed error to console for debugging
+  console.error("Transcription error details:", {
+    originalError: error,
+    displayError,
+    timestamp: new Date().toISOString(),
+  });
   
   return (
     <Alert variant="destructive" className="mt-4">
@@ -42,6 +64,7 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
       <AlertTitle>{displayError}</AlertTitle>
       <AlertDescription className="space-y-2 whitespace-pre-wrap">
         {additionalMessage}
+        {!additionalMessage && <p className="text-xs mt-2 opacity-80">Technical details: {error}</p>}
       </AlertDescription>
     </Alert>
   );
