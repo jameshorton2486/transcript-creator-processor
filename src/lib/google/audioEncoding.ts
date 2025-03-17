@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for audio encoding detection and conversion
  */
@@ -223,9 +222,8 @@ const splitFlacFile = (fileBuffer: ArrayBuffer, maxChunkSize: number): ArrayBuff
 export const convertFlacToWav = async (flacFile: File): Promise<File> => {
   try {
     // If we have a Web Audio API with AudioContext support, we can try to convert
-    if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContextClass();
+    if (typeof AudioContext !== 'undefined') {
+      const audioContext = new AudioContext();
       
       // Read the file as an ArrayBuffer
       const arrayBuffer = await flacFile.arrayBuffer();
