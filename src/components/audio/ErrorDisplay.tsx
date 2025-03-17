@@ -33,10 +33,10 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
     additionalMessage = "Your browser couldn't decode this audio format. The system will automatically try direct upload to Google's API. If the problem persists, try converting your audio to MP3 format, which is widely supported.";
   } else if (error.includes("FLAC")) {
     displayError = "FLAC processing issue";
-    additionalMessage = "There was a problem processing your FLAC file. For large FLAC files (>10MB), the system will automatically split the file into smaller chunks. If you continue to see this error, try converting your FLAC file to MP3 format for better compatibility.";
+    additionalMessage = "There was a problem processing your FLAC file. For large FLAC files (>10MB), the system will automatically split the file into smaller chunks. If you continue to see this error, try converting your FLAC file to MP3 or WAV format using a tool like FFmpeg:\n\nffmpeg -i your-file.flac -acodec pcm_s16le -ar 48000 -ac 1 output.wav";
   } else if (error.includes("payload size exceeds") || error.includes("10485760 bytes")) {
     displayError = "File too large for direct upload";
-    additionalMessage = "Your file exceeds Google's 10MB request payload limit. The system will automatically try to process it in smaller chunks. If you continue to have issues, consider converting to MP3 format which handles chunking better.";
+    additionalMessage = "Your file exceeds Google's 10MB request payload limit. The system will automatically try to process it in smaller chunks. If you continue to have issues, consider:\n1. Converting to a smaller format (MP3 instead of WAV/FLAC)\n2. Breaking your file into smaller segments using a tool like FFmpeg:\n\nffmpeg -i large_input.wav -f segment -segment_time 300 -c copy segment%03d.wav";
   } else if (error.includes("insufficient")) {
     displayError = "API privileges insufficient";
     additionalMessage = "Your Google Cloud account doesn't have sufficient privileges to use the Speech-to-Text API. Check that the API is enabled in your Google Cloud Console and that your API key has the correct permissions.";

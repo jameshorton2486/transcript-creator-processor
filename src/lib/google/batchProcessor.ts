@@ -8,7 +8,11 @@ import {
 } from '../audio';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { processChunks, processExtremelyLargeFile } from './chunkProcessor';
-import { detectAudioEncoding, splitFileIntoChunks } from './audioEncoding';
+import { 
+  detectAudioEncoding, 
+  splitFileIntoChunks,
+  convertFlacToWav 
+} from './audioEncoding';
 
 // Increased from 50MB to 200MB
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
@@ -44,10 +48,35 @@ export const transcribeBatchedAudio = async (
     if (isFlac) {
       console.log("FLAC file detected");
       
-      // For FLAC files that exceed Google's 10MB request limit, we need to split them
+      // If FLAC file is large, try to convert it to WAV first for better compatibility
       if (file.size > GOOGLE_API_PAYLOAD_LIMIT) {
-        console.log(`Large FLAC file (${(file.size / (1024 * 1024)).toFixed(2)} MB) detected, using binary chunking`);
+        console.log(`Large FLAC file (${(file.size / (1024 * 1024)).toFixed(2)} MB) detected, attempting conversion to WAV`);
         onProgress?.(5);
+        
+        try {
+          // Try to convert FLAC to WAV first for better compatibility
+          const wavFile = await convertFlacToWav(file);
+          
+          // If conversion was successful and produced a different file
+          if (wavFile !== file && wavFile.type === 'audio/wav') {
+            console.log(`Successfully converted FLAC to WAV: ${(wavFile.size / (1024 * 1024)).toFixed(2)} MB`);
+            onProgress?.(10);
+            
+            // Process the WAV file using our standard processing flow
+            // This will likely go through the normal chunking process below
+            return await transcribeBatchedAudio(wavFile, apiKey, options, 
+              (progress) => onProgress?.(10 + progress * 0.9), // Adjust progress to account for conversion
+              customTerms
+            );
+          }
+        } catch (conversionError) {
+          console.error("FLAC to WAV conversion failed:", conversionError);
+          // Continue with binary chunking if conversion fails
+        }
+        
+        // If conversion failed or wasn't possible, fall back to binary chunking
+        console.log(`Using binary chunking for FLAC file`);
+        onProgress?.(10);
         
         try {
           // Split the FLAC file into binary chunks (not audio chunks - just raw binary splits)
@@ -59,7 +88,7 @@ export const transcribeBatchedAudio = async (
           const results = [];
           for (let i = 0; i < binaryChunks.length; i++) {
             const chunkProgress = (i / binaryChunks.length) * 100;
-            onProgress?.(5 + chunkProgress * 0.9); // 5-95% progress
+            onProgress?.(10 + chunkProgress * 0.9); // 10-100% progress
             
             console.log(`Processing FLAC chunk ${i+1}/${binaryChunks.length}`);
             
@@ -70,6 +99,11 @@ export const transcribeBatchedAudio = async (
             // Process each chunk as a separate FLAC file
             const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms, true);
             results.push(chunkResult);
+            
+            // Add a small delay between chunks to prevent rate limiting
+            if (i < binaryChunks.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
           }
           
           onProgress?.(100);
