@@ -1,4 +1,3 @@
-
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { combineTranscriptionResults } from './responseFormatter';
 import { 
@@ -14,10 +13,8 @@ import {
   convertFlacToWav 
 } from './audioEncoding';
 
-// Increased from 50MB to 200MB
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
 const MEMORY_EFFICIENT_THRESHOLD = 50 * 1024 * 1024;
-// Google API has a hard 10MB limit for request payloads
 const GOOGLE_API_PAYLOAD_LIMIT = 10 * 1024 * 1024;
 
 /**

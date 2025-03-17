@@ -3,7 +3,11 @@ import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { formatGoogleResponse } from './responseFormatter';
 import { preprocessAudioFile } from '../audio/preprocessor';
 import { getAudioContext, fileToAudioBuffer } from '../audio/audioContext';
-import { detectAudioEncoding, getStandardSampleRate, arrayBufferToBase64 } from './audioEncoding';
+import { 
+  detectAudioEncoding, 
+  getStandardSampleRate, 
+  arrayBufferToBase64 
+} from './audio';
 import { buildRequestConfig } from './speechConfig';
 
 /**
