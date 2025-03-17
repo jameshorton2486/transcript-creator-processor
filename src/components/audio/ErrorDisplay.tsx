@@ -13,11 +13,18 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   let displayError = error;
   let additionalMessage = "";
   
-  if (error.includes("Array buffer allocation failed")) {
+  if (error.includes("Array buffer allocation failed") || error.includes("memory") || error.includes("allocation")) {
     displayError = "Memory error while processing audio file";
-    additionalMessage = "Your file is too large for your browser's memory. Try using a shorter audio file or converting it to a smaller format.";
+    additionalMessage = "Your file is too large for your browser's memory. Try using a shorter audio file, converting it to a smaller format, or breaking it into smaller segments before uploading.";
   } else if (error.includes("quota")) {
-    additionalMessage = "Try using a different API key or waiting before making more requests.";
+    displayError = "API quota exceeded";
+    additionalMessage = "You've reached your Google API usage limit. Try using a different API key or waiting before making more requests.";
+  } else if (error.includes("Network") || error.includes("internet")) {
+    displayError = "Network connection error";
+    additionalMessage = "Please check your internet connection and try again.";
+  } else if (error.includes("unsupported file type")) {
+    displayError = "Unsupported file format";
+    additionalMessage = "Please use a common audio format like MP3, WAV, FLAC, or M4A.";
   }
   
   return (

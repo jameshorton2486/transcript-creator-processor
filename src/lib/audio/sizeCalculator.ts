@@ -19,6 +19,11 @@ export const calculateOptimalChunkDuration = (
   fileSize: number, 
   durationSec: number
 ): number => {
+  // For extremely large files, use even smaller chunks to avoid memory issues
+  if (fileSize > 100 * 1024 * 1024) { // Files larger than 100MB
+    return 8; // Use 8-second chunks for extremely large files
+  }
+  
   // For very large files, use smaller chunks to avoid memory issues
   if (fileSize > 50 * 1024 * 1024) { // Files larger than 50MB
     return 10; // Use 10-second chunks for very large files
