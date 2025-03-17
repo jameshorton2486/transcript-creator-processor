@@ -12,12 +12,13 @@ export const ProgressIndicator = ({ progress, isVisible }: ProgressIndicatorProp
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span>Processing in batches</span>
+        <span>Processing in memory-efficient batches</span>
         <span>{progress}%</span>
       </div>
       <Progress value={progress} className="h-2" />
       <p className="text-xs text-slate-500 italic">
-        Large files are processed in chunks. Please be patient.
+        Files are processed in small segments to preserve browser memory. 
+        Each segment is processed individually, then combined for the final result.
       </p>
     </div>
   );

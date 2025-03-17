@@ -15,7 +15,7 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   
   if (error.includes("Array buffer allocation failed") || error.includes("memory") || error.includes("allocation")) {
     displayError = "Memory error while processing audio file";
-    additionalMessage = "Your file is too large for your browser's memory. Try using a shorter audio file, converting it to a smaller format, or breaking it into smaller segments before uploading.";
+    additionalMessage = "Your browser ran out of memory processing this audio file. The system will automatically try smaller chunks, but if the error persists, try one of these approaches:\n1. Use a shorter audio file\n2. Convert to a smaller format (MP3 instead of WAV/FLAC)\n3. Break your recording into smaller segments before uploading\n4. Try using a different browser with more memory";
   } else if (error.includes("quota")) {
     displayError = "API quota exceeded";
     additionalMessage = "You've reached your Google API usage limit. Try using a different API key or waiting before making more requests.";
@@ -30,10 +30,9 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   return (
     <Alert variant="destructive" className="mt-4">
       <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Error</AlertTitle>
-      <AlertDescription className="space-y-2">
-        <p>{displayError}</p>
-        {additionalMessage && <p className="text-xs italic">{additionalMessage}</p>}
+      <AlertTitle>{displayError}</AlertTitle>
+      <AlertDescription className="space-y-2 whitespace-pre-wrap">
+        {additionalMessage}
       </AlertDescription>
     </Alert>
   );

@@ -18,6 +18,8 @@ import { FileUploader } from "@/components/FileUploader";
 
 // Increased file size threshold to 200MB
 const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
+// Threshold for showing memory-efficient processing message
+const MEMORY_EFFICIENT_THRESHOLD = 10 * 1024 * 1024; // 10MB
 
 interface AudioTranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
@@ -50,7 +52,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
-  const isLargeFile = file && file.size > LARGE_FILE_THRESHOLD;
+  const isLargeFile = file && file.size > MEMORY_EFFICIENT_THRESHOLD;
 
   const handleTermsExtracted = (terms: string[]) => {
     setCustomTerms(terms);
@@ -162,7 +164,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         )}
         
         <LargeFileAlert 
-          isVisible={!!file && file.size > 10 * 1024 * 1024 && !isLoading} 
+          isVisible={!!file && file.size > MEMORY_EFFICIENT_THRESHOLD && !isLoading} 
           fileSizeMB={fileSizeMB}
         />
         
@@ -188,8 +190,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       </CardContent>
       
       <CardFooter className="bg-slate-50 text-xs text-slate-500 italic">
-        Optimized for legal transcripts. Supports files up to 200MB with automatic batch processing.
-        Larger files will be divided into optimal segments for accurate transcription.
+        Using memory-efficient batch processing. Supports files up to 200MB through automatic chunking.
+        Large files are split into small segments to prevent browser memory issues.
       </CardFooter>
     </Card>
   );

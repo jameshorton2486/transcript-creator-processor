@@ -13,7 +13,7 @@ import { transcribeSingleFile } from './singleFileProcessor';
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
 
 /**
- * Process audio in batches for larger files
+ * Process audio in batches for larger files with memory-efficient approach
  */
 export const transcribeBatchedAudio = async (
   file: File, 
@@ -45,59 +45,94 @@ export const transcribeBatchedAudio = async (
       }
     }
     
-    // For extremely large files, use a streaming approach
-    if (file.size > 100 * 1024 * 1024) { // More than 100MB
-      console.log("Extremely large file detected, using stream processing approach");
+    // For extremely large files, use a streaming approach to avoid memory issues
+    if (file.size > 50 * 1024 * 1024) { // More than 50MB
+      console.log("Very large file detected, using stream processing approach");
       return processExtremelyLargeFile(file, apiKey, options, onProgress, customTerms);
     }
     
-    // Standard approach for regular large files
-    // Convert file to AudioBuffer
-    const audioBuffer = await fileToAudioBuffer(file);
-    const fileDurationSec = audioBuffer.duration;
-    console.log(`Audio duration: ${fileDurationSec} seconds`);
-    
-    // Calculate optimal chunk size based on file size and duration
-    const optimalChunkDuration = calculateOptimalChunkDuration(file.size, fileDurationSec);
-    console.log(`Using chunk duration of ${optimalChunkDuration} seconds`);
-    
-    // Split audio into chunks
-    const audioChunks = splitAudioBuffer(audioBuffer, optimalChunkDuration);
-    console.log(`Split audio into ${audioChunks.length} chunks`);
-    
-    // Convert chunks to WAV files
-    const wavBlobs = audioChunks.map(chunk => 
-      float32ArrayToWav(chunk, audioBuffer.sampleRate)
-    );
-    
-    // Process each chunk
-    const results = [];
-    for (let i = 0; i < wavBlobs.length; i++) {
-      const chunkFile = new File(
-        [wavBlobs[i]], 
-        `${file.name.split('.')[0]}_chunk${i}.wav`, 
-        { type: 'audio/wav' }
-      );
+    try {
+      // Standard approach for regular large files
+      // Convert file to AudioBuffer
+      const audioBuffer = await fileToAudioBuffer(file);
+      const fileDurationSec = audioBuffer.duration;
+      console.log(`Audio duration: ${fileDurationSec} seconds`);
       
-      // Update progress
-      onProgress?.(Math.round((i / wavBlobs.length) * 100));
-      console.log(`Processing chunk ${i+1}/${wavBlobs.length}...`);
+      // Calculate optimal chunk size based on file size and duration
+      const optimalChunkDuration = calculateOptimalChunkDuration(file.size, fileDurationSec);
+      console.log(`Using chunk duration of ${optimalChunkDuration} seconds`);
       
-      // Transcribe this chunk
-      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
-      results.push(chunkResult);
+      // Split audio into chunks with memory-efficient approach
+      const audioChunks = splitAudioBuffer(audioBuffer, optimalChunkDuration);
+      console.log(`Split audio into ${audioChunks.length} chunks`);
       
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Process chunks with memory-efficient approach
+      return await processChunks(audioChunks, audioBuffer.sampleRate, file.name, apiKey, options, onProgress, customTerms);
+    } catch (error) {
+      console.error("Error in standard processing:", error);
+      if (error.message && error.message.includes("buffer allocation failed")) {
+        // If we hit a memory error, fall back to the streaming approach
+        console.log("Memory error detected, falling back to stream processing approach");
+        return processExtremelyLargeFile(file, apiKey, options, onProgress, customTerms);
+      }
+      throw error;
     }
-    
-    // Combine all results
-    onProgress?.(100);
-    return combineTranscriptionResults(results);
   } catch (error) {
     console.error('Batched transcription error:', error);
     throw error;
   }
+};
+
+/**
+ * Memory-efficient chunk processing
+ */
+const processChunks = async (
+  audioChunks: Float32Array[],
+  sampleRate: number,
+  fileName: string,
+  apiKey: string,
+  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  onProgress?: (progress: number) => void,
+  customTerms: string[] = []
+) => {
+  const results = [];
+  
+  // Process one chunk at a time to minimize memory usage
+  for (let i = 0; i < audioChunks.length; i++) {
+    try {
+      // Convert chunk to WAV blob
+      const wavBlob = float32ArrayToWav(audioChunks[i], sampleRate);
+      
+      // Create file from blob
+      const chunkFile = new File(
+        [wavBlob], 
+        `${fileName.split('.')[0]}_chunk${i}.wav`, 
+        { type: 'audio/wav' }
+      );
+      
+      // Free up the Float32Array memory by removing the reference
+      // This allows garbage collection to reclaim the memory
+      audioChunks[i] = null;
+      
+      // Update progress
+      onProgress?.(Math.round((i / audioChunks.length) * 100));
+      console.log(`Processing chunk ${i+1}/${audioChunks.length}...`);
+      
+      // Process this chunk
+      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
+      results.push(chunkResult);
+      
+      // Small delay to avoid rate limiting and let GC run
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error(`Error processing chunk ${i}:`, error);
+      // Continue with other chunks even if one fails
+    }
+  }
+  
+  // Combine all results
+  onProgress?.(100);
+  return combineTranscriptionResults(results);
 };
 
 /**
@@ -112,52 +147,49 @@ const processExtremelyLargeFile = async (
   customTerms: string[] = []
 ) => {
   try {
-    // For extremely large files, we'll use a different technique:
-    // 1. Calculate approximate duration from file size
-    // 2. Process in small, timed chunks using slicing
-    
     // Rough estimate: 16-bit mono at 16kHz = ~32KB per second
     const BYTES_PER_SECOND = 32 * 1024;
     const estimatedDurationSec = file.size / BYTES_PER_SECOND;
     console.log(`Estimated duration: ${estimatedDurationSec} seconds`);
     
     // Use very small chunks to avoid memory issues
-    const chunkDurationSec = 10; // 10-second chunks
+    // For extremely large files, use 5-second chunks
+    const chunkDurationSec = 5; 
     const totalChunks = Math.ceil(estimatedDurationSec / chunkDurationSec);
-    console.log(`Will process in ${totalChunks} 10-second chunks`);
+    console.log(`Will process in ${totalChunks} ${chunkDurationSec}-second chunks`);
     
     // Process the file in direct slices 
     const results = [];
     const chunkSize = BYTES_PER_SECOND * chunkDurationSec;
     
     for (let i = 0; i < totalChunks; i++) {
-      // Update progress
-      onProgress?.(Math.round((i / totalChunks) * 100));
-      console.log(`Processing chunk ${i+1}/${totalChunks}...`);
-      
-      // Take a slice of the file
-      const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunkBlob = file.slice(start, end, file.type);
-      
-      // Create a chunk file
-      const chunkFile = new File(
-        [chunkBlob], 
-        `${file.name.split('.')[0]}_chunk${i}.${file.name.split('.').pop()}`, 
-        { type: file.type }
-      );
-      
       try {
+        // Update progress
+        onProgress?.(Math.round((i / totalChunks) * 100));
+        console.log(`Processing chunk ${i+1}/${totalChunks}...`);
+        
+        // Take a slice of the file
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunkBlob = file.slice(start, end, file.type);
+        
+        // Create a chunk file
+        const chunkFile = new File(
+          [chunkBlob], 
+          `${file.name.split('.')[0]}_chunk${i}.${file.name.split('.').pop()}`, 
+          { type: file.type }
+        );
+        
         // Transcribe this chunk
         const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
         results.push(chunkResult);
+        
+        // Small delay to avoid rate limiting and allow garbage collection
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
         console.error(`Error processing chunk ${i+1}:`, error);
         // Continue with other chunks even if one fails
       }
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     // Combine all results
