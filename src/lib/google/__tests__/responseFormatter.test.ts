@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { extractTranscriptText } from '../responseFormatter';
+import { extractTranscriptText } from '../formatters/responseFormatter';
 
 describe('extractTranscriptText', () => {
   it('should extract transcript text from a valid response', () => {

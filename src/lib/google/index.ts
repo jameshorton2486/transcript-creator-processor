@@ -1,10 +1,13 @@
 
 // Main Google Speech API integration entry point
-import { transcribeAudio, extractTranscriptText } from './transcriber';
-import { testApiKey } from './apiTester';
+import { transcribeAudio, testApiKey } from './transcriber';
 import { processSingleFile, transcribeSingleFile } from './singleFileProcessor';
 import { processBatchFile, transcribeBatchedAudio } from './batchProcessor';
-import { formatGoogleResponse, combineTranscriptionResults } from './responseFormatter';
+import { 
+  formatGoogleResponse, 
+  combineTranscriptionResults,
+  extractTranscriptText 
+} from './formatters/responseFormatter';
 
 // Export the main functions that external modules will use
 export {

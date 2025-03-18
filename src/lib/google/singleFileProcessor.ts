@@ -1,6 +1,6 @@
 
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
-import { formatGoogleResponse } from './responseFormatter';
+import { formatGoogleResponse } from './formatters/responseFormatter';
 import { preprocessAudioFile } from '../audio/preprocessor';
 import { processAudioContent, detectActualSampleRate, shouldUseDirectUpload } from './processor/audioUtils';
 import { sendTranscriptionRequest } from './processor/apiRequest';
