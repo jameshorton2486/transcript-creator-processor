@@ -52,6 +52,12 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("timeout")) {
     displayError = "Request timeout";
     additionalMessage = "The transcription request took too long to complete. Try using a shorter audio file or improving your network connection.";
+  } else if (error.includes("CORS") || error.includes("Access-Control-Allow-Origin")) {
+    displayError = "CORS policy error";
+    additionalMessage = "Your request was blocked by CORS policy. This typically happens when trying to access an API from a browser without proper CORS headers. For Google APIs, ensure you're using an API key with the correct domain restrictions. For Firestore, you need to configure CORS in your Firebase project settings.";
+  } else if (error.includes("WebSocket") || error.includes("reconnect")) {
+    displayError = "WebSocket connection error";
+    additionalMessage = "The application failed to establish a WebSocket connection. This might be due to network issues, firewall settings, or proxy configurations. Try refreshing the page or checking your network configuration.";
   }
   
   // Log detailed error to console for debugging
