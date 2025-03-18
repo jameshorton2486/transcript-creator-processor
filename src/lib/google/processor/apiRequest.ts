@@ -21,6 +21,15 @@ export const sendTranscriptionRequest = async (
     }
   };
   
+  // Check for payload size before sending
+  const requestBodySize = JSON.stringify(requestBody).length;
+  const maxPayloadSize = 10 * 1024 * 1024; // 10MB
+  
+  if (requestBodySize > maxPayloadSize) {
+    console.error(`Request payload size (${Math.round(requestBodySize / (1024 * 1024))}MB) exceeds Google API limit (10MB)`);
+    throw new Error(`Request payload size exceeds the limit: ${maxPayloadSize} bytes.`);
+  }
+  
   console.log('Sending request to Google Speech API...');
   console.log('Request config:', JSON.stringify({
     encoding: config.encoding,
@@ -28,7 +37,8 @@ export const sendTranscriptionRequest = async (
     languageCode: config.languageCode,
     useEnhanced: config.useEnhanced,
     enableSpeakerDiarization: !!config.diarizationConfig?.enableSpeakerDiarization,
-    hasCustomTerms: !!config.speechContexts && config.speechContexts.length > 0
+    hasCustomTerms: !!config.speechContexts && config.speechContexts.length > 0,
+    payloadSizeMB: (requestBodySize / (1024 * 1024)).toFixed(2)
   }));
   
   // Make request to Google Speech-to-Text API
@@ -50,7 +60,7 @@ export const sendTranscriptionRequest = async (
   }
   
   const data = await response.json();
-  console.log('Google transcription raw response received:', data);
+  console.log('Google transcription raw response received');
   
   // Validate API response
   if (!data || !data.results || data.results.length === 0) {

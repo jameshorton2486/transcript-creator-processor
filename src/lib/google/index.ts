@@ -25,6 +25,3 @@ export {
   formatGoogleResponse,
   combineTranscriptionResults
 };
-
-// Note: We're not re-exporting arrayBufferToBase64 from responseFormatter
-// since it's already exported from audio/index.ts
