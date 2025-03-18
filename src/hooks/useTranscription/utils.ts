@@ -11,6 +11,8 @@ export const formatErrorMessage = (error: any): string => {
     errorMessage += "Network error. Please check your internet connection.";
   } else if (error.message?.includes("quota")) {
     errorMessage += "API quota exceeded. Please try again later or use a different API key.";
+  } else if (error.message?.includes("payload size exceeds the limit") || error.message?.includes("Request payload size exceeds")) {
+    errorMessage += "This file will be automatically processed in smaller chunks.";
   } else if (error.message?.includes("too large")) {
     errorMessage += "This file is too large for direct processing. The application will try to process it in batches.";
   } else if (error.message?.includes("unsupported file type")) {
@@ -32,22 +34,27 @@ export const formatErrorMessage = (error: any): string => {
 
 // Validates transcript response
 export const validateTranscript = (response: any): string => {
-  const transcriptText = extractTranscriptText(response);
-  
-  if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
-    console.error("Failed to extract transcript from response:", response);
+  try {
+    const transcriptText = extractTranscriptText(response);
     
-    // Check for empty results which might indicate audio decoding issues
-    if (!response.results || 
-        (response.results.channels?.[0]?.alternatives?.[0]?.transcript === "No transcript available" && 
-         response.results.transcripts?.[0]?.transcript === "No transcript available")) {
-      throw new Error("Unable to decode audio data. Try a different audio format or use the direct upload option.");
+    if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
+      console.error("Failed to extract transcript from response:", response);
+      
+      // Check for empty results which might indicate audio decoding issues
+      if (!response.results || 
+          (response.results.channels?.[0]?.alternatives?.[0]?.transcript === "No transcript available" && 
+           response.results.transcripts?.[0]?.transcript === "No transcript available")) {
+        throw new Error("Unable to decode audio data. Try a different audio format or use the direct upload option.");
+      }
+      
+      throw new Error("Failed to extract transcript from the API response.");
     }
     
-    throw new Error("Failed to extract transcript from the API response.");
+    return transcriptText;
+  } catch (error) {
+    console.error("Error validating transcript:", error);
+    throw error;
   }
-  
-  return transcriptText;
 };
 
 // Creates error context for detailed logging
@@ -59,6 +66,7 @@ export const createErrorContext = (file: File | null, options: any, customTerms:
       name: file.name,
       type: file.type,
       size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      estimatedBase64Size: `${((file.size * 1.33) / 1024 / 1024).toFixed(2)} MB`, // Add estimated base64 size
     },
     options,
     customTermsCount: customTerms.length,
