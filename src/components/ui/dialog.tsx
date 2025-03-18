@@ -5,6 +5,12 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// Create our own context for the dialog IDs
+const DialogContext = React.createContext<{
+  titleId?: string;
+  descriptionId?: string;
+}>({})
+
 const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
@@ -49,12 +55,12 @@ const DialogContent = React.forwardRef<
         aria-describedby={descriptionId}
         {...props}
       >
-        {/* Pass the generated IDs to children via context */}
-        <DialogPrimitive.DialogContext.Provider 
+        {/* Pass the generated IDs to children via our context */}
+        <DialogContext.Provider 
           value={{ titleId, descriptionId }}
         >
           {children}
-        </DialogPrimitive.DialogContext.Provider>
+        </DialogContext.Provider>
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
@@ -97,8 +103,8 @@ const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => {
-  // Get the ID from context
-  const { titleId } = React.useContext(DialogPrimitive.DialogContext)
+  // Get the ID from our context
+  const { titleId } = React.useContext(DialogContext)
   
   return (
     <DialogPrimitive.Title
@@ -118,8 +124,8 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => {
-  // Get the ID from context
-  const { descriptionId } = React.useContext(DialogPrimitive.DialogContext)
+  // Get the ID from our context
+  const { descriptionId } = React.useContext(DialogContext)
   
   return (
     <DialogPrimitive.Description
