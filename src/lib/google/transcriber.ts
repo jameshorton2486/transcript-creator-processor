@@ -1,13 +1,12 @@
 
 // Main Google transcription service
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
-import { transcribeSingleFile } from './singleFileProcessor';
 import { transcribeBatchedAudio } from './batchProcessor';
 import { extractTranscriptText } from './formatters/responseFormatter';
 import { testApiKey } from './apiTester';
 
 /**
- * Main transcription function that handles both small and large files
+ * Main transcription function that always processes files in batches
  */
 export const transcribeAudio = async (
   file: File, 
@@ -17,61 +16,75 @@ export const transcribeAudio = async (
   customTerms: string[] = []
 ) => {
   try {
+    // Log start of transcription process with file details
+    console.log(`[TRANSCRIPTION] Starting transcription for: ${file.name}`);
+    console.log(`[TRANSCRIPTION] File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`[TRANSCRIPTION] Transcription options:`, options);
+    if (customTerms?.length > 0) {
+      console.log(`[TRANSCRIPTION] Using ${customTerms.length} custom terms for speech adaptation`);
+    }
+
     // Check file type
     const fileType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
     
     const isAudio = fileType.includes('audio') || 
+                   fileType.includes('video') ||
                    fileName.endsWith('.mp3') || 
                    fileName.endsWith('.wav') || 
                    fileName.endsWith('.flac') || 
                    fileName.endsWith('.m4a') || 
-                   fileName.endsWith('.ogg');
+                   fileName.endsWith('.ogg') ||
+                   fileName.endsWith('.mp4') ||
+                   fileName.endsWith('.webm') ||
+                   fileName.endsWith('.mov');
     
     if (!isAudio) {
-      throw new Error('Unsupported file type. Please upload an audio file.');
+      console.error(`[TRANSCRIPTION ERROR] Unsupported file type: ${fileType || fileName}`);
+      throw new Error('Unsupported file type. Please upload an audio or video file.');
     }
     
-    // Considering base64 encoding increases size by ~33%, adjust threshold 
-    // to account for the base64 expansion
-    const BASE64_EXPANSION_FACTOR = 1.33; // base64 encoding increases size by ~33%
-    const GOOGLE_API_LIMIT = 10 * 1024 * 1024; // 10MB
-    const EFFECTIVE_THRESHOLD = Math.floor(GOOGLE_API_LIMIT / BASE64_EXPANSION_FACTOR); // ~7.5MB
+    // Initialize progress if callback provided
+    onProgress?.(0);
     
-    // If file is larger than our safe threshold, ALWAYS use batch processing
-    const isLargeFile = file.size > EFFECTIVE_THRESHOLD;
+    // Always use batch processing for all files
+    console.log(`[TRANSCRIPTION] Using batch processing for file: ${file.name}`);
     
-    // Log what we're doing
-    console.log(`Transcribing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) with Google Speech-to-Text`);
-    console.log(`File size after base64 encoding (estimated): ~${((file.size * BASE64_EXPANSION_FACTOR) / 1024 / 1024).toFixed(2)} MB`);
-    console.log('Options:', options);
-    console.log(`Using ${isLargeFile ? 'batch' : 'single file'} processing`);
-    
-    if (customTerms && customTerms.length > 0) {
-      console.log(`Using ${customTerms.length} custom terms for speech adaptation: ${customTerms.slice(0, 5).join(', ')}${customTerms.length > 5 ? '...' : ''}`);
-    }
-    
-    if (!isLargeFile) {
-      // For smaller files, use the single file processor
-      console.log(`Using single file processor (file size under threshold: ${(EFFECTIVE_THRESHOLD / 1024 / 1024).toFixed(2)} MB)`);
-      return await transcribeSingleFile(file, apiKey, options, customTerms);
-    } else {
-      // For large files, use batch processing
-      console.log(`Using batch processing for large file (exceeds threshold: ${(EFFECTIVE_THRESHOLD / 1024 / 1024).toFixed(2)} MB)`);
+    try {
+      const result = await transcribeBatchedAudio(file, apiKey, options, onProgress, customTerms);
+      console.log(`[TRANSCRIPTION] Successfully completed batch transcription for: ${file.name}`);
+      return result;
+    } catch (batchError) {
+      console.error('[TRANSCRIPTION ERROR] Batch processing failed:', batchError);
       
-      // Initialize progress if callback provided
-      onProgress?.(0);
+      // Get detailed error information
+      const errorMessage = batchError instanceof Error ? batchError.message : String(batchError);
+      const errorStack = batchError instanceof Error ? batchError.stack : '';
       
-      try {
-        return await transcribeBatchedAudio(file, apiKey, options, onProgress, customTerms);
-      } catch (batchError) {
-        console.error('Batch processing failed:', batchError);
-        throw new Error('Failed to transcribe file. This file will be automatically processed in smaller chunks.');
-      }
+      console.error('[TRANSCRIPTION ERROR] Details:', {
+        file: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        error: errorMessage,
+        stack: errorStack
+      });
+      
+      throw new Error(`Failed to transcribe file in batches: ${errorMessage}`);
     }
   } catch (error) {
-    console.error('Google transcription error:', error);
-    throw error;
+    // Log detailed error information
+    console.error('[TRANSCRIPTION ERROR] Fatal error:', error);
+    
+    // Get specific error information
+    let errorMessage = 'Unknown transcription error occurred.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error('[TRANSCRIPTION ERROR] Stack trace:', error.stack);
+    } else {
+      errorMessage = String(error);
+    }
+    
+    // Re-throw with clear message
+    throw new Error(`Transcription failed: ${errorMessage}`);
   }
 };
 

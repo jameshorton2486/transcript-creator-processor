@@ -1,8 +1,7 @@
-
 // Main Google Speech API integration entry point
 import { transcribeAudio, testApiKey } from './transcriber';
-import { processSingleFile, transcribeSingleFile } from './singleFileProcessor';
-import { processBatchFile, transcribeBatchedAudio } from './batchProcessor';
+import { transcribeSingleFile } from './singleFileProcessor';
+import { transcribeBatchedAudio } from './batchProcessor';
 import { 
   formatGoogleResponse, 
   combineTranscriptionResults,
@@ -28,11 +27,11 @@ export {
   testApiKey,
   extractTranscriptText,
   
-  // Core processing functions
-  processSingleFile,
-  transcribeSingleFile,
-  processBatchFile,
+  // Core processing functions - now all audio will be processed in batches
   transcribeBatchedAudio,
+  
+  // Keep single file processor for internal use (used by batch processor)
+  transcribeSingleFile,
   
   // Utility functions for response handling
   formatGoogleResponse,
