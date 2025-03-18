@@ -8,6 +8,19 @@ import {
   combineTranscriptionResults,
   extractTranscriptText 
 } from './formatters/responseFormatter';
+import {
+  applyLegalFormatting,
+  formatQuestionAnswer,
+  formatParagraphLayout
+} from './formatters/legalFormatter';
+import {
+  normalizeSpeakerLabels,
+  processSpeakerDiarization,
+  formatSpeakerTurns
+} from './formatters/speakerFormatter';
+import {
+  detectLegalContext
+} from './formatters/transcriptExtractor';
 
 // Export the main functions that external modules will use
 export {
@@ -23,5 +36,18 @@ export {
   
   // Utility functions for response handling
   formatGoogleResponse,
-  combineTranscriptionResults
+  combineTranscriptionResults,
+  
+  // Legal formatting utilities
+  applyLegalFormatting,
+  formatQuestionAnswer,
+  formatParagraphLayout,
+  
+  // Speaker formatting utilities
+  normalizeSpeakerLabels,
+  processSpeakerDiarization,
+  formatSpeakerTurns,
+  
+  // Legal context detection
+  detectLegalContext
 };

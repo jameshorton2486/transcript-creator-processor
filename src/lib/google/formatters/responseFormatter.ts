@@ -1,10 +1,19 @@
 
 /**
  * Main module for formatting Google Speech-to-Text responses
+ * with legal transcript conventions
  */
 
-import { applyLegalFormatting } from './legalFormatter';
-import { processSpeakerDiarization, normalizeSpeakerLabels } from './speakerFormatter';
+import { 
+  applyLegalFormatting, 
+  formatQuestionAnswer, 
+  formatParagraphLayout 
+} from './legalFormatter';
+import { 
+  processSpeakerDiarization, 
+  normalizeSpeakerLabels, 
+  formatSpeakerTurns 
+} from './speakerFormatter';
 import { extractTranscriptText } from './transcriptExtractor';
 
 /**
@@ -25,7 +34,15 @@ export function formatGoogleResponse(googleResponse: any) {
   const { transcript: fullTranscript } = processSpeakerDiarization(googleResponse.results);
   
   // Apply legal transcript formatting rules
-  const formattedTranscript = applyLegalFormatting(fullTranscript);
+  let formattedTranscript = applyLegalFormatting(fullTranscript);
+  
+  // Apply speaker turn formatting for better readability
+  formattedTranscript = formatSpeakerTurns(formattedTranscript);
+  
+  // Apply Q&A formatting if transcript contains such patterns
+  if (formattedTranscript.includes('Q: ') || formattedTranscript.includes('A: ')) {
+    formattedTranscript = formatQuestionAnswer(formattedTranscript);
+  }
   
   // Format the response to match our expected format
   return {
@@ -53,6 +70,7 @@ export function formatGoogleResponse(googleResponse: any) {
 /**
  * Combine multiple transcription results into a single result
  * with improved handling of speaker transitions between chunks
+ * and consistent legal formatting
  */
 export function combineTranscriptionResults(results: any[]): any {
   if (results.length === 0) {
@@ -73,7 +91,7 @@ export function combineTranscriptionResults(results: any[]): any {
     if (!result.results?.channels?.[0]?.alternatives?.[0]?.transcript) return;
     
     const transcript = result.results.channels[0].alternatives[0].transcript;
-    const speakerMatches = transcript.match(/Speaker \d+:/g) || [];
+    const speakerMatches = transcript.match(/Speaker \d+:|[A-Z]+ [A-Z]+:/g) || [];
     
     speakerMatches.forEach(speaker => {
       if (!globalSpeakerMap[speaker]) {
@@ -99,8 +117,8 @@ export function combineTranscriptionResults(results: any[]): any {
     if (index > 0 && combinedTranscript.length > 0) {
       // If the last chunk ended with a speaker and this one starts with text (no speaker),
       // then we don't need an additional newline
-      const lastChunkEndsSpeaker = /Speaker \d+:[^\n]*$/i.test(combinedTranscript);
-      const thisChunkStartsSpeaker = /^Speaker \d+:/i.test(transcript.trimStart());
+      const lastChunkEndsSpeaker = /Speaker \d+:|[A-Z]+ [A-Z]+:[^\n]*$/i.test(combinedTranscript);
+      const thisChunkStartsSpeaker = /^(Speaker \d+:|[A-Z]+ [A-Z]+:)/i.test(transcript.trimStart());
       
       if (lastChunkEndsSpeaker && !thisChunkStartsSpeaker) {
         // Just add a space instead of a newline
@@ -119,8 +137,16 @@ export function combineTranscriptionResults(results: any[]): any {
     }
   });
   
-  // Apply final legal formatting to the combined transcript
-  combinedTranscript = applyLegalFormatting(combinedTranscript);
+  // Apply legal formatting to the combined transcript
+  let formattedTranscript = applyLegalFormatting(combinedTranscript);
+  
+  // Apply speaker turn formatting
+  formattedTranscript = formatSpeakerTurns(formattedTranscript);
+  
+  // Apply Q&A formatting if transcript contains such patterns
+  if (formattedTranscript.includes('Q: ') || formattedTranscript.includes('A: ')) {
+    formattedTranscript = formatQuestionAnswer(formattedTranscript);
+  }
   
   // Calculate average confidence
   const avgConfidence = results.length > 0 ? confidenceSum / results.length : 0;
@@ -130,7 +156,7 @@ export function combineTranscriptionResults(results: any[]): any {
     results: {
       transcripts: [
         {
-          transcript: combinedTranscript || "No transcript available",
+          transcript: formattedTranscript || "No transcript available",
           confidence: avgConfidence
         }
       ],
@@ -138,7 +164,7 @@ export function combineTranscriptionResults(results: any[]): any {
         {
           alternatives: [
             {
-              transcript: combinedTranscript || "No transcript available",
+              transcript: formattedTranscript || "No transcript available",
               confidence: avgConfidence
             }
           ]

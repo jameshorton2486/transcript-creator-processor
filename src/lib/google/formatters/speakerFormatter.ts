@@ -1,21 +1,38 @@
 
 /**
  * Functions for formatting speaker labels and diarization
+ * according to legal transcript conventions
  */
 
 interface SpeakerMap {
   [speakerId: number]: number;
 }
 
+// Map of standard court roles to their proper formatted display
+const COURT_ROLES = {
+  'judge': 'THE COURT',
+  'court': 'THE COURT',
+  'plaintiff': 'PLAINTIFF',
+  'defendant': 'DEFENDANT',
+  'witness': 'WITNESS',
+  'prosecutor': 'PROSECUTOR',
+  'defense': 'DEFENSE COUNSEL',
+  'plaintiff counsel': 'PLAINTIFF\'S COUNSEL',
+  'defendant counsel': 'DEFENDANT\'S COUNSEL',
+  'bailiff': 'BAILIFF',
+  'clerk': 'CLERK',
+};
+
 /**
  * Format and normalize speaker labels across transcript chunks
+ * with consistent legal formatting
  */
 export function normalizeSpeakerLabels(
   transcript: string, 
   globalSpeakerMap: Record<string, string> = {}
 ): string {
   // Process speaker labels to maintain consistency
-  const speakerMatches = transcript.match(/Speaker \d+:/g) || [];
+  const speakerMatches = transcript.match(/Speaker \d+:|[A-Z]+ [A-Z]+:/g) || [];
   
   speakerMatches.forEach(speaker => {
     if (globalSpeakerMap[speaker]) {
@@ -24,11 +41,18 @@ export function normalizeSpeakerLabels(
     }
   });
   
+  // Apply standardized formatting for known court roles
+  Object.entries(COURT_ROLES).forEach(([role, formalTitle]) => {
+    const roleRegex = new RegExp(`\\b${role}\\b\\s*:`, 'gi');
+    transcript = transcript.replace(roleRegex, `${formalTitle}:`);
+  });
+  
   return transcript;
 }
 
 /**
  * Process Google API results to create a transcript with speaker labels
+ * following legal transcript formatting conventions
  */
 export function processSpeakerDiarization(results: any[]): { 
   transcript: string; 
@@ -84,16 +108,47 @@ export function processSpeakerDiarization(results: any[]): {
           fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
         }
       } else {
-        // No speaker diarization, just add the transcript with a default speaker
-        // Format into appropriate paragraphs based on punctuation
-        const sentences = transcript.split(/(?<=[.!?])\s+/);
+        // Detection of Q&A patterns for court transcripts
+        const qaPattern = /\b(Q|A):\s/i;
         
-        if (sentences.length > 0) {
-          fullTranscript += `Speaker ${speakerNumber}: ${sentences.join(' ')}\n\n`;
+        if (qaPattern.test(transcript)) {
+          // Format as question and answer
+          const segments = transcript.split(/(?=\b[QA]:\s)/i);
+          segments.forEach(segment => {
+            if (segment.trim()) {
+              fullTranscript += segment.trim() + '\n\n';
+            }
+          });
+        } else {
+          // No speaker diarization, format as paragraphs based on punctuation
+          const sentences = transcript.split(/(?<=[.!?])\s+/);
+          
+          if (sentences.length > 0) {
+            fullTranscript += `Speaker ${speakerNumber}: ${sentences.join(' ')}\n\n`;
+          }
         }
       }
     }
   });
   
   return { transcript: fullTranscript, speakerMap };
+}
+
+/**
+ * Format speaker turn-taking according to standard legal transcript conventions
+ */
+export function formatSpeakerTurns(transcript: string): string {
+  // Format common court dialogue patterns
+  return transcript
+    // Format THE COURT sections with proper indentation and spacing
+    .replace(/(THE COURT:)(\s*)([A-Za-z])/g, '$1\n     $3')
+    
+    // Format counsel sections
+    .replace(/([A-Z]+'S COUNSEL:)(\s*)([A-Za-z])/g, '$1\n     $3')
+    
+    // Format witness sections
+    .replace(/(WITNESS:)(\s*)([A-Za-z])/g, '$1\n     $3')
+    
+    // Ensure proper spacing between speaker changes
+    .replace(/(\n\n)([A-Z][A-Z\s']+:)/g, '\n$2');
 }
