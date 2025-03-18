@@ -1,137 +1,119 @@
-import { buildRequestConfig } from '../speechConfig';
 
-// Builds and sends request to Google Speech API with improved error handling
-export const sendTranscriptionRequest = async (
-  apiKey: string,
-  base64Audio: string,
-  encoding: string,
-  sampleRate: number,
-  options: any,
-  customTerms: string[] = []
-) => {
-  try {
-    // Build configuration for the API request
-    const config = buildRequestConfig(encoding, sampleRate, options, customTerms);
-    
-    // Prepare the complete request body
-    const requestBody = {
-      config,
-      audio: {
-        content: base64Audio
-      }
+import axios from 'axios';
+
+/**
+ * Sends a transcription request to the Google Speech-to-Text API
+ * @param {string} apiKey - The Google Cloud API key
+ * @param {string} audioContent - Base64 encoded audio content
+ * @param {object} options - Transcription options
+ * @returns {Promise<object>} - The transcription response
+ */
+export const sendTranscriptionRequest = async (apiKey, audioContent, options) => {
+  const {
+    encoding,
+    sampleRateHertz,
+    languageCode = 'en-US',
+    enableAutomaticPunctuation = true,
+    model = 'latest_long',
+    useEnhanced = true,
+    enableSpeakerDiarization = false,
+    minSpeakerCount = 2,
+    maxSpeakerCount = 8,
+    enableWordTimeOffsets = false,
+    enableWordConfidence = false,
+    customTerms = [],
+  } = options;
+
+  // Log request parameters for debugging
+  console.info('[API] Sending request to Google Speech API...');
+  
+  // Create the configuration object, only including sampleRateHertz if provided
+  const config = {
+    encoding,
+    languageCode,
+    enableAutomaticPunctuation,
+    model,
+    useEnhanced,
+  };
+  
+  // Only add sampleRateHertz if specified - this allows Google to auto-detect from WAV headers
+  if (sampleRateHertz) {
+    config.sampleRateHertz = sampleRateHertz;
+  } else {
+    console.info('[API] Sample rate not specified, letting Google detect from audio header');
+  }
+  
+  // Add diarization if enabled
+  if (enableSpeakerDiarization) {
+    config.diarizationConfig = {
+      enableSpeakerDiarization,
+      minSpeakerCount,
+      maxSpeakerCount,
     };
+  }
+  
+  // Add word time offsets if enabled
+  if (enableWordTimeOffsets) {
+    config.enableWordTimeOffsets = enableWordTimeOffsets;
+  }
+  
+  if (enableWordConfidence) {
+    config.enableWordConfidence = enableWordConfidence;
+  }
+  
+  // Add speech contexts with custom phrases if any
+  if (customTerms && customTerms.length > 0) {
+    config.speechContexts = [
+      {
+        phrases: customTerms,
+        boost: 10,
+      },
+    ];
+  }
+  
+  // Log payload size for debugging
+  const payloadSizeMB = (audioContent.length * 0.75 / 1024 / 1024).toFixed(2); // Convert base64 length to bytes, then to MB
+  
+  console.info('[API] Request config:', {
+    encoding,
+    sampleRateHertz: sampleRateHertz || 'auto-detect',
+    languageCode,
+    useEnhanced,
+    enableSpeakerDiarization,
+    hasCustomTerms: customTerms.length > 0,
+    payloadSizeMB
+  });
+  
+  // Prepare the request data
+  const requestData = {
+    config,
+    audio: {
+      content: audioContent,
+    },
+  };
+  
+  try {
+    // Send the request to Google's Speech-to-Text API
+    const response = await axios.post(
+      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+      requestData
+    );
     
-    // Pre-check for payload size before sending
-    const requestBodyJson = JSON.stringify(requestBody);
-    const requestBodySize = requestBodyJson.length;
-    const maxPayloadSize = 10 * 1024 * 1024; // 10MB
-    
-    if (requestBodySize > maxPayloadSize) {
-      console.error(`[API ERROR] Request payload size (${Math.round(requestBodySize / (1024 * 1024))}MB) exceeds Google API limit (10MB)`);
-      throw new Error(`Request payload size exceeds the limit: ${maxPayloadSize} bytes. This chunk is too large for the API.`);
-    }
-    
-    console.log('[API] Sending request to Google Speech API...');
-    console.log('[API] Request config:', JSON.stringify({
-      encoding: config.encoding,
-      sampleRateHertz: config.sampleRateHertz,
-      languageCode: config.languageCode,
-      useEnhanced: config.useEnhanced,
-      enableSpeakerDiarization: !!config.diarizationConfig?.enableSpeakerDiarization,
-      hasCustomTerms: !!config.speechContexts && config.speechContexts.length > 0,
-      payloadSizeMB: (requestBodySize / (1024 * 1024)).toFixed(2)
-    }));
-    
-    // Make request to Google Speech-to-Text API
-    let response;
-    try {
-      response = await fetch(
-        `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: requestBodyJson,
-        }
-      );
-    } catch (fetchError) {
-      console.error('[API ERROR] Network error during API request:', fetchError);
-      throw new Error(`Network error while contacting Google API: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
-    }
-    
-    // Handle HTTP errors
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (parseError) {
-        console.error('[API ERROR] Failed to parse error response:', parseError);
-        throw new Error(`Google API error: HTTP ${response.status} - ${response.statusText}`);
-      }
-      
-      console.error('[API ERROR] Google API error response:', errorData);
-      
-      // Provide more specific error messages based on the API error
-      const errorMessage = errorData.error?.message || 'Unknown API error';
-      const errorCode = errorData.error?.code || response.status;
-      
-      // Handle common Google API errors
-      let userFriendlyError = `Google API error (${errorCode}): ${errorMessage}`;
-      
-      if (errorCode === 400) {
-        userFriendlyError = `Invalid request to Google API: ${errorMessage}`;
-      } else if (errorCode === 401) {
-        userFriendlyError = `Authentication error: Your API key may be invalid or expired`;
-      } else if (errorCode === 403) {
-        userFriendlyError = `Access denied: Verify that your API key has access to the Speech-to-Text API and billing is enabled`;
-      } else if (errorCode === 429) {
-        userFriendlyError = `Rate limit exceeded: Too many requests to the Google API`;
-      } else if (errorCode >= 500) {
-        userFriendlyError = `Google API server error (${errorCode}): This is a temporary issue with Google's servers`;
-      }
-      
-      throw new Error(userFriendlyError);
-    }
-    
-    // Parse successful response
-    let data;
-    try {
-      data = await response.json();
-      console.log('[API] Google transcription raw response received');
-    } catch (parseError) {
-      console.error('[API ERROR] Failed to parse success response:', parseError);
-      throw new Error(`Failed to parse Google API response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-    }
-    
-    // Validate API response
-    if (!data || !data.results || data.results.length === 0) {
-      console.error('[API ERROR] Empty or invalid response from Google API:', data);
-      
-      // Check if there's an error field in the response
-      if (data.error) {
-        throw new Error(`Google API error: ${data.error.message || 'Unknown API error'}`);
-      }
-      
-      // If it's just empty results, that might mean no speech was detected
-      if (data.results && data.results.length === 0) {
-        throw new Error('No speech detected in this audio segment. The audio may be silent or contain unintelligible speech.');
-      }
-      
-      throw new Error('Invalid response from Google API. The audio file may not contain recognizable speech or the format may be unsupported.');
-    }
-    
-    return data;
+    // Return the response data
+    return response.data;
   } catch (error) {
-    // Log the error and re-throw with improved message
-    console.error('[API ERROR] API request failed:', error);
-    
-    // If it's already our error, just re-throw it
-    if (error instanceof Error) {
-      throw error;
+    // Log detailed error information
+    if (error.response && error.response.data) {
+      console.error('[API ERROR] Google API error response:', JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error('[API ERROR] Network or request error:', error.message);
     }
     
-    // Otherwise, wrap in a more helpful error
-    throw new Error(`Failed to transcribe audio: ${String(error)}`);
+    // Create a more descriptive error
+    const errorMessage = error.response && error.response.data
+      ? `Invalid request to Google API: ${error.response.data.error.message}`
+      : `API request failed: ${error.message}`;
+    
+    throw new Error(errorMessage);
   }
 };
