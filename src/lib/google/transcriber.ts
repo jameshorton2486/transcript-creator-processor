@@ -3,7 +3,7 @@
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { transcribeBatchedAudio } from './batchProcessor';
-import { extractTranscriptText } from './responseFormatter';
+import { extractTranscriptText } from './formatters/responseFormatter';
 import { testApiKey } from './apiTester';
 
 /**

@@ -1,6 +1,6 @@
 
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
-import { combineTranscriptionResults } from './responseFormatter';
+import { combineTranscriptionResults } from './formatters/responseFormatter';
 import { 
   fileToAudioBuffer, 
   splitAudioBuffer, 
