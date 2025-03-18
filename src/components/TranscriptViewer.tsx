@@ -74,8 +74,25 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
     
     let cleanedText = uniqueLines.join('\n');
     
-    // Highlight speaker labels with different colors for each speaker
-    const speakerRegex = /(Speaker \d+:|THE COURT:|[A-Z]+'S COUNSEL:)/g;
+    // Format common legal transcript patterns
+    cleanedText = cleanedText
+      // Format standard legal case citations
+      .replace(/([A-Za-z]+)\s+v\.?\s+([A-Za-z]+)/g, '<span class="font-semibold">$1 v. $2</span>')
+      
+      // Format legal statute references
+      .replace(/(\d+)\s+U\.S\.C\.\s+§\s+(\d+)/gi, '<span class="font-semibold">$1 U.S.C. § $2</span>')
+      
+      // Format case numbers
+      .replace(/case\s+no\.\s+([A-Za-z0-9\-]+)/gi, 'Case No. <span class="font-semibold">$1</span>')
+      
+      // Format docket numbers
+      .replace(/docket\s+no\.\s+([A-Za-z0-9\-]+)/gi, 'Docket No. <span class="font-semibold">$1</span>')
+      
+      // Format exhibit references
+      .replace(/exhibit\s+([A-Za-z0-9\-]+)/gi, 'Exhibit <span class="font-semibold">$1</span>');
+    
+    // Identify and format speaker labels with different colors for each speaker
+    const speakerRegex = /(Speaker \d+:|THE COURT:|[A-Z][A-Z\s']+(?:'S COUNSEL|COUNSEL)?:)/g;
     
     // Get all unique speakers
     const speakers = Array.from(new Set(cleanedText.match(speakerRegex) || []));
@@ -91,8 +108,12 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
       );
     });
     
-    // Add styling for paragraph breaks
-    cleanedText = cleanedText.replace(/\n/g, '<br />');
+    // Add proper line breaks and indentation for readability
+    cleanedText = cleanedText
+      // Add paragraph breaks after consecutive sentences
+      .replace(/(\.)(\s*)([A-Z])/g, '$1<br />$3')
+      // Add indentation after speaker labels
+      .replace(/(class="font-bold [^"]+">.*?:)(\s*)/g, '$1</span><br /><span class="pl-4">');
     
     return cleanedText;
   };
