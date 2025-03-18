@@ -1,10 +1,6 @@
 
-import { 
-  detectAudioEncoding, 
-  getStandardSampleRate, 
-  arrayBufferToBase64 
-} from '../audio';
 import { getAudioContext } from '../../audio/audioContext';
+import { detectAudioEncoding, getStandardSampleRate } from '../audioEncoding';
 
 // Processes audio content for API request
 export const processAudioContent = async (
@@ -38,6 +34,19 @@ export const processAudioContent = async (
   
   return { base64Audio, actualSampleRate };
 };
+
+// Helper function to convert ArrayBuffer to base64
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  
+  return window.btoa(binary);
+}
 
 // Attempts to detect actual sample rate from audio file
 export const detectActualSampleRate = async (preprocessedAudio: ArrayBuffer) => {

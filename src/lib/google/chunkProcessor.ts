@@ -1,10 +1,13 @@
 
-/**
- * Handles processing of audio chunks for batch transcription
- */
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { float32ArrayToWav } from '../audio';
+
+// Extended TranscriptionOptions interface that includes customTerms
+interface ExtendedTranscriptionOptions extends typeof DEFAULT_TRANSCRIPTION_OPTIONS {
+  customTerms?: string[];
+  [key: string]: any; // Allow for additional properties
+}
 
 /**
  * Process a batch of chunks with memory-efficient approach
@@ -14,7 +17,7 @@ export const processChunks = async (
   sampleRate: number,
   fileName: string,
   apiKey: string,
-  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  options: ExtendedTranscriptionOptions = DEFAULT_TRANSCRIPTION_OPTIONS as ExtendedTranscriptionOptions,
   onProgress?: (progress: number) => void,
   customTerms: string[] = []
 ) => {
@@ -42,7 +45,7 @@ export const processChunks = async (
       console.log(`Processing chunk ${i+1}/${audioChunks.length}...`);
       
       // Process this chunk
-      const mergedOptions = { ...options };
+      const mergedOptions: ExtendedTranscriptionOptions = { ...options };
       if (customTerms.length > 0) {
         mergedOptions.customTerms = customTerms;
       }
@@ -70,7 +73,7 @@ export const processChunks = async (
 export const processExtremelyLargeFile = async (
   file: File,
   apiKey: string,
-  options = DEFAULT_TRANSCRIPTION_OPTIONS,
+  options: ExtendedTranscriptionOptions = DEFAULT_TRANSCRIPTION_OPTIONS as ExtendedTranscriptionOptions,
   onProgress?: (progress: number) => void,
   customTerms: string[] = []
 ) => {
@@ -109,7 +112,7 @@ export const processExtremelyLargeFile = async (
         );
         
         // Transcribe this chunk
-        const mergedOptions = { ...options };
+        const mergedOptions: ExtendedTranscriptionOptions = { ...options };
         if (customTerms.length > 0) {
           mergedOptions.customTerms = customTerms;
         }

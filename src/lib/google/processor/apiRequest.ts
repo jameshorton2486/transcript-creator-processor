@@ -1,6 +1,27 @@
 
 import axios from 'axios';
 
+// Add a proper interface for the configuration
+interface TranscriptionConfig {
+  encoding: string;
+  sampleRateHertz?: number;
+  languageCode: string;
+  enableAutomaticPunctuation: boolean;
+  model: string;
+  useEnhanced: boolean;
+  diarizationConfig?: {
+    enableSpeakerDiarization: boolean;
+    minSpeakerCount: number;
+    maxSpeakerCount: number;
+  };
+  enableWordTimeOffsets?: boolean;
+  enableWordConfidence?: boolean;
+  speechContexts?: {
+    phrases: string[];
+    boost: number;
+  }[];
+}
+
 /**
  * Sends a transcription request to the Google Speech-to-Text API
  * @param {string} apiKey - The Google Cloud API key
@@ -27,8 +48,8 @@ export const sendTranscriptionRequest = async (apiKey, audioContent, options) =>
   // Log request parameters for debugging
   console.info('[API] Sending request to Google Speech API...');
   
-  // Create the configuration object
-  const config = {
+  // Create the configuration object with proper type
+  const config: TranscriptionConfig = {
     encoding,
     languageCode,
     enableAutomaticPunctuation,

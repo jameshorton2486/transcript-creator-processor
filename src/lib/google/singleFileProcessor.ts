@@ -2,6 +2,22 @@
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { getSampleRate } from './audio/formatDetection';
 
+interface TranscriptionOptions {
+  encoding?: string;
+  sampleRateHertz?: number;
+  languageCode?: string;
+  enableAutomaticPunctuation?: boolean;
+  model?: string;
+  useEnhanced?: boolean;
+  enableSpeakerDiarization?: boolean;
+  minSpeakerCount?: number;
+  maxSpeakerCount?: number;
+  enableWordTimeOffsets?: boolean;
+  enableWordConfidence?: boolean;
+  customTerms?: string[];
+  [key: string]: any; // Allow for additional properties
+}
+
 /**
  * Transcribes a single audio file
  * @param {File|Blob} file - The audio file to transcribe
@@ -9,10 +25,14 @@ import { getSampleRate } from './audio/formatDetection';
  * @param {object} options - Transcription options
  * @returns {Promise<object>} - The transcription response
  */
-export const transcribeSingleFile = async (file, apiKey, options = {}) => {
+export const transcribeSingleFile = async (
+  file: File | Blob, 
+  apiKey: string, 
+  options: TranscriptionOptions = {}
+) => {
   try {
     // Log file details
-    console.info(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+    console.info(`Processing file: ${(file as File).name}, type: ${file.type}, size: ${file.size} bytes`);
     
     // Determine encoding based on file type
     let encoding = 'LINEAR16'; // Default encoding for WAV files
@@ -31,9 +51,9 @@ export const transcribeSingleFile = async (file, apiKey, options = {}) => {
     console.info(`Detected encoding: ${encoding}`);
     
     // Read the file content as ArrayBuffer for processing
-    const audioArrayBuffer = await new Promise((resolve, reject) => {
+    const audioArrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
+      reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
     });
@@ -43,11 +63,11 @@ export const transcribeSingleFile = async (file, apiKey, options = {}) => {
     const sampleRateHertz = getSampleRate(audioArrayBuffer, file.type);
     
     // Convert to base64 for API request
-    const audioBase64 = await new Promise((resolve, reject) => {
+    const audioBase64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         // Extract the base64 content without the prefix
-        const base64 = e.target.result.toString().split(',')[1];
+        const base64 = (e.target?.result as string).split(',')[1];
         resolve(base64);
       };
       reader.onerror = reject;
