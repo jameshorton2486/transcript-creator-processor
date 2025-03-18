@@ -41,6 +41,7 @@ export interface TranscriptionOptions {
   noiseReduction?: boolean;  // Noise reduction
   autoChunk?: boolean;  // Automatic chunking of long audio
   enhancedModel?: boolean;  // Use enhanced speech recognition model
+  customTerms?: string[];  // Custom terminology for speech recognition
 }
 
 export const DEFAULT_TRANSCRIPTION_OPTIONS: TranscriptionOptions = {
@@ -52,7 +53,8 @@ export const DEFAULT_TRANSCRIPTION_OPTIONS: TranscriptionOptions = {
   normalize: true,
   noiseReduction: true,
   autoChunk: true,
-  enhancedModel: true
+  enhancedModel: true,
+  customTerms: []
 };
 
 export interface ProcessingOptions {

@@ -1,6 +1,5 @@
 
 import { getAudioContext } from '../../audio/audioContext';
-import { detectAudioEncoding, getStandardSampleRate } from '../audioEncoding';
 
 // Processes audio content for API request
 export const processAudioContent = async (
@@ -48,6 +47,23 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return window.btoa(binary);
 }
 
+// Helper function to get standard sample rate based on encoding
+function getStandardSampleRate(encoding: string): number {
+  switch (encoding.toUpperCase()) {
+    case 'FLAC':
+      return 16000;
+    case 'MP3':
+      return 16000;
+    case 'WAV':
+    case 'LINEAR16':
+      return 16000;
+    case 'OGG_OPUS':
+      return 48000;
+    default:
+      return 16000; // Default to 16kHz for most speech recognition
+  }
+}
+
 // Attempts to detect actual sample rate from audio file
 export const detectActualSampleRate = async (preprocessedAudio: ArrayBuffer) => {
   console.log("Detecting audio sample rate...");
@@ -69,9 +85,32 @@ export const shouldUseDirectUpload = (
   file: File, 
   skipBrowserDecoding: boolean
 ) => {
-  const { encoding, shouldSkipBrowserDecoding } = detectAudioEncoding(file);
+  const encoding = detectAudioEncoding(file);
   console.log(`Detected encoding: ${encoding}`);
   
-  const useDirectUpload = skipBrowserDecoding || shouldSkipBrowserDecoding || encoding === "FLAC";
+  const useDirectUpload = skipBrowserDecoding || encoding === "FLAC";
   return { encoding, useDirectUpload };
 };
+
+// Function to detect audio encoding based on file type
+function detectAudioEncoding(file: File): string {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  
+  if (type.includes('flac') || name.endsWith('.flac')) {
+    return 'FLAC';
+  } else if (type.includes('mp3') || name.endsWith('.mp3')) {
+    return 'MP3';
+  } else if (type.includes('wav') || name.endsWith('.wav')) {
+    return 'LINEAR16';
+  } else if (type.includes('ogg') || name.endsWith('.ogg')) {
+    return 'OGG_OPUS';
+  } else if (type.includes('amr') || name.endsWith('.amr')) {
+    return 'AMR';
+  } else if (type.includes('webm') || name.endsWith('.webm')) {
+    return 'WEBM_OPUS';
+  }
+  
+  // Default to WAV format if unknown
+  return 'LINEAR16';
+}

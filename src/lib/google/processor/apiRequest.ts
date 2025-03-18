@@ -22,6 +22,22 @@ interface TranscriptionConfig {
   }[];
 }
 
+interface TranscriptionOptions {
+  encoding: string;
+  sampleRateHertz?: number;
+  languageCode?: string;
+  enableAutomaticPunctuation?: boolean;
+  model?: string;
+  useEnhanced?: boolean;
+  enableSpeakerDiarization?: boolean;
+  minSpeakerCount?: number;
+  maxSpeakerCount?: number;
+  enableWordTimeOffsets?: boolean;
+  enableWordConfidence?: boolean;
+  customTerms?: string[];
+  [key: string]: any;
+}
+
 /**
  * Sends a transcription request to the Google Speech-to-Text API
  * @param {string} apiKey - The Google Cloud API key
@@ -29,7 +45,11 @@ interface TranscriptionConfig {
  * @param {object} options - Transcription options
  * @returns {Promise<object>} - The transcription response
  */
-export const sendTranscriptionRequest = async (apiKey, audioContent, options) => {
+export const sendTranscriptionRequest = async (
+  apiKey: string, 
+  audioContent: string, 
+  options: TranscriptionOptions
+) => {
   const {
     encoding,
     sampleRateHertz,
