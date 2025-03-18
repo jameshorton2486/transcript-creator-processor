@@ -57,28 +57,44 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
   const formatTranscript = (text: string) => {
     if (!text) return "No text available";
     
+    // Remove duplicate lines that often occur in raw transcripts
+    const lines = text.split('\n');
+    const uniqueLines: string[] = [];
+    let prevContent = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const currentLine = lines[i].trim();
+      
+      // Skip empty lines and duplicate content
+      if (currentLine && currentLine !== prevContent) {
+        uniqueLines.push(currentLine);
+        prevContent = currentLine;
+      }
+    }
+    
+    let cleanedText = uniqueLines.join('\n');
+    
     // Highlight speaker labels with different colors for each speaker
-    let formattedText = text;
     const speakerRegex = /(Speaker \d+:|THE COURT:|[A-Z]+'S COUNSEL:)/g;
     
     // Get all unique speakers
-    const speakers = Array.from(new Set(text.match(speakerRegex) || []));
+    const speakers = Array.from(new Set(cleanedText.match(speakerRegex) || []));
     const colors = ['text-blue-600', 'text-green-600', 'text-purple-600', 'text-red-600', 'text-amber-600'];
     
     // Replace each speaker with a colored version
     speakers.forEach((speaker, index) => {
       const colorClass = colors[index % colors.length];
       const escapedSpeaker = speaker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      formattedText = formattedText.replace(
+      cleanedText = cleanedText.replace(
         new RegExp(`(${escapedSpeaker})`, 'g'),
         `<span class="font-bold ${colorClass}">$1</span>`
       );
     });
     
     // Add styling for paragraph breaks
-    formattedText = formattedText.replace(/\n/g, '<br />');
+    cleanedText = cleanedText.replace(/\n/g, '<br />');
     
-    return formattedText;
+    return cleanedText;
   };
 
   return (
@@ -111,7 +127,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
       </div>
       <ScrollArea className="flex-1 p-4 min-h-[600px]">
         <div 
-          className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed"
+          className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed text-left"
           dangerouslySetInnerHTML={{ __html: formatTranscript(text) }}
         />
       </ScrollArea>
