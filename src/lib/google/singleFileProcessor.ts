@@ -4,12 +4,12 @@ import { getSampleRate } from './audio/formatDetection';
 
 /**
  * Transcribes a single audio file
- * @param {string} apiKey - The Google Cloud API key
  * @param {File|Blob} file - The audio file to transcribe
+ * @param {string} apiKey - The Google Cloud API key
  * @param {object} options - Transcription options
  * @returns {Promise<object>} - The transcription response
  */
-export const transcribeSingleFile = async (apiKey, file, options = {}) => {
+export const transcribeSingleFile = async (file, apiKey, options = {}) => {
   try {
     // Log file details
     console.info(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
@@ -67,7 +67,7 @@ export const transcribeSingleFile = async (apiKey, file, options = {}) => {
       console.info(`Added ${legalTerms.length} common legal terms to speech context`);
     }
     
-    // Prepare transcription options
+    // Prepare transcription options with custom terms
     const transcriptionOptions = {
       encoding,
       sampleRateHertz, // This might be undefined for auto-detection
@@ -84,3 +84,6 @@ export const transcribeSingleFile = async (apiKey, file, options = {}) => {
     throw error;
   }
 };
+
+// For backward compatibility
+export const processSingleFile = transcribeSingleFile;

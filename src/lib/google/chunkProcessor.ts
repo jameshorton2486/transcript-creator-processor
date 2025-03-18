@@ -42,7 +42,12 @@ export const processChunks = async (
       console.log(`Processing chunk ${i+1}/${audioChunks.length}...`);
       
       // Process this chunk
-      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
+      const mergedOptions = { ...options };
+      if (customTerms.length > 0) {
+        mergedOptions.customTerms = customTerms;
+      }
+      
+      const chunkResult = await transcribeSingleFile(chunkFile, apiKey, mergedOptions);
       results.push(chunkResult);
       
       // Small delay to avoid rate limiting and let GC run
@@ -104,7 +109,12 @@ export const processExtremelyLargeFile = async (
         );
         
         // Transcribe this chunk
-        const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms);
+        const mergedOptions = { ...options };
+        if (customTerms.length > 0) {
+          mergedOptions.customTerms = customTerms;
+        }
+        
+        const chunkResult = await transcribeSingleFile(chunkFile, apiKey, mergedOptions);
         results.push(chunkResult);
         
         // Small delay to avoid rate limiting and allow garbage collection

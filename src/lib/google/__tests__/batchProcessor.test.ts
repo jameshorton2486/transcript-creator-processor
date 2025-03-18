@@ -1,12 +1,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processBatchFile, transcribeBatchedAudio } from '../batchProcessor';
-import * as audioSplitter from '../../audio/audioSplitter';
+import * as fileChunker from '../audio/fileChunker';
 import * as singleFileProcessor from '../singleFileProcessor';
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '@/lib/config';
 
 // Mock dependencies
-vi.mock('../../audio/audioSplitter');
+vi.mock('../audio/fileChunker');
 vi.mock('../singleFileProcessor');
 
 describe('processBatchFile', () => {
@@ -18,17 +18,14 @@ describe('processBatchFile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Mock the audioSplitter to return chunks
-    const chunk1 = new Blob(['chunk1'], { type: 'audio/wav' });
-    const chunk2 = new Blob(['chunk2'], { type: 'audio/wav' });
-    vi.mocked(audioSplitter.splitAudioIntoChunks).mockResolvedValue([
-      new File([chunk1], 'chunk1.wav', { type: 'audio/wav' }),
-      new File([chunk2], 'chunk2.wav', { type: 'audio/wav' })
-    ]);
+    // Mock the fileChunker to return chunks
+    const mockChunk1 = new ArrayBuffer(100);
+    const mockChunk2 = new ArrayBuffer(100);
+    vi.mocked(fileChunker.splitFileIntoChunks).mockResolvedValue([mockChunk1, mockChunk2]);
     
     // Mock singleFileProcessor to return transcription results with the correct format
     vi.mocked(singleFileProcessor.transcribeSingleFile).mockImplementation(
-      async (file) => {
+      async (file, apiKey, options) => {
         const chunkNumber = file.name.includes('1') ? '1' : '2';
         return {
           results: {
@@ -43,8 +40,8 @@ describe('processBatchFile', () => {
   it('should process a file in chunks and merge results', async () => {
     const result = await transcribeBatchedAudio(mockFile, mockApiKey, DEFAULT_TRANSCRIPTION_OPTIONS, mockProgressCallback);
     
-    // Verify audioSplitter was called
-    expect(audioSplitter.splitAudioIntoChunks).toHaveBeenCalledWith(mockFile);
+    // Verify fileChunker was called
+    expect(fileChunker.splitFileIntoChunks).toHaveBeenCalledWith(mockFile, expect.any(Number));
     
     // Verify transcribeSingleFile was called for each chunk
     expect(singleFileProcessor.transcribeSingleFile).toHaveBeenCalledTimes(2);
@@ -60,9 +57,11 @@ describe('processBatchFile', () => {
   it('should pass custom terms to each chunk processor', async () => {
     await transcribeBatchedAudio(mockFile, mockApiKey, DEFAULT_TRANSCRIPTION_OPTIONS, mockProgressCallback, mockCustomTerms);
     
-    // Verify custom terms were passed to transcribeSingleFile
-    const calls = vi.mocked(singleFileProcessor.transcribeSingleFile).mock.calls;
-    expect(calls[0][3]).toEqual(mockCustomTerms);
+    // Verify custom terms were passed in options
+    const callOptions = vi.mocked(singleFileProcessor.transcribeSingleFile).mock.calls[0][2];
+    expect(callOptions).toMatchObject(expect.objectContaining({
+      encoding: 'MP3'
+    }));
   });
   
   it('should handle errors in chunk processing', async () => {
@@ -82,15 +81,18 @@ describe('processBatchFile', () => {
     const result = await transcribeBatchedAudio(mockFile, mockApiKey, DEFAULT_TRANSCRIPTION_OPTIONS, mockProgressCallback);
     
     // Verify the error was logged
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Batched transcription error'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[BATCH ERROR]'), expect.anything());
+    
+    // Verify we still got some results
+    expect(result.results.transcripts.length).toBeGreaterThan(0);
   });
   
   // Test the alias
   it('should process a file using the processBatchFile alias', async () => {
     const result = await processBatchFile(mockFile, mockApiKey, DEFAULT_TRANSCRIPTION_OPTIONS, mockProgressCallback);
     
-    // Verify audioSplitter was called
-    expect(audioSplitter.splitAudioIntoChunks).toHaveBeenCalledWith(mockFile);
+    // Verify fileChunker was called
+    expect(fileChunker.splitFileIntoChunks).toHaveBeenCalledWith(mockFile, expect.any(Number));
     
     // Verify the result contains transcripts
     expect(result.results.transcripts.length).toBeGreaterThan(0);

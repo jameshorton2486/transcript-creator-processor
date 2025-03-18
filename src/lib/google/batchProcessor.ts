@@ -3,7 +3,6 @@ import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 import { combineTranscriptionResults } from './formatters/responseFormatter';
 import { splitFileIntoChunks } from './audio/fileChunker';
 import { transcribeSingleFile } from './singleFileProcessor';
-import { detectAudioEncoding } from './audioEncoding';
 
 // Adjust payload limit to account for base64 encoding expansion (~33%)
 const BASE64_EXPANSION_FACTOR = 1.33;
@@ -28,7 +27,19 @@ export const transcribeBatchedAudio = async (
     // Determine file type and encoding
     const fileType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
-    const { encoding } = detectAudioEncoding(file);
+    let encoding = 'LINEAR16'; // Default encoding for WAV files
+    
+    if (fileType.includes('mp3') || fileName.endsWith('.mp3')) {
+      encoding = 'MP3';
+    } else if (fileType.includes('flac') || fileName.endsWith('.flac')) {
+      encoding = 'FLAC';
+    } else if (fileType.includes('ogg') || fileName.endsWith('.ogg')) {
+      encoding = 'OGG_OPUS';
+    } else if (fileType.includes('amr') || fileName.endsWith('.amr')) {
+      encoding = 'AMR';
+    } else if (fileType.includes('webm') || fileName.endsWith('.webm')) {
+      encoding = 'WEBM_OPUS';
+    }
     
     console.log(`[BATCH] File format: ${fileType || 'Unknown, using filename: ' + fileName}`);
     console.log(`[BATCH] Encoding detected: ${encoding}`);
@@ -56,8 +67,9 @@ export const transcribeBatchedAudio = async (
         const chunkFile = new File([chunkBlob], `chunk-${i}.${fileName.split('.').pop()}`, { type: file.type });
         
         try {
-          // Process this chunk with skipBrowserDecoding=true to force direct API upload
-          const chunkResult = await transcribeSingleFile(chunkFile, apiKey, options, customTerms, true);
+          // Process this chunk with the options including custom terms
+          const mergedOptions = { ...options, encoding };
+          const chunkResult = await transcribeSingleFile(chunkFile, apiKey, mergedOptions);
           results.push(chunkResult);
           successCount++;
           console.log(`[BATCH] Successfully processed chunk ${i+1}/${chunks.length}`);

@@ -27,7 +27,7 @@ export const sendTranscriptionRequest = async (apiKey, audioContent, options) =>
   // Log request parameters for debugging
   console.info('[API] Sending request to Google Speech API...');
   
-  // Create the configuration object, only including sampleRateHertz if provided
+  // Create the configuration object
   const config = {
     encoding,
     languageCode,

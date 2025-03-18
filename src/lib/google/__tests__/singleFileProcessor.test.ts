@@ -1,134 +1,127 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { processSingleFile, transcribeSingleFile } from '../singleFileProcessor';
-import * as wavConverter from '../../audio/wavConverter';
+import { transcribeSingleFile, processSingleFile } from '../singleFileProcessor';
+import * as apiRequest from '../processor/apiRequest';
+import * as formatDetection from '../audio/formatDetection';
 
-// Mock fetch and other dependencies
-vi.mock('../../audio/wavConverter');
+// Mock dependencies
+vi.mock('../processor/apiRequest');
+vi.mock('../audio/formatDetection');
 
-describe('processSingleFile', () => {
-  const mockFile = new File(['audio content'], 'test-audio.mp3', { type: 'audio/mp3' });
+describe('transcribeSingleFile', () => {
+  const mockFile = new File(['audio content'], 'test-audio.wav', { type: 'audio/wav' });
   const mockApiKey = 'test-api-key';
-  const mockOptions = { 
-    language: 'en-US', 
-    model: 'default',
-    punctuate: true,
-    diarize: true,
-    paragraphs: true,
-    utterances: true,
-    numerals: true
-  };
-  const mockCustomTerms = ['term1', 'term2'];
+  const mockAudioBuffer = new ArrayBuffer(100);
+  const mockBase64 = 'base64audio';
+  const mockResponse = { results: [{ alternatives: [{ transcript: 'test transcript', confidence: 0.9 }] }] };
   
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Mock the fetch function
-    global.fetch = vi.fn();
-    
-    // Mock the wavConverter
-    vi.mocked(wavConverter.convertToWav).mockResolvedValue(new ArrayBuffer(1024));
-  });
-  
-  it('should process a file and return transcription results', async () => {
-    const mockResponse = {
-      results: [{ alternatives: [{ transcript: 'Test transcript' }] }]
+    // Mock FileReader
+    const mockFileReaderInstance = {
+      onload: null,
+      onerror: null,
+      readAsArrayBuffer: function() {
+        setTimeout(() => {
+          this.onload && this.onload({ target: { result: mockAudioBuffer } });
+        }, 0);
+      },
+      readAsDataURL: function() {
+        setTimeout(() => {
+          this.onload && this.onload({ target: { result: `data:audio/wav;base64,${mockBase64}` } });
+        }, 0);
+      }
     };
     
-    // Mock successful API response
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse
-    });
+    // @ts-ignore
+    global.FileReader = vi.fn(() => mockFileReaderInstance);
     
-    const result = await transcribeSingleFile(mockFile, mockApiKey, mockOptions, mockCustomTerms);
+    // Mock getSampleRate
+    vi.mocked(formatDetection.getSampleRate).mockReturnValue(16000);
     
-    // Verify fetch was called with correct parameters
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('https://speech.googleapis.com/v1/speech:recognize'),
+    // Mock sendTranscriptionRequest
+    vi.mocked(apiRequest.sendTranscriptionRequest).mockResolvedValue(mockResponse);
+  });
+  
+  it('should process a WAV file correctly', async () => {
+    const result = await transcribeSingleFile(mockFile, mockApiKey);
+    
+    // Verify the sample rate was detected
+    expect(formatDetection.getSampleRate).toHaveBeenCalledWith(mockAudioBuffer, 'audio/wav');
+    
+    // Verify API request was made with correct parameters
+    expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
+      mockApiKey,
+      mockBase64,
       expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json'
-        }),
-        body: expect.any(String)
+        encoding: 'LINEAR16',
+        sampleRateHertz: 16000
       })
     );
     
-    // Verify the result matches the expected response
-    expect(result).toEqual(expect.objectContaining({
-      results: expect.arrayContaining([
-        expect.objectContaining({
-          alternatives: expect.arrayContaining([
-            expect.objectContaining({
-              transcript: 'Test transcript'
-            })
-          ])
-        })
-      ])
-    }));
+    // Verify result
+    expect(result).toEqual(mockResponse);
   });
   
-  it('should include speech adaptation when custom terms are provided', async () => {
-    const mockResponse = {
-      results: [{ alternatives: [{ transcript: 'Test with custom terms' }] }]
+  it('should support custom options', async () => {
+    const options = {
+      enableAutomaticPunctuation: false,
+      languageCode: 'en-GB'
     };
     
-    // Mock successful API response
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse
-    });
+    await transcribeSingleFile(mockFile, mockApiKey, options);
     
-    await transcribeSingleFile(mockFile, mockApiKey, mockOptions, mockCustomTerms);
-    
-    // Capture the fetch call arguments
-    const fetchCall = (global.fetch as any).mock.calls[0];
-    const requestBody = JSON.parse(fetchCall[1].body);
-    
-    // Verify speech adaptation config was included
-    expect(requestBody.config.speechContexts).toBeDefined();
-    expect(requestBody.config.speechContexts[0].phrases).toEqual(mockCustomTerms);
+    // Verify options were passed to API request
+    expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
+      mockApiKey,
+      mockBase64,
+      expect.objectContaining({
+        encoding: 'LINEAR16',
+        sampleRateHertz: 16000,
+        enableAutomaticPunctuation: false,
+        languageCode: 'en-GB'
+      })
+    );
   });
   
-  it('should throw an error when API response is not ok', async () => {
-    // Mock failed API response
-    (global.fetch as any).mockResolvedValue({
-      ok: false,
-      status: 400,
-      statusText: 'Bad Request',
-      json: async () => ({ error: 'Invalid request' })
-    });
+  it('should handle MP3 files correctly', async () => {
+    const mp3File = new File(['audio content'], 'test-audio.mp3', { type: 'audio/mp3' });
     
-    await expect(transcribeSingleFile(mockFile, mockApiKey, mockOptions))
-      .rejects.toThrow(/Google API error/);
+    await transcribeSingleFile(mp3File, mockApiKey);
+    
+    // Verify correct encoding for MP3
+    expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
+      mockApiKey,
+      mockBase64,
+      expect.objectContaining({
+        encoding: 'MP3'
+      })
+    );
   });
   
-  // Test the alias
-  it('should process a file using the processSingleFile alias', async () => {
-    const mockResponse = {
-      results: [{ alternatives: [{ transcript: 'Test transcript' }] }]
-    };
+  it('should handle errors and rethrow them', async () => {
+    const error = new Error('API error');
+    vi.mocked(apiRequest.sendTranscriptionRequest).mockRejectedValueOnce(error);
     
-    // Mock successful API response
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse
-    });
+    await expect(transcribeSingleFile(mockFile, mockApiKey)).rejects.toThrow('API error');
+  });
+  
+  it('should add legal terms to speech context', async () => {
+    await transcribeSingleFile(mockFile, mockApiKey);
     
-    const result = await processSingleFile(mockFile, mockApiKey, mockOptions, mockCustomTerms);
-    
-    // Verify the result matches the expected response
-    expect(result).toEqual(expect.objectContaining({
-      results: expect.arrayContaining([
-        expect.objectContaining({
-          alternatives: expect.arrayContaining([
-            expect.objectContaining({
-              transcript: 'Test transcript'
-            })
-          ])
-        })
-      ])
-    }));
+    // Verify legal terms were added
+    expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
+      mockApiKey,
+      mockBase64,
+      expect.objectContaining({
+        customTerms: expect.arrayContaining(['plaintiff', 'defendant', 'counsel'])
+      })
+    );
+  });
+  
+  // Test backward compatibility
+  it('should be accessible via processSingleFile alias', async () => {
+    expect(processSingleFile).toBe(transcribeSingleFile);
   });
 });
