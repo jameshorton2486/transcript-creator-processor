@@ -4,7 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
 import { transcribeAudio, testApiKey } from "@/lib/google";
 import { LARGE_FILE_THRESHOLD, TranscriptionHookState } from "./constants";
-import { formatErrorMessage, validateTranscript, createErrorContext } from "./utils";
+import { formatErrorMessage, validateTranscript, createErrorContext, safePromise } from "./utils";
 
 export const useTranscription = (onTranscriptCreated: (transcript: string, jsonData: any) => void) => {
   const [state, setState] = useState<TranscriptionHookState>({
@@ -77,7 +77,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     
     try {
       // First, verify the API key is valid
-      const isKeyValid = await testApiKey(apiKey);
+      const isKeyValid = await safePromise(testApiKey(apiKey));
       if (!isKeyValid) {
         throw new Error("API key is invalid or unauthorized");
       }
@@ -99,12 +99,15 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
         console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
       }
       
-      const response = await transcribeAudio(
-        file, 
-        apiKey, 
-        options, 
-        isLargeFile ? (progress) => setState(prev => ({ ...prev, progress })) : undefined,
-        customTerms
+      // Use safePromise to handle potential promise errors
+      const response = await safePromise(
+        transcribeAudio(
+          file, 
+          apiKey, 
+          options, 
+          isLargeFile ? (progress) => setState(prev => ({ ...prev, progress })) : undefined,
+          customTerms
+        )
       );
       
       console.log("Transcription response received:", response);

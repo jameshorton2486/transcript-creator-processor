@@ -5,28 +5,43 @@ import { extractTranscriptText } from "@/lib/google";
 export const formatErrorMessage = (error: any): string => {
   let errorMessage = "Failed to transcribe file. ";
   
-  if (error.message?.includes("API key")) {
+  if (!error) {
+    return errorMessage + "Unknown error occurred.";
+  }
+  
+  // Extract the error message
+  const message = error.message || String(error);
+  
+  if (message.includes("API key")) {
     errorMessage += "Please check your API key is valid.";
-  } else if (error.message?.includes("Network") || error.message?.includes("fetch")) {
+  } else if (message.includes("Network") || message.includes("fetch") || message.includes("internet")) {
     errorMessage += "Network error. Please check your internet connection.";
-  } else if (error.message?.includes("quota")) {
+  } else if (message.includes("quota")) {
     errorMessage += "API quota exceeded. Please try again later or use a different API key.";
-  } else if (error.message?.includes("payload size exceeds the limit") || error.message?.includes("Request payload size exceeds")) {
+  } else if (message.includes("payload size exceeds the limit") || message.includes("Request payload size exceeds")) {
     errorMessage += "This file will be automatically processed in smaller chunks.";
-  } else if (error.message?.includes("too large")) {
+  } else if (message.includes("too large")) {
     errorMessage += "This file is too large for direct processing. The application will try to process it in batches.";
-  } else if (error.message?.includes("unsupported file type")) {
+  } else if (message.includes("unsupported file type")) {
     errorMessage += "The file format is not supported. Please use MP3, WAV, FLAC, or OGG format.";
-  } else if (error.message?.includes("sample_rate_hertz") || error.message?.includes("sample rate")) {
+  } else if (message.includes("sample_rate_hertz") || message.includes("sample rate")) {
     errorMessage += "Sample rate mismatch detected. The system will attempt to correct this automatically.";
-  } else if (error.message?.includes("Unable to decode") || error.message?.includes("decode audio")) {
+  } else if (message.includes("Unable to decode") || message.includes("decode audio")) {
     errorMessage += "Your browser couldn't decode this audio format. Try uploading a different format like MP3.";
-  } else if (error.message?.includes("permission") || error.message?.includes("permission_denied")) {
+  } else if (message.includes("permission") || message.includes("permission_denied")) {
     errorMessage += "Google API permission denied. Ensure your API key has access to Speech-to-Text.";
-  } else if (error.message?.includes("insufficient") || error.message?.includes("billing")) {
+  } else if (message.includes("insufficient") || message.includes("billing")) {
     errorMessage += "Insufficient privileges. Check if billing is enabled for your Google Cloud project.";
+  } else if (message.includes("Audio content is empty")) {
+    errorMessage += "The audio file appears to be empty or could not be processed.";
+  } else if (message.includes("asynchronous response") || message.includes("message channel closed")) {
+    errorMessage += "A promise wasn't properly resolved. This is an application error that has been logged.";
+  } else if (message.includes("Invalid request")) {
+    errorMessage += "The request to Google's API was invalid. This could be due to an issue with the audio format.";
+  } else if (message.includes("speech") && message.includes("not enabled")) {
+    errorMessage += "Speech-to-Text API is not enabled for your Google Cloud project.";
   } else {
-    errorMessage += `Error details: ${error.message || "Unknown error"}`;
+    errorMessage += `Error details: ${message}`;
   }
   
   return errorMessage;
@@ -35,16 +50,35 @@ export const formatErrorMessage = (error: any): string => {
 // Validates transcript response
 export const validateTranscript = (response: any): string => {
   try {
+    // First check if the response is valid
+    if (!response) {
+      console.error("Empty response received from API");
+      throw new Error("No response received from API");
+    }
+    
+    // Check for API errors in the response
+    if (response.error) {
+      console.error("API error in response:", response.error);
+      throw new Error(`API error: ${response.error.message || "Unknown API error"}`);
+    }
+    
+    // Extract the transcript text
     const transcriptText = extractTranscriptText(response);
     
-    if (transcriptText === "No transcript available" || transcriptText === "Error extracting transcript") {
+    if (!transcriptText || 
+        transcriptText === "No transcript available" || 
+        transcriptText === "Error extracting transcript") {
       console.error("Failed to extract transcript from response:", response);
       
       // Check for empty results which might indicate audio decoding issues
-      if (!response.results || 
-          (response.results.channels?.[0]?.alternatives?.[0]?.transcript === "No transcript available" && 
-           response.results.transcripts?.[0]?.transcript === "No transcript available")) {
-        throw new Error("Unable to decode audio data. Try a different audio format or use the direct upload option.");
+      if (!response.results || response.results.length === 0) {
+        throw new Error("No transcription results. This could be due to silent audio or an unsupported format.");
+      }
+      
+      if (response.results && Array.isArray(response.results) && 
+          response.results.length > 0 && 
+          (!response.results[0].alternatives || response.results[0].alternatives.length === 0)) {
+        throw new Error("Google could not recognize any speech in this audio file.");
       }
       
       throw new Error("Failed to extract transcript from the API response.");
@@ -59,7 +93,7 @@ export const validateTranscript = (response: any): string => {
 
 // Creates error context for detailed logging
 export const createErrorContext = (file: File | null, options: any, customTerms: string[], error: any) => {
-  if (!file) return {};
+  if (!file) return { error: String(error) };
   
   return {
     file: {
@@ -67,11 +101,39 @@ export const createErrorContext = (file: File | null, options: any, customTerms:
       type: file.type,
       size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
       estimatedBase64Size: `${((file.size * 1.33) / 1024 / 1024).toFixed(2)} MB`, // Add estimated base64 size
+      lastModified: new Date(file.lastModified).toISOString(),
     },
     options,
     customTermsCount: customTerms.length,
+    customTerms: customTerms.length <= 10 ? customTerms : `${customTerms.length} terms`,
     timestamp: new Date().toISOString(),
-    errorMessage: error.message,
-    errorStack: error.stack,
+    errorMessage: error?.message || String(error),
+    errorStack: error?.stack || 'No stack trace',
+    browserInfo: {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+    }
   };
+};
+
+// Promise handler to safely resolve promises and avoid "message channel closed" errors
+export const safePromise = async <T>(promise: Promise<T>, timeout = 30000): Promise<T> => {
+  let timeoutId: number;
+  
+  // Create a timeout promise that rejects after specified timeout
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`Promise timed out after ${timeout}ms`));
+    }, timeout);
+  });
+  
+  try {
+    // Race the original promise against the timeout
+    const result = await Promise.race([promise, timeoutPromise]);
+    window.clearTimeout(timeoutId);
+    return result;
+  } catch (error) {
+    window.clearTimeout(timeoutId);
+    throw error;
+  }
 };
