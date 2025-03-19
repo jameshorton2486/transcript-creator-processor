@@ -1,7 +1,7 @@
 
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { isValidAudioFile, detectAudioEncoding } from './audio/audioValidation';
-import { preprocessAudioFile, arrayBufferToBase64 } from './audioProcessing/audioPreProcessor';
+import { arrayBufferToBase64 } from './audioProcessing/audioPreProcessor';
 
 interface TranscriptionOptions {
   encoding?: string;
@@ -67,11 +67,8 @@ export const transcribeSingleFile = async (
       throw new Error('The audio file is empty or could not be read.');
     }
     
-    // Process the audio data
-    const { resampled } = await preprocessAudioFile(audioArrayBuffer);
-    
     // Convert to base64 for API request
-    const audioBase64 = await arrayBufferToBase64(resampled);
+    const audioBase64 = await arrayBufferToBase64(audioArrayBuffer);
     console.info('[PROCESSING] Successfully encoded audio to base64, ready for transmission');
     
     // Create custom terms list for legal vocabulary
@@ -87,7 +84,7 @@ export const transcribeSingleFile = async (
     
     // Prepare transcription options with custom terms
     const transcriptionOptions = {
-      encoding: 'LINEAR16', // Always use LINEAR16 since we've converted to WAV
+      encoding: encoding, // Use the detected encoding
       sampleRateHertz: 16000, // Always 16000 Hz
       ...options,
       customTerms: [...(options.customTerms || []), ...legalTerms]

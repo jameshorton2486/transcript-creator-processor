@@ -19,10 +19,6 @@ export const ProgressIndicator = ({ progress, isVisible }: ProgressIndicatorProp
       <p className="text-xs text-slate-500 italic">
         Audio is being processed in batches. This may take a few minutes for larger files.
       </p>
-      <div className="mt-2 text-xs text-slate-600 grid grid-cols-2 gap-x-4 gap-y-1">
-        <div>✓ Batch processing for large files</div>
-        <div>✓ Memory-efficient processing</div>
-      </div>
     </div>
   );
 };

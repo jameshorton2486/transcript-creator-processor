@@ -4,14 +4,14 @@
 export * from "./audioContext";
 export * from "./wavConverter";
 
-// Export from sizeCalculator but not audioSplitter's version
+// Export from sizeCalculator 
 export { 
   estimateWavFileSize, 
   calculateOptimalChunkDuration, 
   MAX_BATCH_SIZE_BYTES 
 } from "./sizeCalculator";
 
-// Export from audioSplitter but avoid the naming conflict
+// Export from audioSplitter
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
 
