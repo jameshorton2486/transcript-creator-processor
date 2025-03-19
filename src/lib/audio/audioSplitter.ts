@@ -1,4 +1,3 @@
-
 /**
  * Audio splitting utilities for chunking large audio files
  */
@@ -127,7 +126,7 @@ export const splitAudioIntoChunks = async (
         chunkBuffer.getChannelData(0).set(chunk);
         
         // Convert to WAV for better compatibility
-        const wavBlob = await encodeWavFile(chunkBuffer);
+        const wavBlob = await encodeWavFile(chunkBuffer, audioBuffer.sampleRate);
         audioChunkBlobs.push(wavBlob);
         
         console.log(`[SPLIT] Processed chunk ${i+1}/${audioChunks.length}`);
@@ -150,13 +149,13 @@ export const splitAudioIntoChunks = async (
 /**
  * Encodes AudioBuffer to WAV format Blob
  * @param {AudioBuffer} audioBuffer - The audio buffer to encode
+ * @param {number} sampleRate - The sample rate of the audio buffer
  * @returns {Promise<Blob>} WAV file as blob
  */
-const encodeWavFile = async (audioBuffer: AudioBuffer): Promise<Blob> => {
+const encodeWavFile = async (audioBuffer: AudioBuffer, sampleRate: number): Promise<Blob> => {
   try {
     // Get audio data - since we want mono, just get the first channel
     const audioData = audioBuffer.getChannelData(0);
-    const sampleRate = audioBuffer.sampleRate;
     
     // Create WAV header and file
     const dataLength = audioData.length * 2; // 16-bit samples = 2 bytes per sample
