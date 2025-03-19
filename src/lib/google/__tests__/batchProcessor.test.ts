@@ -26,7 +26,10 @@ describe('processBatchFile', () => {
     // Mock singleFileProcessor to return transcription results with the correct format
     vi.mocked(singleFileProcessor.transcribeSingleFile).mockImplementation(
       async (file, apiKey, options) => {
-        const chunkNumber = file.name.includes('1') ? '1' : '2';
+        // Get chunk number from the filename, ensuring type safety
+        const fileName = file instanceof File ? file.name : 'unknown';
+        const chunkNumber = fileName.includes('1') ? '1' : '2';
+        
         return {
           results: {
             transcripts: [{ transcript: `Transcript for chunk ${chunkNumber}`, confidence: 0.95 }],
