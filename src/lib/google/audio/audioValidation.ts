@@ -24,7 +24,15 @@ export const isValidAudioFile = (file: File): boolean => {
                            name.endsWith('.amr') || 
                            name.endsWith('.webm');
   
-  return isValidMimeType || isValidExtension;
+  const isValid = isValidMimeType || isValidExtension;
+  
+  if (!isValid) {
+    console.warn(`[VALIDATION] Invalid audio file: ${name} (${type})`);
+  } else {
+    console.log(`[VALIDATION] Valid audio file: ${name} (${type})`);
+  }
+  
+  return isValid;
 };
 
 /**
@@ -34,20 +42,59 @@ export const detectAudioEncoding = (file: File): { encoding: string } => {
   const type = file.type.toLowerCase();
   const name = file.name.toLowerCase();
   
+  // Log file details for debugging
+  console.log(`[ENCODING] Detecting encoding for file: ${name} (${type || 'unknown type'})`);
+  
+  let encoding = 'LINEAR16'; // Default encoding
+  
   if (type.includes('flac') || name.endsWith('.flac')) {
-    return { encoding: 'FLAC' };
+    encoding = 'FLAC';
   } else if (type.includes('mp3') || name.endsWith('.mp3')) {
-    return { encoding: 'MP3' };
+    encoding = 'MP3';
   } else if (type.includes('wav') || name.endsWith('.wav')) {
-    return { encoding: 'LINEAR16' };
+    encoding = 'LINEAR16';
   } else if (type.includes('ogg') || name.endsWith('.ogg')) {
-    return { encoding: 'OGG_OPUS' };
+    encoding = 'OGG_OPUS';
   } else if (type.includes('amr') || name.endsWith('.amr')) {
-    return { encoding: 'AMR' };
+    encoding = 'AMR';
   } else if (type.includes('webm') || name.endsWith('.webm')) {
-    return { encoding: 'WEBM_OPUS' };
+    encoding = 'WEBM_OPUS';
   }
   
-  // Default to LINEAR16 (WAV) format if unknown
+  console.log(`[ENCODING] Selected encoding: ${encoding} for file: ${name}`);
+  return { encoding };
+};
+
+/**
+ * Provides a fallback encoding if the original detection fails
+ * Always falls back to LINEAR16 (WAV) as it's most widely supported
+ */
+export const getFallbackEncoding = (): { encoding: string } => {
+  console.log(`[ENCODING] Using fallback LINEAR16 encoding`);
   return { encoding: 'LINEAR16' };
+};
+
+/**
+ * Attempts to get audio MIME type from file extension
+ */
+export const getMimeTypeFromExtension = (fileName: string): string => {
+  const name = fileName.toLowerCase();
+  
+  if (name.endsWith('.wav')) {
+    return 'audio/wav';
+  } else if (name.endsWith('.mp3')) {
+    return 'audio/mpeg';
+  } else if (name.endsWith('.flac')) {
+    return 'audio/flac';
+  } else if (name.endsWith('.ogg')) {
+    return 'audio/ogg';
+  } else if (name.endsWith('.m4a')) {
+    return 'audio/mp4';
+  } else if (name.endsWith('.amr')) {
+    return 'audio/amr';
+  } else if (name.endsWith('.webm')) {
+    return 'audio/webm';
+  }
+  
+  return 'audio/mpeg'; // Default to MP3
 };

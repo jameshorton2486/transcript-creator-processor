@@ -1,11 +1,10 @@
 
-
 /**
  * Attempts to detect sample rate from WAV header
  * @param {ArrayBuffer} buffer - The audio buffer
  * @returns {number|null} - The detected sample rate or null if can't be detected
  */
-export const detectSampleRateFromWav = (buffer) => {
+export const detectSampleRateFromWav = (buffer: ArrayBuffer): number | null => {
   try {
     // WAV header sample rate is at byte offset 24, as a 32-bit little-endian integer
     if (buffer.byteLength < 28) {
@@ -55,8 +54,8 @@ export const detectSampleRateFromWav = (buffer) => {
  * @param {string} mimeType - The file mime type
  * @returns {boolean} - Whether to use auto detection
  */
-export const shouldUseAutoSampleRate = (mimeType) => {
-  // No need to use auto detection anymore as we'll always resample to 16000 Hz
+export const shouldUseAutoSampleRate = (mimeType: string): boolean => {
+  // We'll always use 16000 Hz for Google Speech API
   return false;
 };
 
@@ -65,10 +64,10 @@ export const shouldUseAutoSampleRate = (mimeType) => {
  * @param {ArrayBuffer} buffer - The audio buffer
  * @param {string} mimeType - The file mime type
  * @param {number} defaultRate - Default rate to use if detection fails
- * @returns {number|undefined} - The sample rate to use, or undefined to let API auto-detect
+ * @returns {number} - The sample rate to use, always 16000 Hz for Google API
  */
-export const getSampleRate = (buffer, mimeType, defaultRate = 16000) => {
-  // We always use 16000 Hz for Google Speech API now, regardless of detection
+export const getSampleRate = (buffer: ArrayBuffer, mimeType: string, defaultRate = 16000): number => {
+  // Always use 16000 Hz for Google Speech API
   console.info('[FORMAT] Using fixed sample rate: 16000 Hz for Google Speech API');
   return 16000;
 };
@@ -76,13 +75,13 @@ export const getSampleRate = (buffer, mimeType, defaultRate = 16000) => {
 /**
  * Detects number of channels from WAV header
  * @param {ArrayBuffer} buffer - The audio buffer
- * @returns {number|null} - The detected number of channels or null if can't be detected
+ * @returns {number} - The detected number of channels (defaults to 1 if detection fails)
  */
-export const detectChannelsFromWav = (buffer) => {
+export const detectChannelsFromWav = (buffer: ArrayBuffer): number => {
   try {
     if (buffer.byteLength < 23) {
       console.warn('[FORMAT] Buffer too small to contain WAV header channel info');
-      return null;
+      return 1; // Default to mono
     }
     
     const dataView = new DataView(buffer);
@@ -97,7 +96,7 @@ export const detectChannelsFromWav = (buffer) => {
     
     if (riff !== 'RIFF') {
       console.warn('[FORMAT] Not a valid WAV file format (missing RIFF header)');
-      return null;
+      return 1; // Default to mono
     }
     
     // Read number of channels (bytes 22-23)
@@ -107,6 +106,38 @@ export const detectChannelsFromWav = (buffer) => {
     return numChannels;
   } catch (error) {
     console.warn('[FORMAT] Error detecting channels from WAV:', error);
-    return null;
+    return 1; // Default to mono
+  }
+};
+
+/**
+ * Detect if a buffer represents a FLAC file
+ * @param {ArrayBuffer} buffer - The audio buffer
+ * @returns {boolean} - Whether this appears to be a FLAC file
+ */
+export const isFlacFile = (buffer: ArrayBuffer): boolean => {
+  try {
+    if (buffer.byteLength < 4) return false;
+    
+    const dataView = new DataView(buffer);
+    const flacSignature = [0x66, 0x4C, 0x61, 0x43]; // "fLaC"
+    
+    // Check for FLAC signature
+    for (let i = 0; i < Math.min(100, buffer.byteLength - 4); i++) {
+      if (
+        dataView.getUint8(i) === flacSignature[0] &&
+        dataView.getUint8(i + 1) === flacSignature[1] &&
+        dataView.getUint8(i + 2) === flacSignature[2] &&
+        dataView.getUint8(i + 3) === flacSignature[3]
+      ) {
+        console.info(`[FORMAT] FLAC signature detected at offset ${i}`);
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.warn('[FORMAT] Error checking for FLAC signature:', error);
+    return false;
   }
 };
