@@ -1,7 +1,7 @@
 
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { isValidAudioFile, detectAudioEncoding } from './audio/audioValidation';
-import { arrayBufferToBase64 } from './audioProcessing/audioPreProcessor';
+import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
 
 interface TranscriptionOptions {
   encoding?: string;

@@ -1,6 +1,10 @@
 
 /**
- * Converts an ArrayBuffer to base64 encoding
+ * Utilities for converting audio data to base64 format
+ */
+
+/**
+ * Converts an ArrayBuffer to base64 encoding using FileReader
  */
 export const arrayBufferToBase64 = async (buffer: ArrayBuffer): Promise<string> => {
   return new Promise<string>((resolve, reject) => {
@@ -14,29 +18,15 @@ export const arrayBufferToBase64 = async (buffer: ArrayBuffer): Promise<string> 
           const base64 = result.split(',')[1];
           
           if (!base64) {
-            console.warn('Failed to extract base64 data. Attempting alternative encoding method.');
-            // Fallback method for base64 conversion
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) {
-              binary += String.fromCharCode(bytes[i]);
-            }
-            resolve(window.btoa(binary));
+            console.warn('Failed to extract base64 data. Using direct conversion.');
+            resolve(directBufferToBase64(buffer));
             return;
           }
           
           resolve(base64);
         } catch (parseError) {
           console.error('Error parsing FileReader result:', parseError);
-          // Fallback method
-          const bytes = new Uint8Array(buffer);
-          let binary = '';
-          const len = bytes.byteLength;
-          for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          resolve(window.btoa(binary));
+          resolve(directBufferToBase64(buffer));
         }
       };
       
@@ -54,7 +44,7 @@ export const arrayBufferToBase64 = async (buffer: ArrayBuffer): Promise<string> 
 };
 
 /**
- * Simple direct binary to base64 conversion
+ * Direct binary to base64 conversion
  * Used as a fallback when other methods fail
  */
 export const directBufferToBase64 = (buffer: ArrayBuffer): string => {

@@ -3,6 +3,7 @@
 
 export * from "./audioContext";
 export * from "./wavConverter";
+export * from "./base64Converter";
 
 // Export from sizeCalculator 
 export { 

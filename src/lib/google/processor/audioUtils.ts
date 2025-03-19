@@ -1,6 +1,7 @@
 
 // Constants for audio processing
 const TARGET_SAMPLE_RATE = 16000; // 16kHz for Google Speech API
+import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
 
 // Processes audio content for API request
 export const processAudioContent = async (
@@ -17,7 +18,7 @@ export const processAudioContent = async (
     const rawBuffer = await file.arrayBuffer();
     
     // Convert buffer to base64
-    base64Audio = arrayBufferToBase64(rawBuffer);
+    base64Audio = await arrayBufferToBase64(rawBuffer);
     console.log(`[AUDIO] Successfully processed audio: encoding=${encoding}`);
   } catch (error) {
     console.error("[AUDIO] Error processing audio:", error);
@@ -25,24 +26,11 @@ export const processAudioContent = async (
     // Fallback to direct upload if processing fails
     console.log("[AUDIO] Using direct upload as fallback");
     const rawBuffer = await file.arrayBuffer();
-    base64Audio = arrayBufferToBase64(rawBuffer);
+    base64Audio = await arrayBufferToBase64(rawBuffer);
   }
   
   return { base64Audio, actualSampleRate: TARGET_SAMPLE_RATE };
 };
-
-// Helper function to convert ArrayBuffer to base64
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  
-  return window.btoa(binary);
-}
 
 // Helper function to get standard sample rate based on encoding
 function getStandardSampleRate(encoding: string): number {
