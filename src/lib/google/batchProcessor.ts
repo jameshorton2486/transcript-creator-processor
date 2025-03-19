@@ -55,6 +55,7 @@ export const transcribeBatchedAudio = async (
       const results = [];
       let successCount = 0;
       let errorCount = 0;
+      let lastErrorMessage = ''; // Track the last error message for better error reporting
       
       for (let i = 0; i < chunks.length; i++) {
         const chunkProgress = Math.round((i / chunks.length) * 100);
@@ -70,11 +71,37 @@ export const transcribeBatchedAudio = async (
           // Process this chunk with the options including custom terms
           const mergedOptions = { ...options, encoding };
           const chunkResult = await transcribeSingleFile(chunkFile, apiKey, mergedOptions);
-          results.push(chunkResult);
-          successCount++;
-          console.log(`[BATCH] Successfully processed chunk ${i+1}/${chunks.length}`);
+          
+          // Validate the result has some transcription data
+          if (!chunkResult.results || chunkResult.results.length === 0 || 
+              !chunkResult.results[0].alternatives || chunkResult.results[0].alternatives.length === 0) {
+            console.warn(`[BATCH] Chunk ${i+1}/${chunks.length} returned no transcription data, but didn't throw an error`);
+            
+            // Add an empty result with warning
+            results.push({
+              results: [{
+                alternatives: [{
+                  transcript: `[No speech detected in chunk ${i+1}]`,
+                  confidence: 0
+                }]
+              }]
+            });
+            
+            // Count as success but log warning
+            successCount++;
+          } else {
+            // Normal successful result
+            results.push(chunkResult);
+            successCount++;
+            console.log(`[BATCH] Successfully processed chunk ${i+1}/${chunks.length}`);
+          }
         } catch (chunkError) {
           errorCount++;
+          
+          // Extract detailed error message
+          const errorMessage = chunkError instanceof Error ? chunkError.message : String(chunkError);
+          lastErrorMessage = errorMessage; // Save this for the final error message if needed
+          
           console.error(`[BATCH ERROR] Error processing chunk ${i+1}/${chunks.length}:`, chunkError);
           
           // Log detailed chunk error information
@@ -82,16 +109,23 @@ export const transcribeBatchedAudio = async (
             chunkNumber: i+1,
             totalChunks: chunks.length,
             chunkSize: `${(chunks[i].byteLength / (1024 * 1024)).toFixed(2)} MB`,
-            errorMessage: chunkError instanceof Error ? chunkError.message : String(chunkError)
+            errorMessage
           });
           
-          // Add empty result for failed chunk
+          // Add informative error message for failed chunk
           results.push({
-            results: {
-              transcripts: [{ transcript: `[Transcription failed for chunk ${i+1}]`, confidence: 0 }],
-              channels: [{ alternatives: [{ transcript: `[Transcription failed for chunk ${i+1}]`, confidence: 0 }] }]
-            }
+            results: [{
+              alternatives: [{
+                transcript: `[Transcription failed for chunk ${i+1}: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}]`,
+                confidence: 0
+              }]
+            }]
           });
+          
+          // If this is the first chunk and it failed, we might need to continue with the others
+          if (i === 0 && chunks.length > 1) {
+            console.log(`[BATCH] First chunk failed but continuing with remaining chunks...`);
+          }
         }
         
         // Add a small delay between chunks to prevent rate limiting
@@ -106,14 +140,26 @@ export const transcribeBatchedAudio = async (
       
       onProgress?.(100);
       
-      if (results.length === 0) {
-        throw new Error('All chunks failed to process. Please check your API key and try again.');
+      // If all chunks failed, throw an error with the most detailed information
+      if (successCount === 0) {
+        throw new Error(`All chunks failed to process. Last error: ${lastErrorMessage}`);
       }
       
       // Even if some chunks failed, try to combine the successful ones
       const combinedResult = combineTranscriptionResults(results);
-      console.log(`[BATCH] Successfully combined results from ${results.length} chunks`);
-      return combinedResult;
+      
+      // Check if the combined result has any meaningful transcription
+      if (combinedResult?.results?.length > 0) {
+        console.log(`[BATCH] Successfully combined results from ${results.length} chunks`);
+        return combinedResult;
+      } else {
+        // If combined result is empty, provide a better error message
+        const errorMsg = errorCount > 0 
+          ? `Failed to transcribe any meaningful content. ${errorCount} of ${chunks.length} chunks failed. Last error: ${lastErrorMessage}`
+          : 'No speech was detected in the audio file. The file may be silent or contain background noise only.';
+        
+        throw new Error(errorMsg);
+      }
       
     } catch (processingError) {
       console.error('[BATCH ERROR] File processing failed:', processingError);

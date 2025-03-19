@@ -12,6 +12,28 @@ export const formatErrorMessage = (error: any): string => {
   // Extract the error message
   const message = error.message || String(error);
   
+  // Check for chunk failure patterns
+  if (message.includes("Transcription failed for chunk")) {
+    // Extract chunk number if possible
+    const chunkMatch = message.match(/chunk (\d+)/i);
+    const chunkNumber = chunkMatch ? chunkMatch[1] : "some chunks";
+    
+    // Determine if it's a format or API issue
+    if (message.includes("format") || message.includes("encoding") || message.includes("sample rate")) {
+      errorMessage += `Audio format issue in chunk ${chunkNumber}. The system will try to automatically resample and convert the audio.`;
+    } else if (message.includes("API key")) {
+      errorMessage += "Please check your API key is valid.";
+    } else if (message.includes("permission") || message.includes("permission_denied")) {
+      errorMessage += "Google API permission denied. Ensure your API key has access to Speech-to-Text.";
+    } else if (message.includes("quota")) {
+      errorMessage += "API quota exceeded. Please try again later or use a different API key.";
+    } else {
+      errorMessage += `Error in chunk ${chunkNumber}. This could be due to audio quality issues in that segment.`;
+    }
+    return errorMessage;
+  }
+  
+  // Original error handling logic
   if (message.includes("API key")) {
     errorMessage += "Please check your API key is valid.";
   } else if (message.includes("Network") || message.includes("fetch") || message.includes("internet")) {
@@ -40,6 +62,10 @@ export const formatErrorMessage = (error: any): string => {
     errorMessage += "The request to Google's API was invalid. This could be due to an issue with the audio format.";
   } else if (message.includes("speech") && message.includes("not enabled")) {
     errorMessage += "Speech-to-Text API is not enabled for your Google Cloud project.";
+  } else if (message.includes("No speech was detected")) {
+    errorMessage += "No speech was detected in the audio file. The file may be silent or contain only background noise.";
+  } else if (message.includes("All chunks failed")) {
+    errorMessage += "All audio segments failed to process. This often indicates an issue with the audio format or quality.";
   } else {
     errorMessage += `Error details: ${message}`;
   }
