@@ -58,6 +58,12 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("WebSocket") || error.includes("reconnect")) {
     displayError = "WebSocket connection error";
     additionalMessage = "The application failed to establish a WebSocket connection. This might be due to network issues, firewall settings, or proxy configurations. Try refreshing the page or checking your network configuration.";
+  } else if (error.includes("message channel closed")) {
+    displayError = "Communication channel error";
+    additionalMessage = "A promise wasn't properly resolved. The application will automatically retry with an improved processing method. If this error persists, please refresh the page.";
+  } else if (error.includes("browser performance")) {
+    displayError = "Browser performance issue";
+    additionalMessage = "Your browser is struggling to process this audio file. The application will automatically switch to a more memory-efficient processing method. If issues persist, try using a different browser or converting to a smaller audio format.";
   }
   
   // Log detailed error to console for debugging
@@ -65,6 +71,8 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
     originalError: error,
     displayError,
     timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    platform: navigator.platform
   });
   
   return (

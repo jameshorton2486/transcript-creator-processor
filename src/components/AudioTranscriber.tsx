@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { FileSelector } from "@/components/audio/FileSelector";
@@ -10,11 +9,13 @@ import { LargeFileAlert } from "@/components/audio/LargeFileAlert";
 import { TranscribeButton } from "@/components/audio/TranscribeButton";
 import { TerminologyExtractor } from "@/components/TerminologyExtractor";
 import { useTranscription } from "@/hooks/useTranscription";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { X, Upload, FileText } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { X, Upload, FileText, AlertTriangle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { FileUploader } from "@/components/FileUploader";
+import { estimateMemoryRequirements } from "@/lib/google/audio/fileChunker";
 
 // Increased file size threshold to 200MB
 const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
@@ -49,18 +50,40 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
   const [showTerminologyExtractor, setShowTerminologyExtractor] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [isExtractingTerms, setIsExtractingTerms] = useState(false);
+  const [memoryWarning, setMemoryWarning] = useState<string | null>(null);
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
   const isLargeFile = file && file.size > MEMORY_EFFICIENT_THRESHOLD;
 
+  // Check for potential memory issues when file is selected
+  useEffect(() => {
+    if (file) {
+      const { estimatedMemoryMB, isMemoryCritical, recommendedChunkCount } = estimateMemoryRequirements(file.size);
+      
+      console.log(`[MEMORY] Estimated memory requirements: ${estimatedMemoryMB.toFixed(2)}MB`);
+      console.log(`[MEMORY] Critical memory warning: ${isMemoryCritical ? 'Yes' : 'No'}`);
+      console.log(`[MEMORY] Recommended chunks: ${recommendedChunkCount}`);
+      
+      if (isMemoryCritical) {
+        setMemoryWarning(`This file may require up to ${estimatedMemoryMB.toFixed(0)}MB of memory to process. The application will automatically use memory-efficient processing with ${recommendedChunkCount} chunks.`);
+      } else {
+        setMemoryWarning(null);
+      }
+    } else {
+      setMemoryWarning(null);
+    }
+  }, [file]);
+
   const handleTermsExtracted = (terms: string[]) => {
     setCustomTerms(terms);
     setIsExtractingTerms(false);
+    console.log(`[TERMINOLOGY] Extracted ${terms.length} custom terms for speech adaptation`);
   };
 
   const removeTerm = (termToRemove: string) => {
     setCustomTerms(customTerms.filter(term => term !== termToRemove));
+    console.log(`[TERMINOLOGY] Removed term: ${termToRemove}`);
   };
 
   const handleDocumentUpload = (files: File[]) => {
@@ -71,6 +94,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setDocumentFile(file);
     setIsExtractingTerms(true);
     
+    console.log(`[DOCUMENT] Processing document for terminology extraction: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
+    
     try {
       // The TerminologyExtractor component will handle the actual extraction
       // This is just to trigger the visual state
@@ -78,10 +103,28 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         setShowTerminologyExtractor(true);
       }, 100);
     } catch (error) {
-      console.error("Error processing document:", error);
+      console.error(`[DOCUMENT ERROR] Error processing document:`, error);
       setIsExtractingTerms(false);
     }
   };
+
+  // Log component renders and state changes for debugging
+  useEffect(() => {
+    console.log(`[COMPONENT] AudioTranscriber rendered, isLoading: ${isLoading}, progress: ${progress}%, isBatchProcessing: ${isBatchProcessing}`);
+    
+    // Log memory usage if available
+    if (performance && 'memory' in performance) {
+      // @ts-ignore: 'memory' exists on Chrome's Performance object
+      const memoryInfo = performance.memory;
+      if (memoryInfo) {
+        console.log(`[MEMORY] Current usage: ${(memoryInfo.usedJSHeapSize / (1024 * 1024)).toFixed(2)}MB / ${(memoryInfo.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)}MB`);
+      }
+    }
+    
+    return () => {
+      console.log(`[COMPONENT] AudioTranscriber will unmount`);
+    };
+  }, [isLoading, progress, isBatchProcessing]);
 
   return (
     <Card className="bg-white">
@@ -100,6 +143,14 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           onFileSelected={handleFileSelected}
           isLoading={isLoading}
         />
+        
+        {memoryWarning && (
+          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-700">Memory Usage Warning</AlertTitle>
+            <AlertDescription className="text-amber-600">{memoryWarning}</AlertDescription>
+          </Alert>
+        )}
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">

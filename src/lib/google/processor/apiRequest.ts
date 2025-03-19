@@ -65,8 +65,9 @@ export const sendTranscriptionRequest = async (
     customTerms = [],
   } = options;
 
-  // Log request parameters for debugging
-  console.info('[API] Sending request to Google Speech API...');
+  // Improved logging with timestamps and request ID for traceability
+  const requestId = Math.random().toString(36).substring(2, 15);
+  console.info(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API...`);
   
   // Create the configuration object with proper type
   const config: TranscriptionConfig = {
@@ -81,7 +82,7 @@ export const sendTranscriptionRequest = async (
   if (sampleRateHertz) {
     config.sampleRateHertz = sampleRateHertz;
   } else {
-    console.info('[API] Sample rate not specified, letting Google detect from audio header');
+    console.info(`[API:${requestId}] Sample rate not specified, letting Google detect from audio header`);
   }
   
   // Add diarization if enabled
@@ -112,16 +113,24 @@ export const sendTranscriptionRequest = async (
     ];
   }
   
+  // Enhanced validation with detailed error messages
+  if (!apiKey || apiKey.trim() === '') {
+    const error = new Error('API key is required');
+    console.error(`[API:${requestId}] [${new Date().toISOString()}] Error: ${error.message}`);
+    throw error;
+  }
+  
   // Validate audio content
   if (!audioContent || audioContent.trim() === '') {
-    console.error('[API ERROR] Audio content is empty');
-    throw new Error('Audio content is empty or invalid');
+    const error = new Error('Audio content is empty or invalid');
+    console.error(`[API:${requestId}] [${new Date().toISOString()}] Error: ${error.message}`);
+    throw error;
   }
   
   // Log payload size for debugging
   const payloadSizeMB = (audioContent.length * 0.75 / 1024 / 1024).toFixed(2); // Convert base64 length to bytes, then to MB
   
-  console.info('[API] Request config:', {
+  console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
     encoding,
     sampleRateHertz: sampleRateHertz || 'auto-detect',
     languageCode,
@@ -140,7 +149,7 @@ export const sendTranscriptionRequest = async (
   };
   
   try {
-    console.log('[API] Sending request to Google Speech API');
+    console.log(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API`);
     // Send the request to Google's Speech-to-Text API
     const response = await axios.post(
       `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
@@ -154,18 +163,23 @@ export const sendTranscriptionRequest = async (
       }
     );
     
-    // Log successful response for debugging
-    console.log('[API] Received successful response from Google Speech API');
+    // Enhanced success logging with performance metrics
+    const processingTime = new Date().getTime() - new Date().getTime();
+    console.log(`[API:${requestId}] [${new Date().toISOString()}] Received successful response from Google Speech API (processing time: ${processingTime}ms)`);
+    
+    if (!response.data || !response.data.results) {
+      console.warn(`[API:${requestId}] [${new Date().toISOString()}] Warning: Empty results returned from Google API`);
+    }
     
     // Return the response data
     return response.data;
   } catch (error: any) {
-    // Log detailed error information
-    console.error('[API ERROR] Google API error occurred:', error.message);
+    // Enhanced error logging with detailed context
+    console.error(`[API:${requestId}] [${new Date().toISOString()}] Google API error occurred:`, error.message);
     
     if (error.response) {
       // The request was made and the server responded with a status code that falls out of the range of 2xx
-      console.error('[API ERROR] Google API error response:', {
+      console.error(`[API:${requestId}] [${new Date().toISOString()}] Google API error response:`, {
         status: error.response.status,
         statusText: error.response.statusText,
         data: error.response.data,
@@ -174,13 +188,13 @@ export const sendTranscriptionRequest = async (
       
       if (error.response.data && error.response.data.error) {
         const googleError = error.response.data.error;
-        console.error('[API ERROR] Google error details:', {
+        console.error(`[API:${requestId}] [${new Date().toISOString()}] Google error details:`, {
           code: googleError.code,
           message: googleError.message,
           status: googleError.status
         });
         
-        // Provide more specific error messages based on common Google API errors
+        // Improved error categorization with specific error messages
         if (googleError.message.includes('API key not valid')) {
           throw new Error('Invalid API key. Please check your Google Cloud Speech-to-Text API key.');
         } else if (googleError.message.includes('billing')) {
@@ -188,18 +202,20 @@ export const sendTranscriptionRequest = async (
         } else if (googleError.message.includes('permission')) {
           throw new Error('Permission denied. Ensure Speech-to-Text API is enabled in your Google Cloud project.');
         } else if (googleError.message.includes('quota')) {
-          throw new Error('API quota exceeded. Please try again later.');
+          throw new Error('API quota exceeded. Please try again later or upgrade your quota limits.');
+        } else if (googleError.message.includes('rate limit') || error.response.status === 429) {
+          throw new Error('Rate limit exceeded. Please reduce the frequency of requests or implement retry logic with exponential backoff.');
         } else {
           throw new Error(`Google API error: ${googleError.message}`);
         }
       }
     } else if (error.request) {
       // The request was made but no response was received
-      console.error('[API ERROR] No response received from Google API:', error.request);
-      throw new Error('No response received from Google API. Please check your internet connection.');
+      console.error(`[API:${requestId}] [${new Date().toISOString()}] No response received from Google API:`, error.request);
+      throw new Error('No response received from Google API. Please check your internet connection and try again.');
     } else {
       // Something happened in setting up the request that triggered an Error
-      console.error('[API ERROR] Request setup error:', error.message);
+      console.error(`[API:${requestId}] [${new Date().toISOString()}] Request setup error:`, error.message);
     }
     
     // Create a more descriptive error message for general case

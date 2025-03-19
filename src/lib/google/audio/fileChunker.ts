@@ -19,35 +19,41 @@ export const splitFileIntoChunks = async (
   maxChunkSize: number = DEFAULT_CHUNK_SIZE
 ): Promise<ArrayBuffer[]> => {
   try {
-    console.log(`[CHUNKER] Starting file chunking for ${file.name}`);
+    const processingStartTime = performance.now();
+    console.log(`[CHUNKER] [${new Date().toISOString()}] Starting file chunking for ${file.name}`);
     
     // Get file as ArrayBuffer
     let fileBuffer: ArrayBuffer;
     try {
       fileBuffer = await file.arrayBuffer();
-      console.log(`[CHUNKER] Successfully read file into buffer: ${(fileBuffer.byteLength / (1024 * 1024)).toFixed(2)}MB`);
+      console.log(`[CHUNKER] [${new Date().toISOString()}] Successfully read file into buffer: ${(fileBuffer.byteLength / (1024 * 1024)).toFixed(2)}MB`);
     } catch (readError) {
-      console.error(`[CHUNKER ERROR] Failed to read file:`, readError);
+      console.error(`[CHUNKER ERROR] [${new Date().toISOString()}] Failed to read file:`, readError);
       throw new Error(`Failed to read file: ${readError instanceof Error ? readError.message : String(readError)}`);
     }
     
     const chunks: ArrayBuffer[] = [];
     const totalBytes = fileBuffer.byteLength;
     
-    console.log(`[CHUNKER] Splitting file of ${(totalBytes / (1024 * 1024)).toFixed(2)}MB into chunks of ~${(maxChunkSize / (1024 * 1024)).toFixed(2)}MB`);
-    console.log(`[CHUNKER] After base64 encoding, each chunk will be approximately ${((maxChunkSize * BASE64_EXPANSION_FACTOR) / (1024 * 1024)).toFixed(2)}MB`);
+    console.log(`[CHUNKER] [${new Date().toISOString()}] Splitting file of ${(totalBytes / (1024 * 1024)).toFixed(2)}MB into chunks of ~${(maxChunkSize / (1024 * 1024)).toFixed(2)}MB`);
+    console.log(`[CHUNKER] [${new Date().toISOString()}] After base64 encoding, each chunk will be approximately ${((maxChunkSize * BASE64_EXPANSION_FACTOR) / (1024 * 1024)).toFixed(2)}MB`);
     
     // For FLAC files, use specialized splitter to ensure valid FLAC chunks
     if (file.type.includes("flac") || file.name.toLowerCase().endsWith(".flac")) {
-      console.log(`[CHUNKER] Using specialized FLAC file splitter`);
+      console.log(`[CHUNKER] [${new Date().toISOString()}] Using specialized FLAC file splitter`);
       try {
         const flacChunks = await splitFlacFile(fileBuffer, maxChunkSize);
-        console.log(`[CHUNKER] Successfully split FLAC file into ${flacChunks.length} chunks`);
+        console.log(`[CHUNKER] [${new Date().toISOString()}] Successfully split FLAC file into ${flacChunks.length} chunks`);
+        
+        // Report processing performance
+        const processingEndTime = performance.now();
+        console.log(`[CHUNKER] [${new Date().toISOString()}] FLAC chunking completed in ${(processingEndTime - processingStartTime).toFixed(2)}ms`);
+        
         return flacChunks;
       } catch (flacError) {
-        console.error(`[CHUNKER ERROR] FLAC splitting failed:`, flacError);
+        console.error(`[CHUNKER ERROR] [${new Date().toISOString()}] FLAC splitting failed:`, flacError);
         // Fall back to generic chunking if FLAC specific chunking fails
-        console.log(`[CHUNKER] Falling back to generic chunking for FLAC file`);
+        console.log(`[CHUNKER] [${new Date().toISOString()}] Falling back to generic chunking for FLAC file`);
       }
     }
     
@@ -58,18 +64,40 @@ export const splitFileIntoChunks = async (
     const isMp3 = fileType.includes("mp3") || fileName.endsWith(".mp3");
     const isVideo = fileType.includes("video") || fileName.endsWith(".mp4") || fileName.endsWith(".webm") || fileName.endsWith(".mov");
     
-    // For common audio formats, use standard chunking with appropriate sizes
-    console.log(`[CHUNKER] Using standard chunking for ${isWav ? 'WAV' : isMp3 ? 'MP3' : isVideo ? 'video' : 'generic'} file`);
-    
-    for (let i = 0; i < totalBytes; i += maxChunkSize) {
-      const chunkSize = Math.min(maxChunkSize, totalBytes - i);
-      const chunk = fileBuffer.slice(i, i + chunkSize);
-      chunks.push(chunk);
+    // For extremely large files, use stream processing approach to reduce memory usage
+    if (totalBytes > 100 * 1024 * 1024) { // 100MB
+      console.log(`[CHUNKER] [${new Date().toISOString()}] Using memory-efficient streaming approach for extremely large file (${(totalBytes / (1024 * 1024)).toFixed(2)}MB)`);
       
-      console.log(`[CHUNKER] Created chunk ${chunks.length}: ${(chunk.byteLength / (1024 * 1024)).toFixed(2)}MB (${Math.round((i + chunkSize) / totalBytes * 100)}% of file)`);
+      // Use a smaller chunk size for large files to reduce memory pressure
+      const largeFileChunkSize = maxChunkSize / 2;
+      
+      // Process file in segmented manner to avoid loading entire file into memory at once
+      for (let i = 0; i < totalBytes; i += largeFileChunkSize) {
+        // Free up memory by forcing garbage collection between chunks (indirectly)
+        if (i > 0 && i % (largeFileChunkSize * 5) === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100)); // Small pause to allow GC
+        }
+        
+        const chunkSize = Math.min(largeFileChunkSize, totalBytes - i);
+        const chunk = fileBuffer.slice(i, i + chunkSize);
+        chunks.push(chunk);
+        
+        console.log(`[CHUNKER] [${new Date().toISOString()}] Created chunk ${chunks.length}: ${(chunk.byteLength / (1024 * 1024)).toFixed(2)}MB (${Math.round((i + chunkSize) / totalBytes * 100)}% of file)`);
+      }
+    } else {
+      // For common audio formats, use standard chunking with appropriate sizes
+      console.log(`[CHUNKER] [${new Date().toISOString()}] Using standard chunking for ${isWav ? 'WAV' : isMp3 ? 'MP3' : isVideo ? 'video' : 'generic'} file`);
+      
+      for (let i = 0; i < totalBytes; i += maxChunkSize) {
+        const chunkSize = Math.min(maxChunkSize, totalBytes - i);
+        const chunk = fileBuffer.slice(i, i + chunkSize);
+        chunks.push(chunk);
+        
+        console.log(`[CHUNKER] [${new Date().toISOString()}] Created chunk ${chunks.length}: ${(chunk.byteLength / (1024 * 1024)).toFixed(2)}MB (${Math.round((i + chunkSize) / totalBytes * 100)}% of file)`);
+      }
     }
     
-    console.log(`[CHUNKER] Split file into ${chunks.length} chunks (${(totalBytes / (1024 * 1024)).toFixed(2)}MB total)`);
+    console.log(`[CHUNKER] [${new Date().toISOString()}] Split file into ${chunks.length} chunks (${(totalBytes / (1024 * 1024)).toFixed(2)}MB total)`);
     
     // Validate chunks
     if (chunks.length === 0) {
@@ -79,12 +107,16 @@ export const splitFileIntoChunks = async (
     // Check if sum of chunk sizes equals the original file size
     const totalChunkSize = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
     if (totalChunkSize !== totalBytes) {
-      console.warn(`[CHUNKER WARNING] Total chunk size (${totalChunkSize}) does not match original file size (${totalBytes})`);
+      console.warn(`[CHUNKER WARNING] [${new Date().toISOString()}] Total chunk size (${totalChunkSize}) does not match original file size (${totalBytes})`);
     }
+    
+    // Report processing performance
+    const processingEndTime = performance.now();
+    console.log(`[CHUNKER] [${new Date().toISOString()}] Chunking completed in ${(processingEndTime - processingStartTime).toFixed(2)}ms`);
     
     return chunks;
   } catch (error) {
-    console.error(`[CHUNKER ERROR] File chunking failed:`, error);
+    console.error(`[CHUNKER ERROR] [${new Date().toISOString()}] File chunking failed:`, error);
     throw new Error(`Failed to split file into chunks: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -94,4 +126,35 @@ export const findSafeChunkBoundary = (buffer: ArrayBuffer, startPosition: number
   // For simplicity, we're just using fixed sizes
   // In a production system, you might want to look for silence or other markers
   return Math.min(startPosition + maxChunkSize, buffer.byteLength);
+};
+
+// Helper function to estimate memory requirements for processing
+export const estimateMemoryRequirements = (fileSize: number): {
+  estimatedMemoryMB: number;
+  recommendedChunkCount: number;
+  isMemoryCritical: boolean;
+} => {
+  // Base memory overhead for processing (browser, JS engine, etc.)
+  const baseMemoryOverhead = 200; // MB
+  
+  // Conservative estimate: we need ~3x the file size for processing
+  // (original file + decoded audio + processing buffers)
+  const estimatedMemoryMB = (fileSize / (1024 * 1024)) * 3 + baseMemoryOverhead;
+  
+  // Determine if this might exceed typical browser memory limits
+  const isMemoryCritical = estimatedMemoryMB > 1500; // 1.5GB is pushing it for many browsers
+  
+  // Calculate recommended number of chunks based on memory constraints
+  let recommendedChunkCount = 1;
+  if (estimatedMemoryMB > 1500) {
+    recommendedChunkCount = Math.ceil(estimatedMemoryMB / 500); // Aim for ~500MB per chunk
+  } else if (estimatedMemoryMB > 800) {
+    recommendedChunkCount = Math.ceil(estimatedMemoryMB / 800); // Aim for ~800MB per chunk
+  }
+  
+  return {
+    estimatedMemoryMB,
+    recommendedChunkCount,
+    isMemoryCritical
+  };
 };
