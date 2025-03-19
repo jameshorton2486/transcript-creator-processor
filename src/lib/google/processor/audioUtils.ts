@@ -1,7 +1,4 @@
 
-import { getAudioContext } from '../../audio/audioContext';
-import { resampleAudio, detectSampleRate } from '../../audio/audioResampler';
-
 // Constants for audio processing
 const TARGET_SAMPLE_RATE = 16000; // 16kHz for Google Speech API
 
@@ -14,32 +11,24 @@ export const processAudioContent = async (
   console.log(`Processing audio content, direct upload: ${useDirectUpload}, encoding: ${encoding}`);
   
   let base64Audio;
-  let actualSampleRate = TARGET_SAMPLE_RATE; // Always use 16kHz
   
   try {
     // Get original audio buffer
     const rawBuffer = await file.arrayBuffer();
     
-    // Always resample to 16kHz (Speech API preference)
-    console.log(`[AUDIO] Resampling to ${TARGET_SAMPLE_RATE} Hz`);
-    const { resampled, sampleRate } = await resampleAudio(rawBuffer, TARGET_SAMPLE_RATE);
-    
-    // Use the resampled audio
-    base64Audio = arrayBufferToBase64(resampled);
-    actualSampleRate = sampleRate;
-    
-    console.log(`[AUDIO] Successfully processed audio: encoding=${encoding}, sampleRate=${actualSampleRate} Hz`);
+    // Convert buffer to base64
+    base64Audio = arrayBufferToBase64(rawBuffer);
+    console.log(`[AUDIO] Successfully processed audio: encoding=${encoding}`);
   } catch (error) {
     console.error("[AUDIO] Error processing audio:", error);
     
-    // Fallback to direct upload if preprocessing fails
+    // Fallback to direct upload if processing fails
     console.log("[AUDIO] Using direct upload as fallback");
     const rawBuffer = await file.arrayBuffer();
     base64Audio = arrayBufferToBase64(rawBuffer);
-    actualSampleRate = TARGET_SAMPLE_RATE; // Force 16kHz even in fallback
   }
   
-  return { base64Audio, actualSampleRate };
+  return { base64Audio, actualSampleRate: TARGET_SAMPLE_RATE };
 };
 
 // Helper function to convert ArrayBuffer to base64
@@ -60,21 +49,6 @@ function getStandardSampleRate(encoding: string): number {
   // Always return 16000 Hz regardless of encoding
   return TARGET_SAMPLE_RATE;
 }
-
-// Attempts to detect actual sample rate from audio file
-export const detectActualSampleRate = async (preprocessedAudio: ArrayBuffer) => {
-  console.log("Detecting audio sample rate...");
-  const detectedRate = await detectSampleRate(preprocessedAudio);
-  
-  if (detectedRate > 0) {
-    console.log(`Detected actual sample rate: ${detectedRate} Hz`);
-    return detectedRate;
-  }
-  
-  // Default to target sample rate if detection fails
-  console.log(`Failed to detect sample rate, using default: ${TARGET_SAMPLE_RATE} Hz`);
-  return TARGET_SAMPLE_RATE;
-};
 
 // Determines if direct upload should be used based on file characteristics
 export const shouldUseDirectUpload = (

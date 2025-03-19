@@ -56,12 +56,8 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     if (file) {
       const { estimatedMemoryMB, isMemoryCritical, recommendedChunkCount } = estimateMemoryRequirements(file.size);
       
-      console.log(`[MEMORY] Estimated memory requirements: ${estimatedMemoryMB.toFixed(2)}MB`);
-      console.log(`[MEMORY] Critical memory warning: ${isMemoryCritical ? 'Yes' : 'No'}`);
-      console.log(`[MEMORY] Recommended chunks: ${recommendedChunkCount}`);
-      
       if (isMemoryCritical) {
-        setMemoryWarning(`This file may require up to ${estimatedMemoryMB.toFixed(0)}MB of memory to process. The application will automatically use memory-efficient processing with ${recommendedChunkCount} chunks.`);
+        setMemoryWarning(`This file may require up to ${estimatedMemoryMB.toFixed(0)}MB of memory to process. The application will automatically use batch processing with ${recommendedChunkCount} chunks.`);
       } else {
         setMemoryWarning(null);
       }
@@ -69,21 +65,6 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       setMemoryWarning(null);
     }
   }, [file]);
-
-  // Log component renders and state changes for debugging
-  useEffect(() => {
-    console.log(`[COMPONENT] AudioTranscriber rendered, isLoading: ${isLoading}, progress: ${progress}%, isBatchProcessing: ${isBatchProcessing}`);
-    
-    // Log memory usage if available
-    if (performance && 'memory' in performance && performance.memory) {
-      const memoryInfo = performance.memory;
-      console.log(`[MEMORY] Current usage: ${(memoryInfo.usedJSHeapSize / (1024 * 1024)).toFixed(2)}MB / ${(memoryInfo.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)}MB`);
-    }
-    
-    return () => {
-      console.log(`[COMPONENT] AudioTranscriber will unmount`);
-    };
-  }, [isLoading, progress, isBatchProcessing]);
 
   return (
     <Card className="bg-white">

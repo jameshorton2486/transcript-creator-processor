@@ -3,8 +3,6 @@
  * Utilities for splitting files into chunks with enhanced error handling
  */
 
-import { splitFlacFile } from './flacHandler';
-
 // Calculate a safe chunk size that stays under Google's 10MB limit after base64 encoding
 const BASE64_EXPANSION_FACTOR = 1.33; // base64 encoding increases size by ~33%
 const GOOGLE_API_LIMIT = 10 * 1024 * 1024; // 10MB
@@ -38,32 +36,6 @@ export const splitFileIntoChunks = async (
     console.log(`[CHUNKER] [${new Date().toISOString()}] Splitting file of ${(totalBytes / (1024 * 1024)).toFixed(2)}MB into chunks of ~${(maxChunkSize / (1024 * 1024)).toFixed(2)}MB`);
     console.log(`[CHUNKER] [${new Date().toISOString()}] After base64 encoding, each chunk will be approximately ${((maxChunkSize * BASE64_EXPANSION_FACTOR) / (1024 * 1024)).toFixed(2)}MB`);
     
-    // For FLAC files, use specialized splitter to ensure valid FLAC chunks
-    if (file.type.includes("flac") || file.name.toLowerCase().endsWith(".flac")) {
-      console.log(`[CHUNKER] [${new Date().toISOString()}] Using specialized FLAC file splitter`);
-      try {
-        const flacChunks = await splitFlacFile(fileBuffer, maxChunkSize);
-        console.log(`[CHUNKER] [${new Date().toISOString()}] Successfully split FLAC file into ${flacChunks.length} chunks`);
-        
-        // Report processing performance
-        const processingEndTime = performance.now();
-        console.log(`[CHUNKER] [${new Date().toISOString()}] FLAC chunking completed in ${(processingEndTime - processingStartTime).toFixed(2)}ms`);
-        
-        return flacChunks;
-      } catch (flacError) {
-        console.error(`[CHUNKER ERROR] [${new Date().toISOString()}] FLAC splitting failed:`, flacError);
-        // Fall back to generic chunking if FLAC specific chunking fails
-        console.log(`[CHUNKER] [${new Date().toISOString()}] Falling back to generic chunking for FLAC file`);
-      }
-    }
-    
-    // Use different chunking strategies based on file type
-    const fileType = file.type.toLowerCase();
-    const fileName = file.name.toLowerCase();
-    const isWav = fileType.includes("wav") || fileName.endsWith(".wav");
-    const isMp3 = fileType.includes("mp3") || fileName.endsWith(".mp3");
-    const isVideo = fileType.includes("video") || fileName.endsWith(".mp4") || fileName.endsWith(".webm") || fileName.endsWith(".mov");
-    
     // For extremely large files, use stream processing approach to reduce memory usage
     if (totalBytes > 100 * 1024 * 1024) { // 100MB
       console.log(`[CHUNKER] [${new Date().toISOString()}] Using memory-efficient streaming approach for extremely large file (${(totalBytes / (1024 * 1024)).toFixed(2)}MB)`);
@@ -86,7 +58,7 @@ export const splitFileIntoChunks = async (
       }
     } else {
       // For common audio formats, use standard chunking with appropriate sizes
-      console.log(`[CHUNKER] [${new Date().toISOString()}] Using standard chunking for ${isWav ? 'WAV' : isMp3 ? 'MP3' : isVideo ? 'video' : 'generic'} file`);
+      console.log(`[CHUNKER] [${new Date().toISOString()}] Using standard chunking`);
       
       for (let i = 0; i < totalBytes; i += maxChunkSize) {
         const chunkSize = Math.min(maxChunkSize, totalBytes - i);
@@ -119,13 +91,6 @@ export const splitFileIntoChunks = async (
     console.error(`[CHUNKER ERROR] [${new Date().toISOString()}] File chunking failed:`, error);
     throw new Error(`Failed to split file into chunks: ${error instanceof Error ? error.message : String(error)}`);
   }
-};
-
-// Helper function to create a proper chunk boundary
-export const findSafeChunkBoundary = (buffer: ArrayBuffer, startPosition: number, maxChunkSize: number): number => {
-  // For simplicity, we're just using fixed sizes
-  // In a production system, you might want to look for silence or other markers
-  return Math.min(startPosition + maxChunkSize, buffer.byteLength);
 };
 
 // Helper function to estimate memory requirements for processing
