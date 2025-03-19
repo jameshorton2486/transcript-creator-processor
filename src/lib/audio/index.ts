@@ -2,15 +2,16 @@
 // This file exports all audio processing utilities from smaller modules
 
 export * from "./audioContext";
-export * from "./wavConverter";
 export * from "./base64Converter";
-export * from "./wavUtils";
 export * from "./formatConversion";
-export * from "./wavEncoder";
 export * from "./normalization";
 export * from "./audioBufferUtils";
 export * from "./chunkProcessor";
 export * from "./chunkingStrategy";
+
+// Export from wavUtils and wavEncoder (avoid duplicate exports)
+export { convertToMono, writeString } from './wavUtils';
+export { encodeWavFile, float32ArrayToWav } from './wavEncoder';
 
 // Export from sizeCalculator 
 export { 
