@@ -9,9 +9,41 @@
     <meta name="author" content="Lovable" />
     <meta property="og:image" content="/og-image.png" />
     <!-- Remove any Feature-Policy or Permissions-Policy headers that might reference deprecated features -->
+    
+    <!-- Proper Google Tag Manager implementation -->
+    <script>
+      // Initialize dataLayer array if it doesn't exist
+      window.dataLayer = window.dataLayer || [];
+      
+      // Only load GTM if it's configured correctly
+      function loadGTM(id) {
+        if (!id || id.includes('github.com')) return; // Prevent GitHub URLs
+        
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-PLACEHOLDER');
+      }
+      
+      // Only load if a valid ID is configured
+      // loadGTM('GTM-XXXXXX'); // Uncomment and replace with actual GTM ID when ready
+    </script>
+    
+    <!-- Critical CSS and JS resources only -->
+    <link rel="stylesheet" href="/src/index.css" />
+    
+    <!-- Avoid unnecessary preloads - only preload what's immediately needed -->
   </head>
 
   <body>
+    <!-- Google Tag Manager noscript (for non-JS environments) -->
+    <noscript>
+      <!-- Uncomment and replace with actual GTM ID when ready -->
+      <!-- <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PLACEHOLDER"
+      height="0" width="0" style="display:none;visibility:hidden"></iframe> -->
+    </noscript>
+    
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
