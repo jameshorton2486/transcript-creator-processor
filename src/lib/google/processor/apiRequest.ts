@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { getAudioContext } from '../../audio/audioContext';
 
 // Add a proper interface for the configuration
 interface TranscriptionConfig {
@@ -81,6 +82,7 @@ export const sendTranscriptionRequest = async (
   // Only add sampleRateHertz if specified - this allows Google to auto-detect from WAV headers
   if (sampleRateHertz) {
     config.sampleRateHertz = sampleRateHertz;
+    console.info(`[API:${requestId}] Using specified sample rate: ${sampleRateHertz}`);
   } else {
     console.info(`[API:${requestId}] Sample rate not specified, letting Google detect from audio header`);
   }
@@ -111,6 +113,7 @@ export const sendTranscriptionRequest = async (
         boost: 10,
       },
     ];
+    console.info(`[API:${requestId}] Added ${customTerms.length} custom terms with boost 10`);
   }
   
   // Enhanced validation with detailed error messages
@@ -123,6 +126,14 @@ export const sendTranscriptionRequest = async (
   // Validate audio content
   if (!audioContent || audioContent.trim() === '') {
     const error = new Error('Audio content is empty or invalid');
+    console.error(`[API:${requestId}] [${new Date().toISOString()}] Error: ${error.message}`);
+    throw error;
+  }
+  
+  // Check encoding format compatibility
+  const validEncodings = ['LINEAR16', 'FLAC', 'MP3', 'OGG_OPUS', 'MULAW', 'AMR', 'AMR_WB', 'WEBM_OPUS'];
+  if (!validEncodings.includes(encoding)) {
+    const error = new Error(`Invalid encoding format: ${encoding}. Must be one of: ${validEncodings.join(', ')}`);
     console.error(`[API:${requestId}] [${new Date().toISOString()}] Error: ${error.message}`);
     throw error;
   }
@@ -169,6 +180,8 @@ export const sendTranscriptionRequest = async (
     
     if (!response.data || !response.data.results) {
       console.warn(`[API:${requestId}] [${new Date().toISOString()}] Warning: Empty results returned from Google API`);
+    } else {
+      console.log(`[API:${requestId}] [${new Date().toISOString()}] Transcription successful with ${response.data.results.length} result segments`);
     }
     
     // Return the response data
@@ -205,6 +218,10 @@ export const sendTranscriptionRequest = async (
           throw new Error('API quota exceeded. Please try again later or upgrade your quota limits.');
         } else if (googleError.message.includes('rate limit') || error.response.status === 429) {
           throw new Error('Rate limit exceeded. Please reduce the frequency of requests or implement retry logic with exponential backoff.');
+        } else if (googleError.message.includes('Invalid audio')) {
+          throw new Error(`Invalid audio format: ${googleError.message}. Please check your audio encoding and format.`);
+        } else if (googleError.message.includes('sampleRateHertz')) {
+          throw new Error(`Sample rate error: ${googleError.message}. Try not specifying sample rate to let Google auto-detect it.`);
         } else {
           throw new Error(`Google API error: ${googleError.message}`);
         }

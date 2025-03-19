@@ -40,7 +40,10 @@ export const testApiKey = async (apiKey: string): Promise<boolean> => {
       return true;
     }
     
-    console.error(`[API TEST] API key invalid. Status: ${response.status}`);
+    // Get detailed error information
+    const errorData = await response.json().catch(() => null);
+    console.error('[API TEST] API key invalid. Response:', errorData);
+    
     return false;
   } catch (error) {
     console.error('[API TEST] API key test error:', error);
@@ -81,26 +84,84 @@ export const testSpeechApiAccess = async (apiKey: string): Promise<{isValid: boo
     );
     
     const data = await response.json();
+    console.log('[API TEST] Speech API test response status:', response.status);
     
     if (response.status === 200) {
       console.log('[API TEST] Speech-to-Text API access confirmed');
       return { isValid: true };
     } else if (data.error) {
+      console.error('[API TEST] Speech API test error:', data.error);
+      
       // Check for specific error types
       if (data.error.message.includes('API key not valid')) {
         return { isValid: false, message: 'Invalid API key' };
       } else if (data.error.message.includes('billing')) {
         return { isValid: false, message: 'Billing not enabled for this Google Cloud project' };
-      } else if (data.error.message.includes('permission')) {
+      } else if (data.error.message.includes('permission') || data.error.message.includes('enabled')) {
         return { isValid: false, message: 'Speech-to-Text API not enabled in Google Cloud project' };
+      } else if (data.error.message.includes('quota')) {
+        return { isValid: false, message: 'API quota exceeded' };
       } else {
         return { isValid: false, message: data.error.message };
       }
     }
     
     return { isValid: false, message: 'Unknown error testing Speech API' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API TEST] Speech API test error:', error);
     return { isValid: false, message: `Connection error: ${error.message}` };
+  }
+};
+
+/**
+ * Validates if the project has necessary API permissions by checking specific errors
+ */
+export const checkApiPermissions = async (apiKey: string): Promise<{
+  hasPermission: boolean;
+  needsBilling: boolean;
+  apiEnabled: boolean;
+  message: string;
+}> => {
+  try {
+    // Default response
+    const result = {
+      hasPermission: false,
+      needsBilling: false,
+      apiEnabled: false,
+      message: 'Unknown API permission status'
+    };
+    
+    // Test with a minimal request
+    const { isValid, message } = await testSpeechApiAccess(apiKey);
+    
+    if (isValid) {
+      result.hasPermission = true;
+      result.apiEnabled = true;
+      result.message = 'API key has all required permissions';
+      return result;
+    }
+    
+    // Check specific error messages for different permission issues
+    if (message?.includes('billing')) {
+      result.needsBilling = true;
+      result.apiEnabled = true;
+      result.message = 'Billing needs to be enabled for this Google Cloud project';
+    } else if (message?.includes('enable') || message?.includes('API not enabled')) {
+      result.apiEnabled = false;
+      result.message = 'Speech-to-Text API is not enabled for this project';
+    } else if (message?.includes('invalid') || message?.includes('API key')) {
+      result.message = 'The API key is invalid or does not have proper permissions';
+    } else {
+      result.message = message || 'Unknown permission issue';
+    }
+    
+    return result;
+  } catch (error: any) {
+    return {
+      hasPermission: false,
+      needsBilling: false,
+      apiEnabled: false,
+      message: `Error checking API permissions: ${error.message}`
+    };
   }
 };

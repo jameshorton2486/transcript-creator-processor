@@ -1,6 +1,7 @@
 
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { getSampleRate } from './audio/formatDetection';
+import { isValidAudioFile, detectAudioEncoding } from './audioEncoding';
 
 interface TranscriptionOptions {
   encoding?: string;
@@ -32,31 +33,32 @@ export const transcribeSingleFile = async (
 ) => {
   try {
     // Log file details
-    console.info(`Processing file: ${(file as File).name}, type: ${file.type}, size: ${file.size} bytes`);
+    console.info(`Processing file: ${(file as File).name || 'unnamed blob'}, type: ${file.type}, size: ${file.size} bytes`);
     
-    // Determine encoding based on file type
-    let encoding = 'LINEAR16'; // Default encoding for WAV files
-    if (file.type.includes('mp3')) {
-      encoding = 'MP3';
-    } else if (file.type.includes('flac')) {
-      encoding = 'FLAC';
-    } else if (file.type.includes('ogg')) {
-      encoding = 'OGG_OPUS';
-    } else if (file.type.includes('amr')) {
-      encoding = 'AMR';
-    } else if (file.type.includes('webm')) {
-      encoding = 'WEBM_OPUS';
+    // Validate file is a supported audio type
+    if (file instanceof File && !isValidAudioFile(file)) {
+      throw new Error('Unsupported audio file format. Please upload a WAV, MP3, FLAC, OGG, AMR, or WebM file.');
     }
     
+    // Determine encoding based on file type
+    const { encoding } = file instanceof File ? detectAudioEncoding(file) : { encoding: options.encoding || 'LINEAR16' };
     console.info(`Detected encoding: ${encoding}`);
     
     // Read the file content as ArrayBuffer for processing
     const audioArrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        reject(new Error('Failed to read audio file. The file may be corrupted.'));
+      };
       reader.readAsArrayBuffer(file);
     });
+    
+    // Validate the file is not empty
+    if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
+      throw new Error('The audio file is empty or could not be read.');
+    }
     
     // Get the sample rate from file if possible, otherwise use auto-detection
     // Pass undefined for WAV files to allow Google to auto-detect from header
@@ -67,14 +69,24 @@ export const transcribeSingleFile = async (
       const reader = new FileReader();
       reader.onload = (e) => {
         // Extract the base64 content without the prefix
-        const base64 = (e.target?.result as string).split(',')[1];
+        const result = e.target?.result as string;
+        const base64 = result.split(',')[1];
+        
+        if (!base64) {
+          reject(new Error('Failed to convert audio to base64 format.'));
+          return;
+        }
+        
         resolve(base64);
       };
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('Error converting to base64:', error);
+        reject(new Error('Failed to convert audio to base64 format.'));
+      };
       reader.readAsDataURL(file);
     });
     
-    console.info('Processing audio content, direct upload:', true, 'encoding:', encoding);
+    console.info('Processing audio content, encoding:', encoding);
     
     // Create custom terms list for legal vocabulary
     const legalTerms = [
@@ -97,6 +109,10 @@ export const transcribeSingleFile = async (
     
     // Send the request to Google's Speech-to-Text API
     const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);
+    
+    if (!response.results || response.results.length === 0) {
+      console.warn('Google API returned empty results. This may mean no speech was detected.');
+    }
     
     return response;
   } catch (error) {
