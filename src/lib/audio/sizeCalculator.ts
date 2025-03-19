@@ -1,3 +1,4 @@
+
 // Maximum size for a single batch (10MB is Google's sync API limit, but we want to be safe)
 export const MAX_BATCH_SIZE_BYTES = 5 * 1024 * 1024; // 5MB to be memory-efficient
 
@@ -12,6 +13,9 @@ export const estimateWavFileSize = (durationSec: number, sampleRate: number = 16
 /**
  * Calculates optimal chunk duration based on MAX_BATCH_SIZE_BYTES
  * Memory-efficient version for legal transcriptions
+ * @param {number} fileSize - File size in bytes
+ * @param {number} durationSec - Estimated duration in seconds
+ * @returns {number} Optimal chunk duration in seconds
  */
 export const calculateOptimalChunkDuration = (
   fileSize: number, 

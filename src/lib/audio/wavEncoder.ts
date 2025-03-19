@@ -6,6 +6,8 @@ import { writeString } from './wavUtils';
 
 /**
  * Encodes an AudioBuffer to a WAV file
+ * @param {AudioBuffer} audioBuffer - Audio buffer to encode
+ * @returns {Blob} WAV file as a Blob
  */
 export const encodeWavFile = (audioBuffer: AudioBuffer): Blob => {
   try {
@@ -52,6 +54,31 @@ export const encodeWavFile = (audioBuffer: AudioBuffer): Blob => {
     return new Blob([buffer], { type: 'audio/wav' });
   } catch (error) {
     console.error('[CONVERT] Error encoding WAV file:', error);
+    throw error;
+  }
+};
+
+/**
+ * Converts a Float32Array to a WAV file blob
+ * @param {Float32Array} samples - Float32Array of audio samples
+ * @param {number} sampleRate - Sample rate of the audio
+ * @returns {Blob} WAV file as a Blob
+ */
+export const float32ArrayToWav = (samples: Float32Array, sampleRate: number): Blob => {
+  try {
+    // Create a new audio context
+    const audioContext = new AudioContext();
+    
+    // Create a new AudioBuffer
+    const buffer = audioContext.createBuffer(1, samples.length, sampleRate);
+    
+    // Copy the samples into the buffer
+    buffer.getChannelData(0).set(samples);
+    
+    // Encode the AudioBuffer to WAV
+    return encodeWavFile(buffer);
+  } catch (error) {
+    console.error('[CONVERT] Error converting Float32Array to WAV:', error);
     throw error;
   }
 };

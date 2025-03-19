@@ -22,8 +22,11 @@ export const determineOptimalChunking = async (
     return { shouldChunk: false, optimalDuration: 0 };
   }
   
+  // Estimate audio duration based on file size (rough estimate: 16-bit mono at 16kHz = ~32KB per second)
+  const estimatedDurationSec = file.size / (32 * 1024);
+  
   // Determine optimal chunk duration based on file size
-  const optimalDuration = calculateOptimalChunkDuration(file.size);
+  const optimalDuration = calculateOptimalChunkDuration(file.size, estimatedDurationSec);
   console.log(`[SPLIT] Calculated optimal chunk duration: ${optimalDuration}s`);
   
   // If the file is small enough to process directly, don't bother chunking

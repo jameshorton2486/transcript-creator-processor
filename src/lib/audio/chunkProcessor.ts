@@ -23,7 +23,7 @@ export const processAudioChunk = async (
   const chunkBuffer = createAudioBufferFromChunk(chunk, sampleRate);
   
   // Convert to WAV for better compatibility
-  const wavBlob = encodeWavFile(chunkBuffer, sampleRate);
+  const wavBlob = encodeWavFile(chunkBuffer);
   
   console.log(`[SPLIT] Processed chunk ${index+1}/${total}`);
   
