@@ -17,11 +17,18 @@ export const resampleAudio = async (
     
     // Decode the audio data
     const decodedAudio = await audioContext.decodeAudioData(audioData.slice(0));
-    console.log(`[RESAMPLER] Original sample rate: ${decodedAudio.sampleRate} Hz`);
+    console.log(`[RESAMPLER] Original sample rate: ${decodedAudio.sampleRate} Hz, channels: ${decodedAudio.numberOfChannels}`);
     
-    // If already at target sample rate, return original
-    if (decodedAudio.sampleRate === targetSampleRate) {
-      console.log(`[RESAMPLER] Audio already at target sample rate (${targetSampleRate} Hz)`);
+    // If multi-channel, convert to mono first
+    let monoAudio = decodedAudio;
+    if (decodedAudio.numberOfChannels > 1) {
+      console.log(`[RESAMPLER] Converting ${decodedAudio.numberOfChannels} channels to mono`);
+      monoAudio = convertToMono(audioContext, decodedAudio);
+    }
+    
+    // If already at target sample rate and mono, return original
+    if (decodedAudio.sampleRate === targetSampleRate && decodedAudio.numberOfChannels === 1) {
+      console.log(`[RESAMPLER] Audio already at target sample rate (${targetSampleRate} Hz) and mono`);
       return { 
         resampled: audioData,
         sampleRate: targetSampleRate
@@ -30,26 +37,26 @@ export const resampleAudio = async (
     
     // Create offline context for resampling
     const offlineContext = new OfflineAudioContext(
-      decodedAudio.numberOfChannels,
-      decodedAudio.duration * targetSampleRate,
+      1, // Always use 1 channel (mono) for Google Speech API
+      monoAudio.duration * targetSampleRate,
       targetSampleRate
     );
     
     // Create buffer source
     const source = offlineContext.createBufferSource();
-    source.buffer = decodedAudio;
+    source.buffer = monoAudio;
     source.connect(offlineContext.destination);
     
     // Start source and process
     source.start(0);
-    console.log(`[RESAMPLER] Rendering audio at ${targetSampleRate} Hz`);
+    console.log(`[RESAMPLER] Rendering audio at ${targetSampleRate} Hz (mono)`);
     
     // Render and return the resampled buffer
     const renderedBuffer = await offlineContext.startRendering();
     
     // Convert AudioBuffer to Float32Array
     const channelData = renderedBuffer.getChannelData(0);
-    console.log(`[RESAMPLER] Successfully resampled audio to ${targetSampleRate} Hz`);
+    console.log(`[RESAMPLER] Successfully resampled audio to ${targetSampleRate} Hz (mono)`);
     
     // Convert Float32Array to WAV format
     const wavArrayBuffer = await convertFloat32ToWav(channelData, targetSampleRate);
@@ -65,13 +72,39 @@ export const resampleAudio = async (
 };
 
 /**
+ * Converts a multi-channel audio buffer to mono
+ * @param {AudioContext} audioContext - The audio context
+ * @param {AudioBuffer} audioBuffer - The audio buffer to convert
+ * @returns {AudioBuffer} - Mono audio buffer
+ */
+export const convertToMono = (audioContext: AudioContext, audioBuffer: AudioBuffer): AudioBuffer => {
+  const numberOfChannels = audioBuffer.numberOfChannels;
+  const length = audioBuffer.length;
+  
+  // Create a new mono buffer
+  const monoBuffer = audioContext.createBuffer(1, length, audioBuffer.sampleRate);
+  const monoData = monoBuffer.getChannelData(0);
+  
+  // Mix down all channels to mono
+  for (let i = 0; i < length; i++) {
+    let sum = 0;
+    for (let channel = 0; channel < numberOfChannels; channel++) {
+      sum += audioBuffer.getChannelData(channel)[i];
+    }
+    monoData[i] = sum / numberOfChannels;
+  }
+  
+  return monoBuffer;
+};
+
+/**
  * Converts Float32Array to WAV format ArrayBuffer
  */
 const convertFloat32ToWav = (
   audioData: Float32Array,
   sampleRate: number
 ): ArrayBuffer => {
-  const numChannels = 1; // Mono
+  const numChannels = 1; // Always mono for Google Speech API
   const bitDepth = 16;
   const bytesPerSample = bitDepth / 8;
   const blockAlign = numChannels * bytesPerSample;
@@ -90,7 +123,7 @@ const convertFloat32ToWav = (
   writeString(view, 12, 'fmt ');
   view.setUint32(16, 16, true); // 16 = PCM format
   view.setUint16(20, 1, true); // 1 = PCM format
-  view.setUint16(22, numChannels, true);
+  view.setUint16(22, numChannels, true); // Always mono
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
@@ -131,5 +164,28 @@ export const detectSampleRate = async (audioData: ArrayBuffer): Promise<number> 
   } catch (error) {
     console.error('[SAMPLE RATE] Failed to detect sample rate:', error);
     return 0; // Will trigger fallback to 16000 Hz
+  }
+};
+
+/**
+ * Analyzes audio file properties
+ */
+export const analyzeAudioFile = async (audioData: ArrayBuffer): Promise<{
+  sampleRate: number;
+  numberOfChannels: number;
+  duration: number;
+}> => {
+  try {
+    const audioContext = getAudioContext();
+    const decodedAudio = await audioContext.decodeAudioData(audioData.slice(0));
+    
+    return {
+      sampleRate: decodedAudio.sampleRate,
+      numberOfChannels: decodedAudio.numberOfChannels,
+      duration: decodedAudio.duration
+    };
+  } catch (error) {
+    console.error('[AUDIO ANALYSIS] Failed to analyze audio:', error);
+    throw new Error('Failed to analyze audio file');
   }
 };

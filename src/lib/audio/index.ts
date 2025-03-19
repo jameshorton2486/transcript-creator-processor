@@ -1,3 +1,4 @@
+
 // This file exports all audio processing utilities from smaller modules
 
 export * from "./audioContext";
@@ -15,5 +16,11 @@ export {
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
 
-// Export resampling utilities
-export * from './audioResampler';
+// Export resampling and audio channel conversion utilities
+export { 
+  resampleAudio, 
+  detectSampleRate, 
+  convertToMono,
+  analyzeAudioFile
+} from './audioResampler';
+

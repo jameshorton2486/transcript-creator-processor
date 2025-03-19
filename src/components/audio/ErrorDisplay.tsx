@@ -16,6 +16,9 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   if (error.includes("Array buffer allocation failed") || error.includes("memory") || error.includes("allocation")) {
     displayError = "Memory error while processing audio file";
     additionalMessage = "Your browser ran out of memory processing this audio file. The system will automatically try smaller chunks, but if the error persists, try one of these approaches:\n1. Use a shorter audio file\n2. Convert to a smaller format (MP3 instead of WAV/FLAC)\n3. Break your recording into smaller segments before uploading\n4. Try using a different browser with more memory";
+  } else if (error.includes("single channel") || error.includes("mono audio") || error.includes("WAV header indicates 2 channels")) {
+    displayError = "Audio channel format issue";
+    additionalMessage = "Google's Speech-to-Text API requires mono (single channel) audio. The application will automatically convert your stereo audio to mono. If you continue to see this error, try converting your audio to mono format manually using a tool like Audacity or FFmpeg before uploading.";
   } else if (error.includes("quota")) {
     displayError = "API quota exceeded";
     additionalMessage = "You've reached your Google API usage limit. Try using a different API key or waiting before making more requests.";

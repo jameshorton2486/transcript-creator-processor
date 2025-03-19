@@ -1,6 +1,8 @@
+
 // Function to handle audio preprocessing
 
 import { getAudioContext } from "./audioContext";
+import { convertToMono } from "./audioResampler";
 
 /**
  * Normalizes the audio volume to ensure consistent loudness across the file
@@ -121,14 +123,22 @@ export const removeDCOffset = async (audioBuffer: AudioBuffer): Promise<AudioBuf
  * @returns A processed audio buffer ready for transcription
  */
 export const preprocessAudio = async (audioBuffer: AudioBuffer): Promise<AudioBuffer> => {
-  // Apply processing chain
-  // 1. First remove DC offset
-  let processedBuffer = await removeDCOffset(audioBuffer);
+  const audioContext = getAudioContext();
   
-  // 2. Then normalize to ensure consistent volume
+  // 1. Convert to mono if it's not already mono
+  let processedBuffer = audioBuffer;
+  if (audioBuffer.numberOfChannels > 1) {
+    console.log(`[PREPROCESS] Converting ${audioBuffer.numberOfChannels} channels to mono`);
+    processedBuffer = convertToMono(audioContext, audioBuffer);
+  }
+  
+  // 2. Remove DC offset
+  processedBuffer = await removeDCOffset(processedBuffer);
+  
+  // 3. Normalize to ensure consistent volume
   processedBuffer = await normalizeAudio(processedBuffer);
   
-  // 3. Finally reduce noise
+  // 4. Finally reduce noise
   processedBuffer = await reduceNoise(processedBuffer, 0.015);
 
   return processedBuffer;
@@ -142,14 +152,25 @@ export const preprocessAudio = async (audioBuffer: AudioBuffer): Promise<AudioBu
 export const preprocessAudioFile = async (file: File): Promise<ArrayBuffer> => {
   const audioContext = getAudioContext();
   const arrayBuffer = await file.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
   
-  // Apply all preprocessing steps
-  const processedBuffer = await preprocessAudio(audioBuffer);
+  // Analyze input audio
+  console.log(`[PREPROCESS] Processing file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
   
-  // Convert back to WAV
-  const waveBlob = await audioBufferToWav(processedBuffer);
-  return await waveBlob.arrayBuffer();
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    console.log(`[PREPROCESS] File decoded: ${audioBuffer.numberOfChannels} channels, ${audioBuffer.sampleRate} Hz, ${audioBuffer.duration.toFixed(2)}s`);
+    
+    // Apply all preprocessing steps including mono conversion
+    const processedBuffer = await preprocessAudio(audioBuffer);
+    console.log(`[PREPROCESS] Processing complete: 1 channel, ${processedBuffer.sampleRate} Hz`);
+    
+    // Convert back to WAV
+    const waveBlob = await audioBufferToWav(processedBuffer);
+    return await waveBlob.arrayBuffer();
+  } catch (error) {
+    console.error(`[PREPROCESS] Error processing audio:`, error);
+    throw new Error(`Failed to preprocess audio: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
 /**

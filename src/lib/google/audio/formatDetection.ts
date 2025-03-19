@@ -1,4 +1,5 @@
 
+
 /**
  * Attempts to detect sample rate from WAV header
  * @param {ArrayBuffer} buffer - The audio buffer
@@ -38,7 +39,10 @@ export const detectSampleRateFromWav = (buffer) => {
     // Read sample rate (bytes 24-27)
     const sampleRate = dataView.getUint32(24, true); // true = little endian
     
-    console.info(`[FORMAT] Detected sample rate from WAV header: ${sampleRate} Hz`);
+    // Also read number of channels (bytes 22-23)
+    const numChannels = dataView.getUint16(22, true);
+    
+    console.info(`[FORMAT] Detected from WAV header: ${sampleRate} Hz, ${numChannels} channels`);
     return sampleRate;
   } catch (error) {
     console.warn('[FORMAT] Error detecting sample rate from WAV:', error);
@@ -67,4 +71,42 @@ export const getSampleRate = (buffer, mimeType, defaultRate = 16000) => {
   // We always use 16000 Hz for Google Speech API now, regardless of detection
   console.info('[FORMAT] Using fixed sample rate: 16000 Hz for Google Speech API');
   return 16000;
+};
+
+/**
+ * Detects number of channels from WAV header
+ * @param {ArrayBuffer} buffer - The audio buffer
+ * @returns {number|null} - The detected number of channels or null if can't be detected
+ */
+export const detectChannelsFromWav = (buffer) => {
+  try {
+    if (buffer.byteLength < 23) {
+      console.warn('[FORMAT] Buffer too small to contain WAV header channel info');
+      return null;
+    }
+    
+    const dataView = new DataView(buffer);
+    
+    // Check if this is a valid RIFF WAV file
+    const riff = String.fromCharCode(
+      dataView.getUint8(0),
+      dataView.getUint8(1),
+      dataView.getUint8(2),
+      dataView.getUint8(3)
+    );
+    
+    if (riff !== 'RIFF') {
+      console.warn('[FORMAT] Not a valid WAV file format (missing RIFF header)');
+      return null;
+    }
+    
+    // Read number of channels (bytes 22-23)
+    const numChannels = dataView.getUint16(22, true); // true = little endian
+    
+    console.info(`[FORMAT] Detected ${numChannels} channels from WAV header`);
+    return numChannels;
+  } catch (error) {
+    console.warn('[FORMAT] Error detecting channels from WAV:', error);
+    return null;
+  }
 };

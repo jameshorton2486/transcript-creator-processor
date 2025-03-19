@@ -2,6 +2,7 @@
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { getSampleRate } from './audio/formatDetection';
 import { isValidAudioFile, detectAudioEncoding } from './audioEncoding';
+import { analyzeAudioFile, resampleAudio } from '../audio/audioResampler';
 
 interface TranscriptionOptions {
   encoding?: string;
@@ -60,61 +61,75 @@ export const transcribeSingleFile = async (
       throw new Error('The audio file is empty or could not be read.');
     }
     
-    // Get the sample rate from file if possible, otherwise use auto-detection
-    // Pass undefined for WAV files to allow Google to auto-detect from header
-    const sampleRateHertz = getSampleRate(audioArrayBuffer, file.type);
-    
-    // Convert to base64 for API request
-    const audioBase64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        // Extract the base64 content without the prefix
-        const result = e.target?.result as string;
-        const base64 = result.split(',')[1];
-        
-        if (!base64) {
+    // Analyze the audio to check channels and sample rate
+    try {
+      const audioProperties = await analyzeAudioFile(audioArrayBuffer);
+      console.info(`[AUDIO INFO] Original audio: ${audioProperties.numberOfChannels} channels, ${audioProperties.sampleRate} Hz, ${audioProperties.duration.toFixed(2)}s`);
+      
+      // Process audio - convert to mono and resample to 16000 Hz
+      console.info(`[PROCESSING] Resampling audio to 16000 Hz and converting to mono...`);
+      const { resampled } = await resampleAudio(audioArrayBuffer, 16000);
+      console.info(`[PROCESSING] Successfully resampled audio to 16000 Hz (mono)`);
+      
+      // Override sample rate to 16000 Hz since we've resampled
+      const sampleRateHertz = 16000;
+      
+      // Convert to base64 for API request
+      const audioBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          // Extract the base64 content without the prefix
+          const result = e.target?.result as string;
+          const base64 = result.split(',')[1];
+          
+          if (!base64) {
+            reject(new Error('Failed to convert audio to base64 format.'));
+            return;
+          }
+          
+          resolve(base64);
+        };
+        reader.onerror = (error) => {
+          console.error('Error converting to base64:', error);
           reject(new Error('Failed to convert audio to base64 format.'));
-          return;
-        }
-        
-        resolve(base64);
+        };
+        // Use the resampled audio data instead of original file
+        reader.readAsDataURL(new Blob([resampled], { type: 'audio/wav' }));
+      });
+      
+      console.info('[PROCESSING] Successfully encoded audio to base64, ready for transmission');
+      
+      // Create custom terms list for legal vocabulary
+      const legalTerms = [
+        'plaintiff', 'defendant', 'counsel', 'objection', 'sustained', 'overruled', 
+        'witness', 'testimony', 'exhibit', 'evidence', 'deposition', 'affidavit', 
+        'stipulation', 'pursuant to'
+      ];
+      
+      if (legalTerms.length > 0) {
+        console.info(`Added ${legalTerms.length} common legal terms to speech context`);
+      }
+      
+      // Prepare transcription options with custom terms
+      const transcriptionOptions = {
+        encoding: 'LINEAR16', // Always use LINEAR16 since we've converted to WAV
+        sampleRateHertz, // Always 16000 Hz
+        ...options,
+        customTerms: [...(options.customTerms || []), ...legalTerms]
       };
-      reader.onerror = (error) => {
-        console.error('Error converting to base64:', error);
-        reject(new Error('Failed to convert audio to base64 format.'));
-      };
-      reader.readAsDataURL(file);
-    });
-    
-    console.info('Processing audio content, encoding:', encoding);
-    
-    // Create custom terms list for legal vocabulary
-    const legalTerms = [
-      'plaintiff', 'defendant', 'counsel', 'objection', 'sustained', 'overruled', 
-      'witness', 'testimony', 'exhibit', 'evidence', 'deposition', 'affidavit', 
-      'stipulation', 'pursuant to'
-    ];
-    
-    if (legalTerms.length > 0) {
-      console.info(`Added ${legalTerms.length} common legal terms to speech context`);
+      
+      // Send the request to Google's Speech-to-Text API
+      const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);
+      
+      if (!response.results || response.results.length === 0) {
+        console.warn('Google API returned empty results. This may mean no speech was detected.');
+      }
+      
+      return response;
+    } catch (processingError) {
+      console.error('Error processing audio:', processingError);
+      throw new Error(`Failed to process audio: ${processingError instanceof Error ? processingError.message : String(processingError)}`);
     }
-    
-    // Prepare transcription options with custom terms
-    const transcriptionOptions = {
-      encoding,
-      sampleRateHertz, // This might be undefined for auto-detection
-      ...options,
-      customTerms: [...(options.customTerms || []), ...legalTerms]
-    };
-    
-    // Send the request to Google's Speech-to-Text API
-    const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);
-    
-    if (!response.results || response.results.length === 0) {
-      console.warn('Google API returned empty results. This may mean no speech was detected.');
-    }
-    
-    return response;
   } catch (error) {
     console.error('Transcription error:', error);
     throw error;
