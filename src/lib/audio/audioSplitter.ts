@@ -2,6 +2,7 @@
  * Audio splitting utilities for chunking large audio files
  */
 import { calculateOptimalChunkDuration } from './sizeCalculator';
+import { encodeWavFile } from './wavEncoder';
 
 /**
  * Splits an AudioBuffer into multiple shorter chunks based on optimal duration
@@ -126,7 +127,7 @@ export const splitAudioIntoChunks = async (
         chunkBuffer.getChannelData(0).set(chunk);
         
         // Convert to WAV for better compatibility
-        const wavBlob = await encodeWavFile(chunkBuffer, audioBuffer.sampleRate);
+        const wavBlob = await encodeWavFile(chunkBuffer);
         audioChunkBlobs.push(wavBlob);
         
         console.log(`[SPLIT] Processed chunk ${i+1}/${audioChunks.length}`);
@@ -145,68 +146,3 @@ export const splitAudioIntoChunks = async (
     return [file];
   }
 };
-
-/**
- * Encodes AudioBuffer to WAV format Blob
- * @param {AudioBuffer} audioBuffer - The audio buffer to encode
- * @param {number} sampleRate - The sample rate of the audio buffer
- * @returns {Promise<Blob>} WAV file as blob
- */
-const encodeWavFile = async (audioBuffer: AudioBuffer, sampleRate: number): Promise<Blob> => {
-  try {
-    // Get audio data - since we want mono, just get the first channel
-    const audioData = audioBuffer.getChannelData(0);
-    
-    // Create WAV header and file
-    const dataLength = audioData.length * 2; // 16-bit samples = 2 bytes per sample
-    const totalLength = 44 + dataLength;
-    
-    // Create buffer and view for WAV file
-    const buffer = new ArrayBuffer(totalLength);
-    const view = new DataView(buffer);
-    
-    // Write WAV header
-    // "RIFF" chunk descriptor
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(view, 8, 'WAVE');
-    
-    // "fmt " sub-chunk
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true); // PCM format
-    view.setUint16(20, 1, true); // Mono channel (1)
-    view.setUint16(22, 1, true); // Mono = 1 channel
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true); // Byte rate (sampleRate * channels * bytesPerSample)
-    view.setUint16(32, 2, true); // Block align
-    view.setUint16(34, 16, true); // Bits per sample
-    
-    // "data" sub-chunk
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataLength, true);
-    
-    // Write audio data (convert Float32 to Int16)
-    let offset = 44;
-    for (let i = 0; i < audioData.length; i++) {
-      // Clamp value between -1 and 1
-      const sample = Math.max(-1, Math.min(1, audioData[i]));
-      // Convert to 16-bit signed integer
-      const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-      view.setInt16(offset, value, true);
-      offset += 2;
-    }
-    
-    // Create Blob with WAV file
-    return new Blob([buffer], { type: 'audio/wav' });
-  } catch (error) {
-    console.error('[WAV] Error encoding WAV file:', error);
-    throw error;
-  }
-};
-
-// Helper to write string into DataView
-function writeString(view: DataView, offset: number, string: string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
-}
