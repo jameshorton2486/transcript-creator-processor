@@ -16,13 +16,20 @@ export {
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
 
-// Export resampling and audio channel conversion utilities
-export { 
+// Import and export resampling and audio channel conversion utilities from audioResampler
+import { 
   resampleAudio, 
   detectSampleRate, 
   convertToMono,
   analyzeAudioFile
 } from './audioResampler';
+
+export { 
+  resampleAudio, 
+  detectSampleRate, 
+  convertToMono,
+  analyzeAudioFile
+};
 
 // Standardize sample rate for all Google Speech operations
 export const STANDARD_SAMPLE_RATE = 16000;
