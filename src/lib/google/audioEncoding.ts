@@ -37,22 +37,12 @@ export const detectAudioEncoding = (file: File) => {
 
 /**
  * Determines the standard sample rate based on file type
+ * Note: We now always use 16000 Hz for Google Speech API regardless of original file
  */
 export const getStandardSampleRate = (fileType: string) => {
-  if (fileType.includes('mp3')) {
-    return 44100; // Standard for most MP3 files
-  } else if (fileType.includes('flac')) {
-    return 48000; // Common for FLAC files
-  } else if (fileType.includes('wav') || fileType.includes('x-wav')) {
-    return 16000; // Common for speech WAV files
-  } else if (fileType.includes('webm')) {
-    return 48000; // Common for WebM files
-  } else if (fileType.includes('ogg')) {
-    return 48000; // Common for Ogg files
-  } else {
-    console.log(`[SAMPLE RATE] Using default sample rate for file type: ${fileType}`);
-    return 16000; // Default for speech recognition
-  }
+  // Always return 16000 Hz for all file types to match API expectations
+  console.log(`[SAMPLE RATE] Using standard 16000 Hz sample rate for all file types`);
+  return 16000;
 };
 
 /**
@@ -69,16 +59,17 @@ export const isValidAudioFile = (file: File): boolean => {
     'audio/flac',
     'audio/ogg', 'audio/ogg; codecs=opus',
     'audio/amr',
-    'audio/webm'
+    'audio/webm',
+    'video/mp4', 'video/webm', 'video/quicktime' // Also allow video formats
   ];
   
   // Check by MIME type first
-  if (validTypes.some(type => fileType.includes(type))) {
+  if (validTypes.some(type => fileType.includes(type.split('/')[1]))) {
     return true;
   }
   
   // If MIME type check fails, check by extension
-  const validExtensions = ['.wav', '.mp3', '.flac', '.ogg', '.amr', '.webm'];
+  const validExtensions = ['.wav', '.mp3', '.flac', '.ogg', '.amr', '.webm', '.mp4', '.mov', '.m4a'];
   if (validExtensions.some(ext => fileName.endsWith(ext))) {
     return true;
   }

@@ -1,5 +1,9 @@
 
 import { getAudioContext } from '../../audio/audioContext';
+import { resampleAudio, detectSampleRate } from '../../audio/audioResampler';
+
+// Constants for audio processing
+const TARGET_SAMPLE_RATE = 16000; // 16kHz for Google Speech API
 
 // Processes audio content for API request
 export const processAudioContent = async (
@@ -10,25 +14,29 @@ export const processAudioContent = async (
   console.log(`Processing audio content, direct upload: ${useDirectUpload}, encoding: ${encoding}`);
   
   let base64Audio;
-  let actualSampleRate;
+  let actualSampleRate = TARGET_SAMPLE_RATE; // Always use 16kHz
   
-  if (useDirectUpload) {
-    // For FLAC files or when browser decoding should be skipped, 
-    // use direct upload without browser decoding
-    console.log("Using direct upload without browser audio processing");
+  try {
+    // Get original audio buffer
     const rawBuffer = await file.arrayBuffer();
-    base64Audio = arrayBufferToBase64(rawBuffer);
     
-    // Use standard sample rates based on file type
-    actualSampleRate = getStandardSampleRate(encoding);
-    console.log(`Using standard sample rate: ${actualSampleRate} Hz for direct upload`);
-  } else {
-    // Fall back to direct upload if preprocessing fails
-    console.log("Using direct upload as fallback");
+    // Always resample to 16kHz (Speech API preference)
+    console.log(`[AUDIO] Resampling to ${TARGET_SAMPLE_RATE} Hz`);
+    const { resampled, sampleRate } = await resampleAudio(rawBuffer, TARGET_SAMPLE_RATE);
+    
+    // Use the resampled audio
+    base64Audio = arrayBufferToBase64(resampled);
+    actualSampleRate = sampleRate;
+    
+    console.log(`[AUDIO] Successfully processed audio: encoding=${encoding}, sampleRate=${actualSampleRate} Hz`);
+  } catch (error) {
+    console.error("[AUDIO] Error processing audio:", error);
+    
+    // Fallback to direct upload if preprocessing fails
+    console.log("[AUDIO] Using direct upload as fallback");
     const rawBuffer = await file.arrayBuffer();
     base64Audio = arrayBufferToBase64(rawBuffer);
-    actualSampleRate = getStandardSampleRate(encoding);
-    console.log(`Using standard sample rate: ${actualSampleRate} Hz as fallback`);
+    actualSampleRate = TARGET_SAMPLE_RATE; // Force 16kHz even in fallback
   }
   
   return { base64Audio, actualSampleRate };
@@ -49,35 +57,23 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 // Helper function to get standard sample rate based on encoding
 function getStandardSampleRate(encoding: string): number {
-  switch (encoding.toUpperCase()) {
-    case 'FLAC':
-      return 16000;
-    case 'MP3':
-      return 16000;
-    case 'WAV':
-    case 'LINEAR16':
-      return 16000;
-    case 'OGG_OPUS':
-      return 48000;
-    default:
-      return 16000; // Default to 16kHz for most speech recognition
-  }
+  // Always return 16000 Hz regardless of encoding
+  return TARGET_SAMPLE_RATE;
 }
 
 // Attempts to detect actual sample rate from audio file
 export const detectActualSampleRate = async (preprocessedAudio: ArrayBuffer) => {
   console.log("Detecting audio sample rate...");
-  const audioContext = getAudioContext();
+  const detectedRate = await detectSampleRate(preprocessedAudio);
   
-  try {
-    const audioBuffer = await audioContext.decodeAudioData(preprocessedAudio.slice(0));
-    const actualSampleRate = audioBuffer.sampleRate;
-    console.log(`Detected actual sample rate: ${actualSampleRate} Hz`);
-    return actualSampleRate;
-  } catch (error) {
-    console.error("Failed to detect sample rate:", error);
-    return null;
+  if (detectedRate > 0) {
+    console.log(`Detected actual sample rate: ${detectedRate} Hz`);
+    return detectedRate;
   }
+  
+  // Default to target sample rate if detection fails
+  console.log(`Failed to detect sample rate, using default: ${TARGET_SAMPLE_RATE} Hz`);
+  return TARGET_SAMPLE_RATE;
 };
 
 // Determines if direct upload should be used based on file characteristics
@@ -88,7 +84,9 @@ export const shouldUseDirectUpload = (
   const encoding = detectAudioEncoding(file);
   console.log(`Detected encoding: ${encoding}`);
   
-  const useDirectUpload = skipBrowserDecoding || encoding === "FLAC";
+  // For FLAC files, we might want to use direct upload
+  // but for others, we'll process them to ensure correct sample rate
+  const useDirectUpload = skipBrowserDecoding && encoding === "FLAC";
   return { encoding, useDirectUpload };
 };
 

@@ -53,7 +53,7 @@ export const sendTranscriptionRequest = async (
 ) => {
   const {
     encoding,
-    sampleRateHertz,
+    sampleRateHertz = 16000, // Always default to 16000 Hz
     languageCode = 'en-US',
     enableAutomaticPunctuation = true,
     model = 'latest_long',
@@ -73,19 +73,14 @@ export const sendTranscriptionRequest = async (
   // Create the configuration object with proper type
   const config: TranscriptionConfig = {
     encoding,
+    sampleRateHertz, // Always include 16000 Hz
     languageCode,
     enableAutomaticPunctuation,
     model,
     useEnhanced,
   };
   
-  // Only add sampleRateHertz if specified - this allows Google to auto-detect from WAV headers
-  if (sampleRateHertz) {
-    config.sampleRateHertz = sampleRateHertz;
-    console.info(`[API:${requestId}] Using specified sample rate: ${sampleRateHertz}`);
-  } else {
-    console.info(`[API:${requestId}] Sample rate not specified, letting Google detect from audio header`);
-  }
+  console.info(`[API:${requestId}] Using sample rate: 16000 Hz (resampled)`);
   
   // Add diarization if enabled
   if (enableSpeakerDiarization) {
@@ -143,7 +138,7 @@ export const sendTranscriptionRequest = async (
   
   console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
     encoding,
-    sampleRateHertz: sampleRateHertz || 'auto-detect',
+    sampleRateHertz: 16000, // Always 16000 Hz
     languageCode,
     useEnhanced,
     enableSpeakerDiarization,
@@ -221,7 +216,7 @@ export const sendTranscriptionRequest = async (
         } else if (googleError.message.includes('Invalid audio')) {
           throw new Error(`Invalid audio format: ${googleError.message}. Please check your audio encoding and format.`);
         } else if (googleError.message.includes('sampleRateHertz')) {
-          throw new Error(`Sample rate error: ${googleError.message}. Try not specifying sample rate to let Google auto-detect it.`);
+          throw new Error(`Sample rate error: ${googleError.message}. Audio will be resampled automatically on the next attempt.`);
         } else {
           throw new Error(`Google API error: ${googleError.message}`);
         }

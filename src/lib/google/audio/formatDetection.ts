@@ -52,13 +52,7 @@ export const detectSampleRateFromWav = (buffer) => {
  * @returns {boolean} - Whether to use auto detection
  */
 export const shouldUseAutoSampleRate = (mimeType) => {
-  // For WAV files, we can rely on the header information
-  if (mimeType.includes('wav') || mimeType.includes('wave')) {
-    return true;
-  }
-  
-  // For other formats like MP3, FLAC, etc. we might need browser-based detection
-  // but default to false to allow override through options
+  // No need to use auto detection anymore as we'll always resample to 16000 Hz
   return false;
 };
 
@@ -70,21 +64,7 @@ export const shouldUseAutoSampleRate = (mimeType) => {
  * @returns {number|undefined} - The sample rate to use, or undefined to let API auto-detect
  */
 export const getSampleRate = (buffer, mimeType, defaultRate = 16000) => {
-  if (shouldUseAutoSampleRate(mimeType)) {
-    // For WAV files, try to read from header
-    if (mimeType.includes('wav') || mimeType.includes('wave')) {
-      const detectedRate = detectSampleRateFromWav(buffer);
-      if (detectedRate) {
-        return detectedRate;
-      }
-    }
-    
-    // If we failed to detect or it's another format, don't specify and let Google detect
-    console.info('[FORMAT] Using auto sample rate detection');
-    return undefined;
-  }
-  
-  // For formats that don't support detection, use the default
-  console.info(`[FORMAT] Using default sample rate: ${defaultRate} Hz`);
-  return defaultRate;
+  // We always use 16000 Hz for Google Speech API now, regardless of detection
+  console.info('[FORMAT] Using fixed sample rate: 16000 Hz for Google Speech API');
+  return 16000;
 };
