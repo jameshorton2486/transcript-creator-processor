@@ -1,3 +1,4 @@
+
 // Main Google Speech API integration entry point
 import { transcribeAudio, testApiKey } from './transcriber';
 import { transcribeSingleFile } from './singleFileProcessor';
@@ -20,11 +21,15 @@ import {
 import {
   detectLegalContext
 } from './formatters/transcriptExtractor';
+import {
+  testSpeechApiAccess
+} from './apiTester';
 
 // Export the main functions that external modules will use
 export {
   transcribeAudio,
   testApiKey,
+  testSpeechApiAccess,
   extractTranscriptText,
   
   // Core processing functions - now all audio will be processed in batches
