@@ -113,12 +113,9 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     console.log(`[COMPONENT] AudioTranscriber rendered, isLoading: ${isLoading}, progress: ${progress}%, isBatchProcessing: ${isBatchProcessing}`);
     
     // Log memory usage if available
-    if (performance && 'memory' in performance) {
-      // @ts-ignore: 'memory' exists on Chrome's Performance object
+    if (performance && 'memory' in performance && performance.memory) {
       const memoryInfo = performance.memory;
-      if (memoryInfo) {
-        console.log(`[MEMORY] Current usage: ${(memoryInfo.usedJSHeapSize / (1024 * 1024)).toFixed(2)}MB / ${(memoryInfo.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)}MB`);
-      }
+      console.log(`[MEMORY] Current usage: ${(memoryInfo.usedJSHeapSize / (1024 * 1024)).toFixed(2)}MB / ${(memoryInfo.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)}MB`);
     }
     
     return () => {
@@ -145,7 +142,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         />
         
         {memoryWarning && (
-          <Alert variant="warning" className="bg-amber-50 border-amber-200">
+          <Alert className="bg-amber-50 border-amber-200">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <AlertTitle className="text-amber-700">Memory Usage Warning</AlertTitle>
             <AlertDescription className="text-amber-600">{memoryWarning}</AlertDescription>

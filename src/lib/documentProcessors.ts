@@ -6,8 +6,8 @@ import * as mammoth from 'mammoth';
 // Set up the libraries in the global scope for the TerminologyExtractor to use
 declare global {
   interface Window {
-    pdfjsLib: typeof pdfjs;
-    mammoth: typeof mammoth;
+    pdfjsLib: any; // Use 'any' to match the type in pdf.d.ts
+    mammoth: any;  // Use 'any' to match the type in pdf.d.ts
   }
 }
 
