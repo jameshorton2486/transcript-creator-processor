@@ -2,10 +2,10 @@
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { isValidAudioFile, detectAudioEncoding } from './audio/audioValidation';
 import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
+import { normalizeWavFile, tryConvertToWav } from '@/lib/audio/wavConverter';
 
 interface TranscriptionOptions {
   encoding?: string;
-  sampleRateHertz?: number;
   languageCode?: string;
   enableAutomaticPunctuation?: boolean;
   model?: string;
@@ -35,6 +35,29 @@ const readFileAsArrayBuffer = async (file: File | Blob): Promise<ArrayBuffer> =>
 };
 
 /**
+ * Attempts to pre-process audio file for better compatibility
+ */
+const preprocessAudioFile = async (file: File): Promise<File> => {
+  try {
+    console.log(`[PREPROCESS] Checking if file needs conversion: ${file.name} (${file.type})`);
+    
+    // First try to convert to WAV format for better compatibility
+    const normalizedFile = await tryConvertToWav(file);
+    
+    // If the file is WAV, ensure it's properly normalized (mono, correct sample rate)
+    if (normalizedFile.type.includes('wav') || normalizedFile.name.toLowerCase().endsWith('.wav')) {
+      console.log('[PREPROCESS] Normalizing WAV file');
+      return await normalizeWavFile(normalizedFile);
+    }
+    
+    return normalizedFile;
+  } catch (error) {
+    console.warn('[PREPROCESS] Error preprocessing file:', error);
+    return file; // Return original file if preprocessing fails
+  }
+};
+
+/**
  * Transcribes a single audio file
  * @param {File|Blob} file - The audio file to transcribe
  * @param {string} apiKey - The Google Cloud API key
@@ -55,12 +78,31 @@ export const transcribeSingleFile = async (
       throw new Error('Unsupported audio file format. Please upload a WAV, MP3, FLAC, OGG, AMR, or WebM file.');
     }
     
+    let fileToProcess = file;
+    
+    // Attempt to preprocess the file if it's a File (not a Blob)
+    if (file instanceof File) {
+      try {
+        console.log('[PROCESSING] Attempting to preprocess audio file for better compatibility');
+        fileToProcess = await preprocessAudioFile(file);
+        
+        if (fileToProcess !== file) {
+          console.log('[PROCESSING] File was successfully preprocessed');
+        } else {
+          console.log('[PROCESSING] File preprocessing skipped, using original file');
+        }
+      } catch (preprocessError) {
+        console.warn('[PROCESSING] Error during preprocessing, falling back to original file:', preprocessError);
+        fileToProcess = file; // Fall back to original file
+      }
+    }
+    
     // Determine encoding based on file type
-    const { encoding } = file instanceof File ? detectAudioEncoding(file) : { encoding: options.encoding || 'LINEAR16' };
-    console.info(`Detected encoding: ${encoding}`);
+    const { encoding } = file instanceof File ? detectAudioEncoding(file as File) : { encoding: options.encoding || 'LINEAR16' };
+    console.info(`[PROCESSING] Detected encoding: ${encoding}`);
     
     // Read the file content as ArrayBuffer for processing
-    const audioArrayBuffer = await readFileAsArrayBuffer(file);
+    const audioArrayBuffer = await readFileAsArrayBuffer(fileToProcess);
     
     // Validate the file is not empty
     if (!audioArrayBuffer || audioArrayBuffer.byteLength === 0) {
@@ -79,28 +121,31 @@ export const transcribeSingleFile = async (
     ];
     
     if (legalTerms.length > 0) {
-      console.info(`Added ${legalTerms.length} common legal terms to speech context`);
+      console.info(`[PROCESSING] Added ${legalTerms.length} common legal terms to speech context`);
     }
     
-    // Prepare transcription options with custom terms, but omit sample rate
-    // to let Google Speech API extract it from the audio file header
+    // Prepare transcription options with custom terms
+    // NEVER include sample rate to let Google Speech API extract it automatically
     const transcriptionOptions = {
       encoding: encoding, // Use the detected encoding
       ...options,
       customTerms: [...(options.customTerms || []), ...legalTerms]
     };
     
-    // Remove sample rate from options to let Google API auto-detect it
+    // Explicitly remove sample rate to let Google API auto-detect it
     if (transcriptionOptions.sampleRateHertz) {
-      console.info('Omitting sample rate to allow Google API to use the one from audio header');
+      console.info('[PROCESSING] Omitting sample rate to allow Google API to use the one from audio header');
       delete transcriptionOptions.sampleRateHertz;
     }
+    
+    console.log('[PROCESSING] Sending request to Google Speech API');
     
     // Send the request to Google's Speech-to-Text API
     const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);
     
     if (!response.results || response.results.length === 0) {
-      console.warn('Google API returned empty results. This may mean no speech was detected.');
+      console.warn('[PROCESSING] Google API returned empty results. This may mean no speech was detected.');
+      throw new Error('No speech was detected in the audio file. The file may be silent or contain background noise only.');
     }
     
     return response;

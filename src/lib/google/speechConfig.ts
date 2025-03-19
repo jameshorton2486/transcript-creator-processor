@@ -8,6 +8,7 @@ type TranscriptionOptions = typeof DEFAULT_TRANSCRIPTION_OPTIONS;
 
 /**
  * Builds the request configuration for Google Speech-to-Text API
+ * Important: We no longer provide sampleRateHertz parameter, letting Google detect it
  */
 export const buildRequestConfig = (
   encoding: string,
@@ -15,9 +16,10 @@ export const buildRequestConfig = (
   options: TranscriptionOptions,
   customTerms: string[] = []
 ) => {
+  console.log(`[CONFIG] Building speech config with encoding=${encoding}, sample rate=${sampleRate || 'auto'}`);
+  
   const config: {
     encoding: string;
-    sampleRateHertz?: number;
     languageCode: string;
     enableAutomaticPunctuation: boolean;
     model: string;
@@ -40,10 +42,8 @@ export const buildRequestConfig = (
     useEnhanced: true, // Use enhanced model for better quality
   };
   
-  // Only add sample rate if explicitly provided and not null
-  if (sampleRate !== null && sampleRate > 0) {
-    config.sampleRateHertz = sampleRate;
-  }
+  // Explicitly remove any sampleRateHertz parameter to let Google API auto-detect it
+  // We NEVER add sampleRateHertz now to avoid conflicts with file headers
   
   // Add diarization config if enabled
   if (options.diarize) {
@@ -95,7 +95,7 @@ const addSpeechAdaptation = (
       });
     }
     
-    console.log(`Added ${customTerms.length} custom terms and ${additionalTerms.length} common legal terms`);
+    console.log(`[CONFIG] Added ${customTerms.length} custom terms and ${additionalTerms.length} common legal terms`);
   } else {
     // If no custom terms, still add common legal terminology
     config.speechContexts.push({
@@ -103,6 +103,6 @@ const addSpeechAdaptation = (
       boost: 10.0
     });
     
-    console.log(`Added ${commonLegalTerms.length} common legal terms to speech context`);
+    console.log(`[CONFIG] Added ${commonLegalTerms.length} common legal terms to speech context`);
   }
 };

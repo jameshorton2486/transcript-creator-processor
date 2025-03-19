@@ -1,107 +1,213 @@
 
 /**
- * Utility to split audio files into chunks for batch processing
- * Optimized for legal transcript processing with memory efficiency
+ * Audio splitting utilities for chunking large audio files
  */
-
-// Function to split audio into chunks (mock for test compatibility)
-export const splitAudioIntoChunks = async (file: File): Promise<File[]> => {
-  // Mock implementation to satisfy tests
-  // In a real implementation, this would split the audio file into chunks
-  const chunk1 = new File([new Blob(['chunk1'])], 'chunk1.wav', { type: 'audio/wav' });
-  const chunk2 = new File([new Blob(['chunk2'])], 'chunk2.wav', { type: 'audio/wav' });
-  return [chunk1, chunk2];
-};
+import { calculateOptimalChunkDuration } from './sizeCalculator';
 
 /**
- * Memory-efficient version of splitAudioBuffer that processes data in smaller chunks
- * to avoid "Array buffer allocation failed" errors with large files
+ * Splits an AudioBuffer into multiple shorter chunks based on optimal duration
+ * @param {AudioBuffer} audioBuffer - The original audio buffer
+ * @param {number} optimalDuration - The optimal duration for each chunk in seconds
+ * @returns {Float32Array[]} An array of audio data chunks
  */
-export const splitAudioBuffer = (buffer: AudioBuffer, chunkDurationSec: number): Float32Array[] => {
-  const chunks: Float32Array[] = [];
-  const sampleRate = buffer.sampleRate;
-  const samplesPerChunk = Math.floor(chunkDurationSec * sampleRate);
-  const totalSamples = buffer.length;
-  
-  // Add 0.5 second overlap between chunks to avoid cutting off words
-  const overlapSamples = Math.floor(0.5 * sampleRate);
-  
-  // Process in chunks to avoid large memory allocations
-  let offset = 0;
-  while (offset < totalSamples) {
-    // Calculate chunk size, making sure not to exceed remaining samples
-    const samplesToTake = Math.min(samplesPerChunk, totalSamples - offset);
+export const splitAudioBuffer = (
+  audioBuffer: AudioBuffer, 
+  optimalDuration: number = 60
+): Float32Array[] => {
+  try {
+    console.log(`[SPLIT] Splitting audio buffer into chunks of ~${optimalDuration}s`);
     
-    try {
-      // Process in smaller blocks to avoid memory issues
-      const chunkData = new Float32Array(samplesToTake);
+    // Get audio details
+    const sampleRate = audioBuffer.sampleRate;
+    const numberOfChannels = audioBuffer.numberOfChannels;
+    const samplesPerChunk = Math.floor(optimalDuration * sampleRate);
+    
+    // Log details for debugging
+    console.log(`[SPLIT] Audio details: ${numberOfChannels} channels, ${sampleRate}Hz, ${audioBuffer.length} samples (${(audioBuffer.length / sampleRate).toFixed(1)}s)`);
+    
+    // For now, use only the first channel for mono processing
+    // This ensures compatibility with Google Speech API
+    const audioData = audioBuffer.getChannelData(0);
+    
+    // Calculate number of chunks needed
+    const numChunks = Math.ceil(audioData.length / samplesPerChunk);
+    console.log(`[SPLIT] Creating ${numChunks} chunks`);
+    
+    // Split the audio data into chunks
+    const chunks: Float32Array[] = [];
+    
+    for (let i = 0; i < numChunks; i++) {
+      const start = i * samplesPerChunk;
+      const end = Math.min(start + samplesPerChunk, audioData.length);
+      const chunkLength = end - start;
       
-      // Get the data in small blocks rather than all at once
-      const blockSize = 4000; // Small enough to avoid memory issues
-      for (let blockStart = 0; blockStart < samplesToTake; blockStart += blockSize) {
-        const blockEnd = Math.min(blockStart + blockSize, samplesToTake);
-        const tempView = buffer.getChannelData(0).subarray(offset + blockStart, offset + blockEnd);
-        
-        // Copy to our chunk buffer
-        for (let i = 0; i < tempView.length; i++) {
-          chunkData[blockStart + i] = tempView[i];
-        }
+      // Create new audio chunk from this segment
+      const chunk = new Float32Array(chunkLength);
+      for (let j = 0; j < chunkLength; j++) {
+        chunk[j] = audioData[start + j];
       }
       
-      chunks.push(chunkData);
-    } catch (error) {
-      console.error("Memory error while processing audio chunk:", error);
-      // If we hit a memory error, try with even smaller chunk size
-      if (samplesToTake > sampleRate * 5) { // If chunk is larger than 5 seconds
-        // Recursively try with half the duration
-        console.log("Reducing chunk size and retrying...");
-        return splitAudioBuffer(buffer, chunkDurationSec / 2);
-      } else {
-        // If we're already at a very small chunk size, we need to throw
-        throw new Error("Unable to process audio due to memory constraints: " + error.message);
-      }
+      chunks.push(chunk);
+      console.log(`[SPLIT] Chunk ${i+1}/${numChunks}: ${(chunkLength / sampleRate).toFixed(1)}s`);
     }
     
-    // Move to next chunk with overlap
-    offset += (samplesToTake - overlapSamples);
-    if (offset < 0) offset = 0; // Safety check
+    return chunks;
+  } catch (error) {
+    console.error('[SPLIT] Error splitting audio buffer:', error);
+    throw new Error(`Failed to split audio buffer: ${error instanceof Error ? error.message : String(error)}`);
   }
-  
-  console.log(`Split audio into ${chunks.length} chunks with 0.5s overlap`);
-  return chunks;
 };
 
 /**
- * Calculate the optimal chunk duration based on file size and audio duration
- * Specifically calibrated for legal transcription needs and memory constraints
+ * Splits audio file into chunks of optimal duration
+ * @param {ArrayBuffer} audioData - Raw audio data as ArrayBuffer
+ * @param {string} fileType - The MIME type of the audio file
+ * @returns {Promise<Blob[]>} Array of chunked audio blobs
  */
-export const calculateOptimalChunkDuration = (fileSizeBytes: number, durationSec: number): number => {
-  // For extremely large files, use very small chunks
-  if (fileSizeBytes > 100 * 1024 * 1024) { // Files larger than 100MB
-    return 5; // Use 5-second chunks for extremely large files
+export const splitAudioIntoChunks = async (
+  file: File
+): Promise<Blob[]> => {
+  try {
+    // Calculate optimal chunk duration based on file size
+    const fileSizeMB = file.size / (1024 * 1024);
+    console.log(`[SPLIT] Processing file: ${file.name}, Size: ${fileSizeMB.toFixed(2)} MB`);
+    
+    // For small files (less than 1MB), process in a single chunk
+    if (fileSizeMB < 1) {
+      console.log('[SPLIT] File is small, no splitting needed');
+      return [file];
+    }
+    
+    // Determine optimal chunk duration based on file size
+    const optimalDuration = calculateOptimalChunkDuration(file.size);
+    console.log(`[SPLIT] Calculated optimal chunk duration: ${optimalDuration}s`);
+    
+    // If the file is small enough to process directly, don't bother chunking
+    if (optimalDuration >= 500) {
+      console.log('[SPLIT] File is small enough to process without splitting');
+      return [file];
+    }
+    
+    // For audio formats we can't decode easily, return the original file
+    if (!/^(audio|video)/.test(file.type) && !file.name.match(/\.(wav|mp3|flac|ogg|m4a|webm)$/i)) {
+      console.log('[SPLIT] Unsupported format for browser audio decoding, returning original file');
+      return [file];
+    }
+    
+    console.log('[SPLIT] Audio needs chunking, decoding audio for splitting...');
+    
+    // We need to analyze the file to split it correctly
+    try {
+      // Create audio context
+      const audioContext = new AudioContext();
+      
+      // Get array buffer from file
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Try to decode the audio data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+        .catch(err => {
+          console.warn('[SPLIT] Browser cannot decode this audio format:', err);
+          throw new Error('Browser cannot decode this audio format');
+        });
+      
+      // Get the split chunks
+      console.log(`[SPLIT] Successfully decoded audio, splitting into ~${optimalDuration}s chunks`);
+      const audioChunks = splitAudioBuffer(audioBuffer, optimalDuration);
+      
+      // Convert Float32Array chunks back to blobs
+      const audioChunkBlobs: Blob[] = [];
+      
+      // Use WAV format for chunks for better compatibility
+      for (let i = 0; i < audioChunks.length; i++) {
+        const chunk = audioChunks[i];
+        
+        // Create a new AudioBuffer for this chunk
+        const chunkBuffer = audioContext.createBuffer(1, chunk.length, audioBuffer.sampleRate);
+        chunkBuffer.getChannelData(0).set(chunk);
+        
+        // Convert to WAV for better compatibility
+        const wavBlob = await encodeWavFile(chunkBuffer);
+        audioChunkBlobs.push(wavBlob);
+        
+        console.log(`[SPLIT] Processed chunk ${i+1}/${audioChunks.length}`);
+      }
+      
+      console.log(`[SPLIT] Successfully split audio into ${audioChunkBlobs.length} chunks`);
+      return audioChunkBlobs;
+    } catch (decodeError) {
+      console.warn('[SPLIT] Error decoding audio, returning original file:', decodeError);
+      // If we can't decode the audio, return original file
+      return [file];
+    }
+  } catch (error) {
+    console.error('[SPLIT] Error in splitAudioIntoChunks:', error);
+    // If anything fails, return original file
+    return [file];
   }
-  
-  // For very large files, use smaller chunks
-  if (fileSizeBytes > 50 * 1024 * 1024) { // Files larger than 50MB
-    return 8; // Use 8-second chunks for very large files
-  }
-  
-  // Target chunk size around 3MB (conservative for memory constraints)
-  const targetChunkSizeBytes = 3 * 1024 * 1024;
-  
-  if (fileSizeBytes <= targetChunkSizeBytes) {
-    return durationSec; // Return full duration if already small enough
-  }
-  
-  // Calculate bytes per second
-  const bytesPerSec = fileSizeBytes / durationSec;
-  
-  // Calculate optimal duration for target size
-  let optimalDurationSec = targetChunkSizeBytes / bytesPerSec;
-  
-  // For legal transcripts, 5-15 second chunks work well for very large files
-  optimalDurationSec = Math.max(5, Math.min(15, optimalDurationSec));
-  
-  // Round to nearest 5 seconds for more natural breakpoints
-  return Math.round(optimalDurationSec / 5) * 5;
 };
+
+/**
+ * Encodes AudioBuffer to WAV format Blob
+ * @param {AudioBuffer} audioBuffer - The audio buffer to encode
+ * @returns {Promise<Blob>} WAV file as blob
+ */
+const encodeWavFile = async (audioBuffer: AudioBuffer): Promise<Blob> => {
+  try {
+    // Get audio data - since we want mono, just get the first channel
+    const audioData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+    
+    // Create WAV header and file
+    const dataLength = audioData.length * 2; // 16-bit samples = 2 bytes per sample
+    const totalLength = 44 + dataLength;
+    
+    // Create buffer and view for WAV file
+    const buffer = new ArrayBuffer(totalLength);
+    const view = new DataView(buffer);
+    
+    // Write WAV header
+    // "RIFF" chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(view, 8, 'WAVE');
+    
+    // "fmt " sub-chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // PCM format
+    view.setUint16(20, 1, true); // Mono channel (1)
+    view.setUint16(22, 1, true); // Mono = 1 channel
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // Byte rate (sampleRate * channels * bytesPerSample)
+    view.setUint16(32, 2, true); // Block align
+    view.setUint16(34, 16, true); // Bits per sample
+    
+    // "data" sub-chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // Write audio data (convert Float32 to Int16)
+    let offset = 44;
+    for (let i = 0; i < audioData.length; i++) {
+      // Clamp value between -1 and 1
+      const sample = Math.max(-1, Math.min(1, audioData[i]));
+      // Convert to 16-bit signed integer
+      const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(offset, value, true);
+      offset += 2;
+    }
+    
+    // Create Blob with WAV file
+    return new Blob([buffer], { type: 'audio/wav' });
+  } catch (error) {
+    console.error('[WAV] Error encoding WAV file:', error);
+    throw error;
+  }
+};
+
+// Helper to write string into DataView
+function writeString(view: DataView, offset: number, string: string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}

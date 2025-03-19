@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { TranscriptionConfig, TranscriptionOptions } from './types';
 import { validateApiRequest, validateEncoding, getDetailedErrorMessage } from './requestValidator';
@@ -30,10 +29,8 @@ const buildRequestConfig = (options: TranscriptionOptions): TranscriptionConfig 
     useEnhanced,
   };
   
-  // Only add sampleRateHertz if explicitly provided and non-zero
-  if (options.sampleRateHertz && options.sampleRateHertz > 0) {
-    config.sampleRateHertz = options.sampleRateHertz;
-  }
+  // IMPORTANT: NEVER add sampleRateHertz parameter now
+  // Let Google API detect it from the file header to avoid mismatches
   
   // Add diarization if enabled
   if (enableSpeakerDiarization) {
@@ -101,7 +98,7 @@ export const sendTranscriptionRequest = async (
     
     console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
       encoding: options.encoding,
-      sampleRateHertz: config.sampleRateHertz || 'Omitted (using file header value)',
+      sampleRateHertz: 'Omitted (using file header value)',
       languageCode: options.languageCode || 'en-US',
       useEnhanced: options.useEnhanced || true,
       enableSpeakerDiarization: options.enableSpeakerDiarization || false,
@@ -119,18 +116,35 @@ export const sendTranscriptionRequest = async (
     
     console.log(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API`);
     
-    // Send the request
+    // Use longrunningrecognize for files over 60 seconds
+    const apiEndpoint = payloadSizeMB && parseFloat(payloadSizeMB) > 1 
+      ? 'speech:longrunningrecognize' 
+      : 'speech:recognize';
+    
+    console.log(`[API:${requestId}] Using API endpoint: ${apiEndpoint} for ${payloadSizeMB}MB payload`);
+    
+    // Send the request with longrunningrecognize for larger files
     const response = await axios.post(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+      `https://speech.googleapis.com/v1/${apiEndpoint}?key=${apiKey}`,
       requestData,
       {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        timeout: 120000, // 2-minute timeout for large files
+        timeout: 300000, // 5-minute timeout for large files
       }
     );
+    
+    // Check if this is a long-running operation
+    if (response.data.name && !response.data.results) {
+      console.log(`[API:${requestId}] Long-running operation started with name: ${response.data.name}`);
+      
+      // Poll for results
+      const operationResult = await pollOperationStatus(apiKey, response.data.name, requestId);
+      console.log(`[API:${requestId}] Long-running operation completed`);
+      return operationResult;
+    }
     
     // Log success
     console.log(`[API:${requestId}] [${new Date().toISOString()}] Received successful response from Google Speech API`);
@@ -162,4 +176,73 @@ export const sendTranscriptionRequest = async (
     const errorMessage = getDetailedErrorMessage(error);
     throw new Error(errorMessage);
   }
+};
+
+/**
+ * Polls for the status of a long-running operation
+ * @param {string} apiKey - Google API key
+ * @param {string} operationName - The operation name to poll
+ * @param {string} requestId - Request ID for logging
+ * @returns {Promise<any>} The operation result
+ */
+const pollOperationStatus = async (apiKey: string, operationName: string, requestId: string): Promise<any> => {
+  let attempts = 0;
+  const maxAttempts = 60; // Allow up to 60 attempts (10 minutes with exponential backoff)
+  const baseDelay = 5000; // Start with 5-second delay
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    
+    try {
+      // Calculate delay with exponential backoff
+      const delay = Math.min(baseDelay * Math.pow(1.5, attempts - 1), 60000); // Cap at 60 seconds
+      
+      // Log polling attempt
+      console.log(`[API:${requestId}] Polling operation ${operationName}, attempt ${attempts}/${maxAttempts}, waiting ${delay/1000}s`);
+      
+      // Wait before polling
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Check operation status
+      const response = await axios.get(
+        `https://speech.googleapis.com/v1/operations/${operationName}?key=${apiKey}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
+          timeout: 30000, // 30-second timeout for polling requests
+        }
+      );
+      
+      // If operation is done, return the result
+      if (response.data.done) {
+        console.log(`[API:${requestId}] Operation completed in ${attempts} polling attempts`);
+        
+        // Check for errors
+        if (response.data.error) {
+          throw new Error(`Operation failed: ${response.data.error.message}`);
+        }
+        
+        // Return the response result
+        return response.data.response;
+      }
+      
+      // Log progress if available
+      if (response.data.metadata && response.data.metadata.progressPercent) {
+        console.log(`[API:${requestId}] Operation progress: ${response.data.metadata.progressPercent}%`);
+      }
+    } catch (error: any) {
+      console.error(`[API:${requestId}] Error polling operation:`, error.message);
+      
+      // If we've reached max attempts, throw error
+      if (attempts >= maxAttempts) {
+        throw new Error(`Operation polling timed out after ${maxAttempts} attempts: ${error.message}`);
+      }
+      
+      // Otherwise continue polling
+      console.log(`[API:${requestId}] Continuing to poll despite error...`);
+    }
+  }
+  
+  throw new Error(`Operation did not complete within the allowed time (${maxAttempts} polling attempts)`);
 };
