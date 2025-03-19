@@ -11,13 +11,13 @@ type TranscriptionOptions = typeof DEFAULT_TRANSCRIPTION_OPTIONS;
  */
 export const buildRequestConfig = (
   encoding: string,
-  sampleRate: number,
+  sampleRate: number | null,
   options: TranscriptionOptions,
   customTerms: string[] = []
 ) => {
   const config: {
     encoding: string;
-    sampleRateHertz: number;
+    sampleRateHertz?: number;
     languageCode: string;
     enableAutomaticPunctuation: boolean;
     model: string;
@@ -34,12 +34,16 @@ export const buildRequestConfig = (
     useEnhanced?: boolean;
   } = {
     encoding: encoding,
-    sampleRateHertz: sampleRate,
     languageCode: 'en-US', // Default to en-US as the TranscriptionOptions doesn't have a language property
     enableAutomaticPunctuation: options.punctuate,
     model: "latest_long",
     useEnhanced: true, // Use enhanced model for better quality
   };
+  
+  // Only add sample rate if explicitly provided and not null
+  if (sampleRate !== null && sampleRate > 0) {
+    config.sampleRateHertz = sampleRate;
+  }
   
   // Add diarization config if enabled
   if (options.diarize) {

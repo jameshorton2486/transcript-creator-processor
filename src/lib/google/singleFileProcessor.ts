@@ -82,13 +82,19 @@ export const transcribeSingleFile = async (
       console.info(`Added ${legalTerms.length} common legal terms to speech context`);
     }
     
-    // Prepare transcription options with custom terms
+    // Prepare transcription options with custom terms, but omit sample rate
+    // to let Google Speech API extract it from the audio file header
     const transcriptionOptions = {
       encoding: encoding, // Use the detected encoding
-      sampleRateHertz: 16000, // Always 16000 Hz
       ...options,
       customTerms: [...(options.customTerms || []), ...legalTerms]
     };
+    
+    // Remove sample rate from options to let Google API auto-detect it
+    if (transcriptionOptions.sampleRateHertz) {
+      console.info('Omitting sample rate to allow Google API to use the one from audio header');
+      delete transcriptionOptions.sampleRateHertz;
+    }
     
     // Send the request to Google's Speech-to-Text API
     const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);

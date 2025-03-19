@@ -16,5 +16,5 @@ export {
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
 
-// Standardize sample rate for all Google Speech operations
-export const STANDARD_SAMPLE_RATE = 16000;
+// Note: We no longer export a standard sample rate constant
+// as we want Google Speech API to detect it from the file header

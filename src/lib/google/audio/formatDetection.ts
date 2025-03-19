@@ -55,21 +55,29 @@ export const detectSampleRateFromWav = (buffer: ArrayBuffer): number | null => {
  * @returns {boolean} - Whether to use auto detection
  */
 export const shouldUseAutoSampleRate = (mimeType: string): boolean => {
-  // We'll always use 16000 Hz for Google Speech API
-  return false;
+  // For the Google Speech API, we let the API determine sample rate from the file
+  return true;
 };
 
 /**
- * Gets the appropriate sample rate for the audio, using detection or fallback
+ * Gets the appropriate sample rate for the audio
+ * Note: We now return null to let Google Speech API extract it from the file header
  * @param {ArrayBuffer} buffer - The audio buffer
  * @param {string} mimeType - The file mime type
- * @param {number} defaultRate - Default rate to use if detection fails
- * @returns {number} - The sample rate to use, always 16000 Hz for Google API
+ * @returns {number|null} - The sample rate to use or null to use file header
  */
-export const getSampleRate = (buffer: ArrayBuffer, mimeType: string, defaultRate = 16000): number => {
-  // Always use 16000 Hz for Google Speech API
-  console.info('[FORMAT] Using fixed sample rate: 16000 Hz for Google Speech API');
-  return 16000;
+export const getSampleRate = (buffer: ArrayBuffer, mimeType: string): number | null => {
+  // Detect sample rate for logging purposes
+  const detectedRate = detectSampleRateFromWav(buffer);
+  if (detectedRate) {
+    console.info(`[FORMAT] Detected sample rate from WAV header: ${detectedRate} Hz`);
+    console.info('[FORMAT] Letting Google Speech API use sample rate from audio header');
+  } else {
+    console.info('[FORMAT] Could not detect sample rate, letting Google Speech API handle it');
+  }
+  
+  // Return null to let Google API use the rate from the file header
+  return null;
 };
 
 /**

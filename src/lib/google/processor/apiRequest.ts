@@ -9,7 +9,6 @@ import { validateApiRequest, validateEncoding, getDetailedErrorMessage } from '.
 const buildRequestConfig = (options: TranscriptionOptions): TranscriptionConfig => {
   const {
     encoding,
-    sampleRateHertz = 16000, // Always default to 16000 Hz
     languageCode = 'en-US',
     enableAutomaticPunctuation = true,
     model = 'latest_long',
@@ -25,12 +24,16 @@ const buildRequestConfig = (options: TranscriptionOptions): TranscriptionConfig 
   // Create the configuration object
   const config: TranscriptionConfig = {
     encoding,
-    sampleRateHertz,
     languageCode,
     enableAutomaticPunctuation,
     model,
     useEnhanced,
   };
+  
+  // Only add sampleRateHertz if explicitly provided and non-zero
+  if (options.sampleRateHertz && options.sampleRateHertz > 0) {
+    config.sampleRateHertz = options.sampleRateHertz;
+  }
   
   // Add diarization if enabled
   if (enableSpeakerDiarization) {
@@ -98,7 +101,7 @@ export const sendTranscriptionRequest = async (
     
     console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
       encoding: options.encoding,
-      sampleRateHertz: options.sampleRateHertz || 16000,
+      sampleRateHertz: config.sampleRateHertz || 'Omitted (using file header value)',
       languageCode: options.languageCode || 'en-US',
       useEnhanced: options.useEnhanced || true,
       enableSpeakerDiarization: options.enableSpeakerDiarization || false,
