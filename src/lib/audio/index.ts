@@ -16,5 +16,8 @@ export {
 import { splitAudioIntoChunks, splitAudioBuffer } from "./audioSplitter";
 export { splitAudioIntoChunks, splitAudioBuffer };
 
+// Export float32ArrayToWav from wavConverter for use in other modules
+export { float32ArrayToWav } from "./wavConverter";
+
 // Note: We no longer export a standard sample rate constant
 // as we want Google Speech API to detect it from the file header

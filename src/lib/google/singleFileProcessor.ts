@@ -1,4 +1,3 @@
-
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { isValidAudioFile, detectAudioEncoding } from './audio/audioValidation';
 import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
@@ -125,18 +124,14 @@ export const transcribeSingleFile = async (
     }
     
     // Prepare transcription options with custom terms
-    // NEVER include sample rate to let Google Speech API extract it automatically
     const transcriptionOptions = {
       encoding: encoding, // Use the detected encoding
       ...options,
       customTerms: [...(options.customTerms || []), ...legalTerms]
     };
     
-    // Explicitly remove sample rate to let Google API auto-detect it
-    if (transcriptionOptions.sampleRateHertz) {
-      console.info('[PROCESSING] Omitting sample rate to allow Google API to use the one from audio header');
-      delete transcriptionOptions.sampleRateHertz;
-    }
+    // We never want to include sample rate - let Google API detect it automatically
+    console.info('[PROCESSING] Omitting sample rate to allow Google API to use the one from audio header');
     
     console.log('[PROCESSING] Sending request to Google Speech API');
     

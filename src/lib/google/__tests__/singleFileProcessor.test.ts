@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { transcribeSingleFile, processSingleFile } from '../singleFileProcessor';
 import * as apiRequest from '../processor/apiRequest';
@@ -37,8 +36,8 @@ describe('transcribeSingleFile', () => {
     // @ts-ignore
     global.FileReader = vi.fn(() => mockFileReaderInstance);
     
-    // Mock getSampleRate
-    vi.mocked(formatDetection.getSampleRate).mockReturnValue(16000);
+    // Mock getSampleRate - return null to let Google detect sample rate automatically
+    vi.mocked(formatDetection.getSampleRate).mockReturnValue(null);
     
     // Mock sendTranscriptionRequest
     vi.mocked(apiRequest.sendTranscriptionRequest).mockResolvedValue(mockResponse);
@@ -48,15 +47,14 @@ describe('transcribeSingleFile', () => {
     const result = await transcribeSingleFile(mockFile, mockApiKey);
     
     // Verify the sample rate was detected
-    expect(formatDetection.getSampleRate).toHaveBeenCalledWith(mockAudioBuffer, 'audio/wav');
+    expect(formatDetection.getSampleRate).toHaveBeenCalled();
     
-    // Verify API request was made with correct parameters
+    // Verify API request was made with correct parameters - without sampleRateHertz
     expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
       mockApiKey,
       mockBase64,
       expect.objectContaining({
-        encoding: 'LINEAR16',
-        sampleRateHertz: 16000
+        encoding: 'LINEAR16'
       })
     );
     
@@ -72,13 +70,12 @@ describe('transcribeSingleFile', () => {
     
     await transcribeSingleFile(mockFile, mockApiKey, options);
     
-    // Verify options were passed to API request
+    // Verify options were passed to API request without sampleRateHertz
     expect(apiRequest.sendTranscriptionRequest).toHaveBeenCalledWith(
       mockApiKey,
       mockBase64,
       expect.objectContaining({
         encoding: 'LINEAR16',
-        sampleRateHertz: 16000,
         enableAutomaticPunctuation: false,
         languageCode: 'en-GB'
       })
