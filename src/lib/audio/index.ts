@@ -8,6 +8,9 @@ export * from "./wavUtils";
 export * from "./formatConversion";
 export * from "./wavEncoder";
 export * from "./normalization";
+export * from "./audioBufferUtils";
+export * from "./chunkProcessor";
+export * from "./chunkingStrategy";
 
 // Export from sizeCalculator 
 export { 

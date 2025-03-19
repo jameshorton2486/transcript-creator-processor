@@ -1,8 +1,10 @@
+
 /**
  * Audio splitting utilities for chunking large audio files
  */
 import { calculateOptimalChunkDuration } from './sizeCalculator';
 import { encodeWavFile } from './wavEncoder';
+import { createAudioBufferFromChunk } from './audioBufferUtils';
 
 /**
  * Splits an AudioBuffer into multiple shorter chunks based on optimal duration
@@ -60,56 +62,30 @@ export const splitAudioBuffer = (
 
 /**
  * Splits audio file into chunks of optimal duration
- * @param {ArrayBuffer} audioData - Raw audio data as ArrayBuffer
- * @param {string} fileType - The MIME type of the audio file
+ * @param {File} file - Audio file to split
  * @returns {Promise<Blob[]>} Array of chunked audio blobs
  */
 export const splitAudioIntoChunks = async (
   file: File
 ): Promise<Blob[]> => {
   try {
-    // Calculate optimal chunk duration based on file size
-    const fileSizeMB = file.size / (1024 * 1024);
-    console.log(`[SPLIT] Processing file: ${file.name}, Size: ${fileSizeMB.toFixed(2)} MB`);
+    const { determineOptimalChunking, shouldSplitFile } = await import('./chunkingStrategy');
+    const { decodeAudioFile } = await import('./audioBufferUtils');
+
+    // Decide if and how to split the file
+    const { shouldChunk, optimalDuration } = await determineOptimalChunking(file);
     
-    // For small files (less than 1MB), process in a single chunk
-    if (fileSizeMB < 1) {
-      console.log('[SPLIT] File is small, no splitting needed');
-      return [file];
-    }
-    
-    // Determine optimal chunk duration based on file size
-    const optimalDuration = calculateOptimalChunkDuration(file.size);
-    console.log(`[SPLIT] Calculated optimal chunk duration: ${optimalDuration}s`);
-    
-    // If the file is small enough to process directly, don't bother chunking
-    if (optimalDuration >= 500) {
+    // If the file doesn't need to be split
+    if (!shouldChunk) {
       console.log('[SPLIT] File is small enough to process without splitting');
-      return [file];
-    }
-    
-    // For audio formats we can't decode easily, return the original file
-    if (!/^(audio|video)/.test(file.type) && !file.name.match(/\.(wav|mp3|flac|ogg|m4a|webm)$/i)) {
-      console.log('[SPLIT] Unsupported format for browser audio decoding, returning original file');
       return [file];
     }
     
     console.log('[SPLIT] Audio needs chunking, decoding audio for splitting...');
     
-    // We need to analyze the file to split it correctly
     try {
-      // Create audio context
-      const audioContext = new AudioContext();
-      
-      // Get array buffer from file
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Try to decode the audio data
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-        .catch(err => {
-          console.warn('[SPLIT] Browser cannot decode this audio format:', err);
-          throw new Error('Browser cannot decode this audio format');
-        });
+      // Decode the audio file
+      const audioBuffer = await decodeAudioFile(file);
       
       // Get the split chunks
       console.log(`[SPLIT] Successfully decoded audio, splitting into ~${optimalDuration}s chunks`);
@@ -118,19 +94,11 @@ export const splitAudioIntoChunks = async (
       // Convert Float32Array chunks back to blobs
       const audioChunkBlobs: Blob[] = [];
       
-      // Use WAV format for chunks for better compatibility
+      // Process each chunk
+      const { processAudioChunk } = await import('./chunkProcessor');
       for (let i = 0; i < audioChunks.length; i++) {
-        const chunk = audioChunks[i];
-        
-        // Create a new AudioBuffer for this chunk
-        const chunkBuffer = audioContext.createBuffer(1, chunk.length, audioBuffer.sampleRate);
-        chunkBuffer.getChannelData(0).set(chunk);
-        
-        // Convert to WAV for better compatibility
-        const wavBlob = await encodeWavFile(chunkBuffer);
-        audioChunkBlobs.push(wavBlob);
-        
-        console.log(`[SPLIT] Processed chunk ${i+1}/${audioChunks.length}`);
+        const blob = await processAudioChunk(audioChunks[i], audioBuffer.sampleRate, i, audioChunks.length);
+        audioChunkBlobs.push(blob);
       }
       
       console.log(`[SPLIT] Successfully split audio into ${audioChunkBlobs.length} chunks`);
