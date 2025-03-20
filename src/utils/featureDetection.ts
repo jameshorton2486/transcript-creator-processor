@@ -46,7 +46,7 @@ export const getSupportedFeatures = (featureNames: string[]): string[] => {
 /**
  * Modern supported feature policies that can be used
  * Updated list of well-supported features across browsers
- * Removed deprecated APIs: vr, ambient-light-sensor, battery, browsing-topics
+ * Removed all deprecated APIs
  */
 export const SUPPORTED_FEATURE_POLICIES = [
   'accelerometer',

@@ -48,28 +48,44 @@ const isValidScriptUrl = (url: string): boolean => {
 };
 
 /**
- * Preloads a resource only when it will be used immediately
- * Modified to avoid "preloaded but not used" console warnings
+ * Improved preload resource function that avoids "preloaded but not used" warnings
+ * Only preloads resources when they're about to be used
  * 
  * @param url The URL of the resource to preload
  * @param type The type of resource (e.g., 'script', 'style', 'image')
- * @param immediate Whether to load immediately or when browser is idle
- * @param ttl Time-to-live in ms before removing the preload if unused (default: 3000ms)
+ * @param immediate Whether to load immediately or when the resource will be used soon
  */
 export const preloadResource = (
   url: string, 
   type: string, 
-  immediate = false, 
-  ttl = 3000
+  immediate = false
 ): void => {
-  const preload = () => {
-    // Check if the resource is already loaded or preloaded
-    const existingLinks = document.querySelectorAll(`link[href="${url}"]`);
-    if (existingLinks.length > 0) {
-      console.debug(`Resource already preloaded: ${url}`);
+  // Check if the resource is already loaded or preloaded
+  const existingLinks = document.querySelectorAll(`link[href="${url}"]`);
+  const existingScripts = document.querySelectorAll(`script[src="${url}"]`);
+  const existingStyles = document.querySelectorAll(`link[rel="stylesheet"][href="${url}"]`);
+  
+  if (existingLinks.length > 0 || existingScripts.length > 0 || existingStyles.length > 0) {
+    console.debug(`Resource already loaded or preloaded: ${url}`);
+    return;
+  }
+  
+  // For immediate loading, use the appropriate element instead of preload
+  if (immediate) {
+    if (type === 'script') {
+      loadScript(url).catch(err => console.error(err));
+      return;
+    } else if (type === 'style') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = url;
+      document.head.appendChild(link);
       return;
     }
-    
+  }
+  
+  // Only preload if we're really going to use it soon
+  const preload = () => {
     const link = document.createElement('link');
     link.rel = 'preload';
     link.href = url;
@@ -80,34 +96,28 @@ export const preloadResource = (
       link.setAttribute('crossorigin', 'anonymous');
     }
     
-    document.head.appendChild(link);
-    
-    // Remove the preload link if the resource isn't used within the TTL
-    // This helps prevent "preloaded but not used" console warnings
+    // Create a timeout to actually load the resource after preloading
+    // This ensures the preload is actually used
     setTimeout(() => {
-      // Check if the resource has been used
-      const isResourceUsed = type === 'script' 
-        ? document.querySelector(`script[src="${url}"]`) !== null
-        : type === 'style'
-          ? document.querySelector(`link[rel="stylesheet"][href="${url}"]`) !== null
-          : false;
-          
-      if (!isResourceUsed) {
-        console.debug(`Removing unused preload for: ${url}`);
-        document.head.removeChild(link);
+      if (type === 'script') {
+        loadScript(url).catch(err => console.error(err));
+      } else if (type === 'style') {
+        const styleLink = document.createElement('link');
+        styleLink.rel = 'stylesheet';
+        styleLink.href = url;
+        document.head.appendChild(styleLink);
       }
-    }, ttl);
+      // For other resource types, the preload is enough
+    }, 100); // Small delay to ensure preload happens first
+    
+    document.head.appendChild(link);
   };
   
-  if (immediate) {
-    preload();
+  // Use requestIdleCallback for non-critical resources
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(preload);
   } else {
-    // Use requestIdleCallback for non-critical resources
-    if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(preload);
-    } else {
-      // Fallback for browsers that don't support requestIdleCallback
-      setTimeout(preload, 1);
-    }
+    // Fallback for browsers that don't support requestIdleCallback
+    setTimeout(preload, 1);
   }
 };

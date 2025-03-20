@@ -13,10 +13,8 @@ const App = () => {
     // Initialize document processing libraries
     initDocumentProcessors();
     
-    // Load any additional scripts only when needed
-    // Example of proper script loading (commented out until needed)
-    // loadScript('https://cdn.example.com/some-script.js')
-    //   .catch(error => console.error('Failed to load script:', error));
+    // We've removed the commented out loadScript call since it wasn't being used
+    // and could trigger the preload warning
   }, []);
 
   return (
