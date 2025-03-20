@@ -19,15 +19,8 @@ export const isFeatureSupported = (featureName: string): boolean => {
   switch (featureName) {
     case 'xr':
       return 'xr' in navigator;
-    case 'battery':
-      return 'getBattery' in navigator;
-    case 'ambient-light-sensor':
-      return 'AmbientLightSensor' in window;
     case 'bluetooth':
       return 'bluetooth' in navigator;
-    case 'vr':
-      // VR is now handled via WebXR
-      return 'xr' in navigator;
     default:
       // For other features, try permissions API
       if ('permissions' in navigator && navigator.permissions) {
