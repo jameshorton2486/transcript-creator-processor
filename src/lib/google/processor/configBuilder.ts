@@ -9,7 +9,7 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     encoding,
     languageCode = 'en-US',
     enableAutomaticPunctuation = true,
-    model = 'latest_long',
+    model = 'video', // Changed from 'latest_long' to 'video', which is better for general transcription
     useEnhanced = true,
     enableSpeakerDiarization = false,
     minSpeakerCount = 2,
@@ -28,8 +28,10 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     useEnhanced,
   };
   
-  // IMPORTANT: NEVER add sampleRateHertz parameter now
-  // Let Google API detect it from the file header to avoid mismatches
+  // Explicitly set sampleRateHertz for LINEAR16 (WAV) files to avoid detection issues
+  if (encoding === 'LINEAR16') {
+    config.sampleRateHertz = 16000; // Standard rate for speech recognition
+  }
   
   // Add diarization if enabled
   if (enableSpeakerDiarization) {
@@ -54,7 +56,7 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     config.speechContexts = [
       {
         phrases: customTerms,
-        boost: 10,
+        boost: 15, // Increased from 10 to 15 for better recognition
       },
     ];
   }

@@ -26,13 +26,19 @@ export const sendTranscriptionRequest = async (
     validateApiRequest(apiKey, audioContent);
     validateEncoding(options.encoding);
     
+    // Verify audio content seems valid
+    if (audioContent.length < 1000) {
+      console.warn(`[API:${requestId}] Audio content is suspiciously small (${audioContent.length} chars)`);
+      throw new Error('Audio content appears to be too small or empty. Please check your audio file.');
+    }
+    
     // Build the configuration object
     const config = buildRequestConfig(options);
     
     // Log custom terms
     const customTerms = options.customTerms || [];
     if (customTerms.length > 0) {
-      console.info(`[API:${requestId}] Added ${customTerms.length} custom terms with boost 10`);
+      console.info(`[API:${requestId}] Added ${customTerms.length} custom terms with boost 15`);
     }
     
     // Log payload size for debugging
@@ -40,8 +46,9 @@ export const sendTranscriptionRequest = async (
     
     console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
       encoding: options.encoding,
-      sampleRateHertz: 'Omitted (using file header value)',
+      sampleRateHertz: config.sampleRateHertz || 'Omitted (using file header value)',
       languageCode: options.languageCode || 'en-US',
+      model: config.model,
       useEnhanced: options.useEnhanced || true,
       enableSpeakerDiarization: options.enableSpeakerDiarization || false,
       hasCustomTerms: customTerms.length > 0,
@@ -74,6 +81,12 @@ export const sendTranscriptionRequest = async (
         data: error.response.data,
         headers: error.response.headers
       });
+      
+      // Provide more specific guidance for common errors
+      if (error.response.data?.error?.message?.includes('audio quality')) {
+        console.error(`[API:${requestId}] Poor audio quality detected. Providing detailed troubleshooting.`);
+        throw new Error('Google API reports poor audio quality. Try: 1) Converting audio to 16-bit WAV mono, 2) Ensuring clear speech with minimal background noise, 3) Using a smaller audio segment for testing.');
+      }
     }
     
     // Get a detailed error message
@@ -128,6 +141,7 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
     // Check if response has results
     if (!response.data || !response.data.results) {
       console.warn(`[API:${requestId}] [${new Date().toISOString()}] Warning: Empty results returned from Google API`);
+      throw new Error('No transcription results were returned. The audio may not contain recognizable speech or may have quality issues.');
     } else {
       console.log(`[API:${requestId}] [${new Date().toISOString()}] Transcription successful with ${response.data.results.length} result segments`);
     }
@@ -143,6 +157,12 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
       if (googleError.message && googleError.message.includes("exceeds duration limit")) {
         console.error(`[API:${requestId}] Google API duration limit error: ${googleError.message}`);
         throw new Error(`Google API error: ${googleError.message}`);
+      }
+      
+      // Handle poor audio quality errors with more specific guidance
+      if (googleError.message && googleError.message.includes("audio quality")) {
+        console.error(`[API:${requestId}] Poor audio quality error: ${googleError.message}`);
+        throw new Error('Audio quality issue detected. Try: 1) Converting to 16kHz mono WAV, 2) Reducing background noise, 3) Ensuring clear speech in the recording.');
       }
       
       // Log detailed error info
