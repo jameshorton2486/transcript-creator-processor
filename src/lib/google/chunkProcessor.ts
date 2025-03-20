@@ -52,10 +52,11 @@ export const processChunks = async (
       console.log(`[BATCH] Processing chunk ${i+1}/${audioChunks.length}...`);
       
       // Create a merged options object with the correct sample rate for the chunk
-      const mergedOptions: TranscriptionOptions = { 
+      // Make sure to use proper type casting to avoid TypeScript errors
+      const mergedOptions = { 
         ...options,
         sampleRateHertz: sampleRate  // Pass the actual sample rate used when creating the WAV
-      };
+      } as TranscriptionOptions;
       
       if (customTerms.length > 0) {
         mergedOptions.customTerms = customTerms;
@@ -148,10 +149,10 @@ export const processExtremelyLargeFile = async (
         console.log(`[LARGE] Created chunk file ${i+1}/${totalChunks}: ${(chunkBlob.size / 1024).toFixed(1)}KB`);
         
         // Transcribe this chunk with full error logging
-        const mergedOptions: TranscriptionOptions = { 
+        const mergedOptions = { 
           ...options,
           // Don't set sampleRateHertz and let Google detect it for direct file slices
-        };
+        } as TranscriptionOptions;
         
         if (customTerms.length > 0) {
           mergedOptions.customTerms = customTerms;

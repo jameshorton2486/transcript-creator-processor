@@ -34,5 +34,5 @@ export interface TranscriptionOptions {
   enableWordTimeOffsets?: boolean;
   enableWordConfidence?: boolean;
   customTerms?: string[];
-  [key: string]: any;
+  [key: string]: any; // Allow for additional properties
 }

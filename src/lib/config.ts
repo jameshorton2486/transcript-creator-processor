@@ -1,4 +1,3 @@
-
 // Configuration for transcript processing
 export const PUNCTUATION_RULES = [
   "Use proper punctuation marks where necessary.",
@@ -42,6 +41,10 @@ export interface TranscriptionOptions {
   autoChunk?: boolean;  // Automatic chunking of long audio
   enhancedModel?: boolean;  // Use enhanced speech recognition model
   customTerms?: string[];  // Custom terminology for speech recognition
+  sampleRateHertz?: number; // Added to match processor/types.ts
+  encoding?: string;        // Added to match processor/types.ts
+  languageCode?: string;    // Added to match processor/types.ts
+  [key: string]: any;       // Allow for additional properties
 }
 
 export const DEFAULT_TRANSCRIPTION_OPTIONS: TranscriptionOptions = {
