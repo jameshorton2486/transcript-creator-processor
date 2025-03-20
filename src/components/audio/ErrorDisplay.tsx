@@ -67,6 +67,12 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
   } else if (error.includes("browser performance")) {
     displayError = "Browser performance issue";
     additionalMessage = "Your browser is struggling to process this audio file. The application will automatically switch to a more memory-efficient processing method. If issues persist, try using a different browser or converting to a smaller audio format.";
+  } else if (error.includes("exceeds duration limit") || error.includes("GCS URI")) {
+    displayError = "Audio duration limit exceeded";
+    additionalMessage = "Your audio file is too long for direct processing with Google's Speech API. The application will automatically break it into smaller segments. If the error persists, try these approaches:\n1. Use a shorter audio file (under 1 minute)\n2. Break your recording into smaller segments before uploading\n3. Try a different audio format (MP3 instead of WAV/FLAC)";
+  } else if (error.includes("All chunks failed to process")) {
+    displayError = "Failed to process audio segments";
+    additionalMessage = "The application encountered issues processing your audio in smaller segments. This could be due to an audio format incompatibility or API limitations. Try these approaches:\n1. Use a shorter audio file\n2. Convert to a different format (MP3 instead of WAV/FLAC)\n3. Try a different browser";
   }
   
   // Log detailed error to console for debugging

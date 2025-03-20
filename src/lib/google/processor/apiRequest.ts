@@ -1,6 +1,13 @@
+
 import axios from 'axios';
 import { TranscriptionConfig, TranscriptionOptions } from './types';
 import { validateApiRequest, validateEncoding, getDetailedErrorMessage } from './requestValidator';
+
+/**
+ * Maximum duration for synchronous transcription (in seconds)
+ * For longer audio, we should use longrunningrecognize
+ */
+const MAX_SYNC_DURATION_SECONDS = 60;
 
 /**
  * Builds the configuration object for the Google Speech-to-Text API request
@@ -116,14 +123,13 @@ export const sendTranscriptionRequest = async (
     
     console.log(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API`);
     
-    // Use longrunningrecognize for files over 60 seconds
-    const apiEndpoint = payloadSizeMB && parseFloat(payloadSizeMB) > 1 
-      ? 'speech:longrunningrecognize' 
-      : 'speech:recognize';
+    // IMPORTANT: For all chunks, always use longrunningrecognize to avoid duration limit errors
+    // This API method supports longer audio durations and is less likely to fail
+    const apiEndpoint = 'speech:longrunningrecognize';
     
     console.log(`[API:${requestId}] Using API endpoint: ${apiEndpoint} for ${payloadSizeMB}MB payload`);
     
-    // Send the request with longrunningrecognize for larger files
+    // Send the request with longrunningrecognize
     const response = await axios.post(
       `https://speech.googleapis.com/v1/${apiEndpoint}?key=${apiKey}`,
       requestData,

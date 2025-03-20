@@ -14,6 +14,7 @@ import { TranscriberFooter } from "@/components/audio/TranscriberFooter";
 import { useTranscription } from "@/hooks/useTranscription";
 import { useState, useEffect } from "react";
 import { estimateMemoryRequirements } from "@/lib/google/audio/fileChunker";
+import { MAX_CHUNK_DURATION_SECONDS } from "@/lib/audio/chunkProcessor";
 
 // Increased file size threshold to 200MB
 const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
@@ -46,6 +47,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
   });
 
   const [memoryWarning, setMemoryWarning] = useState<string | null>(null);
+  const [durationWarning, setDurationWarning] = useState<string | null>(null);
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
@@ -61,8 +63,17 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
       } else {
         setMemoryWarning(null);
       }
+      
+      // Estimate duration based on file size (rough estimate: 16-bit mono at 16kHz = ~32KB per second)
+      const estimatedDurationSec = file.size / (32 * 1024);
+      if (estimatedDurationSec > MAX_CHUNK_DURATION_SECONDS) {
+        setDurationWarning(`This file appears to be longer than ${MAX_CHUNK_DURATION_SECONDS} seconds. It will be automatically processed in smaller chunks to comply with Google's API limitations.`);
+      } else {
+        setDurationWarning(null);
+      }
     } else {
       setMemoryWarning(null);
+      setDurationWarning(null);
     }
   }, [file]);
 
@@ -85,6 +96,12 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         />
         
         <MemoryWarningAlert warningMessage={memoryWarning} />
+        
+        {durationWarning && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
+            <p>{durationWarning}</p>
+          </div>
+        )}
         
         <CustomTerminologySection 
           customTerms={customTerms}

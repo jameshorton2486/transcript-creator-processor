@@ -3,6 +3,7 @@
  * Strategies for determining how to split audio files
  */
 import { calculateOptimalChunkDuration } from './sizeCalculator';
+import { MAX_CHUNK_DURATION_SECONDS } from './chunkProcessor';
 
 /**
  * Determines if a file should be split and what the optimal chunk duration should be
@@ -25,13 +26,14 @@ export const determineOptimalChunking = async (
   // Estimate audio duration based on file size (rough estimate: 16-bit mono at 16kHz = ~32KB per second)
   const estimatedDurationSec = file.size / (32 * 1024);
   
-  // Determine optimal chunk duration based on file size
+  // Determine optimal chunk duration based on file size and estimated duration
   const optimalDuration = calculateOptimalChunkDuration(file.size, estimatedDurationSec);
   console.log(`[SPLIT] Calculated optimal chunk duration: ${optimalDuration}s`);
   
-  // If the file is small enough to process directly, don't bother chunking
-  if (optimalDuration >= 500) {
-    return { shouldChunk: false, optimalDuration: 0 };
+  // Enforce Google's maximum duration limit for direct API requests
+  const finalChunkDuration = Math.min(optimalDuration, MAX_CHUNK_DURATION_SECONDS);
+  if (finalChunkDuration < optimalDuration) {
+    console.log(`[SPLIT] Adjusted chunk duration to ${finalChunkDuration}s to comply with Google API limits`);
   }
   
   // For audio formats we can't decode easily, return the original file
@@ -40,7 +42,7 @@ export const determineOptimalChunking = async (
     return { shouldChunk: false, optimalDuration: 0 };
   }
   
-  return { shouldChunk: true, optimalDuration };
+  return { shouldChunk: true, optimalDuration: finalChunkDuration };
 };
 
 /**
@@ -51,9 +53,9 @@ export const determineOptimalChunking = async (
 export const shouldSplitFile = (file: File): boolean => {
   const fileSizeMB = file.size / (1024 * 1024);
   
-  // Only split files larger than 1MB
-  if (fileSizeMB < 1) {
-    return false;
+  // Files larger than 0.5MB should be split to avoid Google API duration limits
+  if (fileSizeMB > 0.5) {
+    return true;
   }
   
   // Only split supported audio formats
