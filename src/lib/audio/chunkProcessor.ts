@@ -20,7 +20,6 @@ const safePromiseWrapper = <T>(promise: Promise<T>): Promise<T> => {
   
   // Create an AbortController to help with cleanup
   const controller = new AbortController();
-  const signal = controller.signal;
   
   // Cleanup function to prevent memory leaks
   const cleanup = () => {

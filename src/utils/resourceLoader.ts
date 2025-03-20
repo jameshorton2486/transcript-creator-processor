@@ -48,76 +48,63 @@ const isValidScriptUrl = (url: string): boolean => {
 };
 
 /**
- * Improved preload resource function that avoids "preloaded but not used" warnings
- * Only preloads resources when they're about to be used
+ * Improved resource loading function that avoids "preloaded but not used" warnings
+ * Only loads resources when they're actually needed
  * 
- * @param url The URL of the resource to preload
+ * @param url The URL of the resource to load
  * @param type The type of resource (e.g., 'script', 'style', 'image')
- * @param immediate Whether to load immediately or when the resource will be used soon
  */
-export const preloadResource = (
-  url: string, 
-  type: string, 
-  immediate = false
-): void => {
-  // Check if the resource is already loaded or preloaded
+export const loadResource = (url: string, type: string): void => {
+  // Check if the resource is already loaded
   const existingLinks = document.querySelectorAll(`link[href="${url}"]`);
   const existingScripts = document.querySelectorAll(`script[src="${url}"]`);
   const existingStyles = document.querySelectorAll(`link[rel="stylesheet"][href="${url}"]`);
   
   if (existingLinks.length > 0 || existingScripts.length > 0 || existingStyles.length > 0) {
-    console.debug(`Resource already loaded or preloaded: ${url}`);
+    console.debug(`Resource already loaded: ${url}`);
     return;
   }
   
-  // For immediate loading, use the appropriate element instead of preload
-  if (immediate) {
-    if (type === 'script') {
-      loadScript(url).catch(err => console.error(err));
-      return;
-    } else if (type === 'style') {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = url;
-      document.head.appendChild(link);
-      return;
-    }
-  }
-  
-  // Only preload if we're really going to use it soon
-  const preload = () => {
+  // Load the resource based on type
+  if (type === 'script') {
+    loadScript(url).catch(err => console.error(err));
+  } else if (type === 'style') {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    document.head.appendChild(link);
+  } else if (type === 'font') {
     const link = document.createElement('link');
     link.rel = 'preload';
     link.href = url;
-    link.as = type;
-    
-    // Add crossorigin attribute for fonts
-    if (type === 'font') {
-      link.setAttribute('crossorigin', 'anonymous');
-    }
-    
-    // Create a timeout to actually load the resource after preloading
-    // This ensures the preload is actually used
-    setTimeout(() => {
-      if (type === 'script') {
-        loadScript(url).catch(err => console.error(err));
-      } else if (type === 'style') {
-        const styleLink = document.createElement('link');
-        styleLink.rel = 'stylesheet';
-        styleLink.href = url;
-        document.head.appendChild(styleLink);
-      }
-      // For other resource types, the preload is enough
-    }, 100); // Small delay to ensure preload happens first
-    
+    link.as = 'font';
+    link.setAttribute('crossorigin', 'anonymous');
+    link.onload = () => {
+      // Convert preload to stylesheet to ensure it's used
+      link.rel = 'stylesheet';
+    };
     document.head.appendChild(link);
-  };
-  
-  // Use requestIdleCallback for non-critical resources
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(preload);
-  } else {
-    // Fallback for browsers that don't support requestIdleCallback
-    setTimeout(preload, 1);
+  } else if (type === 'image') {
+    const img = new Image();
+    img.src = url;
   }
+};
+
+/**
+ * Use prefetch for resources that will be needed later
+ * This is less aggressive than preload and won't trigger warnings
+ * 
+ * @param url The URL of the resource to prefetch
+ */
+export const prefetchResource = (url: string): void => {
+  // Check if already prefetched
+  const existingLinks = document.querySelectorAll(`link[href="${url}"]`);
+  if (existingLinks.length > 0) {
+    return;
+  }
+  
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = url;
+  document.head.appendChild(link);
 };

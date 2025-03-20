@@ -15,19 +15,34 @@ export const isFeatureSupported = (featureName: string): boolean => {
     return true;
   }
   
-  // Check if the feature is available as a permission
-  if ('permissions' in navigator && navigator.permissions) {
-    try {
-      // Only query for permissions that are likely to be supported
-      if (SUPPORTED_FEATURE_POLICIES.includes(featureName)) {
-        // @ts-ignore - TypeScript might not know about the permissions API
-        return navigator.permissions.query({ name: featureName })
-          .then(() => true)
-          .catch(() => false);
+  // Check specific APIs with proper feature detection
+  switch (featureName) {
+    case 'xr':
+      return 'xr' in navigator;
+    case 'battery':
+      return 'getBattery' in navigator;
+    case 'ambient-light-sensor':
+      return 'AmbientLightSensor' in window;
+    case 'bluetooth':
+      return 'bluetooth' in navigator;
+    case 'vr':
+      // VR is now handled via WebXR
+      return 'xr' in navigator;
+    default:
+      // For other features, try permissions API
+      if ('permissions' in navigator && navigator.permissions) {
+        try {
+          // Only query for permissions that are likely to be supported
+          if (SUPPORTED_FEATURE_POLICIES.includes(featureName)) {
+            // @ts-ignore - TypeScript might not know about the permissions API
+            return navigator.permissions.query({ name: featureName })
+              .then(() => true)
+              .catch(() => false);
+          }
+        } catch {
+          return false;
+        }
       }
-    } catch {
-      return false;
-    }
   }
   
   return false;
