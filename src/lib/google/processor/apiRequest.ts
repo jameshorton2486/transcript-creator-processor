@@ -1,13 +1,6 @@
-
 import axios from 'axios';
 import { TranscriptionConfig, TranscriptionOptions } from './types';
 import { validateApiRequest, validateEncoding, getDetailedErrorMessage } from './requestValidator';
-
-/**
- * Maximum duration for synchronous transcription (in seconds)
- * For longer audio, we should use longrunningrecognize
- */
-const MAX_SYNC_DURATION_SECONDS = 60;
 
 /**
  * Builds the configuration object for the Google Speech-to-Text API request
@@ -121,49 +114,66 @@ export const sendTranscriptionRequest = async (
       },
     };
     
-    console.log(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API`);
-    
-    // IMPORTANT: For all chunks, always use longrunningrecognize to avoid duration limit errors
-    // This API method supports longer audio durations and is less likely to fail
+    // Use the appropriate API endpoint - ALWAYS use longrunningrecognize now
     const apiEndpoint = 'speech:longrunningrecognize';
     
     console.log(`[API:${requestId}] Using API endpoint: ${apiEndpoint} for ${payloadSizeMB}MB payload`);
     
-    // Send the request with longrunningrecognize
-    const response = await axios.post(
-      `https://speech.googleapis.com/v1/${apiEndpoint}?key=${apiKey}`,
-      requestData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        timeout: 300000, // 5-minute timeout for large files
-      }
-    );
-    
-    // Check if this is a long-running operation
-    if (response.data.name && !response.data.results) {
-      console.log(`[API:${requestId}] Long-running operation started with name: ${response.data.name}`);
+    try {
+      // Send the request with longrunningrecognize
+      const response = await axios.post(
+        `https://speech.googleapis.com/v1/${apiEndpoint}?key=${apiKey}`,
+        requestData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          timeout: 300000, // 5-minute timeout for large files
+        }
+      );
       
-      // Poll for results
-      const operationResult = await pollOperationStatus(apiKey, response.data.name, requestId);
-      console.log(`[API:${requestId}] Long-running operation completed`);
-      return operationResult;
+      // Check if this is a long-running operation
+      if (response.data.name && !response.data.results) {
+        console.log(`[API:${requestId}] Long-running operation started with name: ${response.data.name}`);
+        
+        // Poll for results
+        const operationResult = await pollOperationStatus(apiKey, response.data.name, requestId);
+        console.log(`[API:${requestId}] Long-running operation completed`);
+        return operationResult;
+      }
+      
+      // Log success
+      console.log(`[API:${requestId}] [${new Date().toISOString()}] Received successful response from Google Speech API`);
+      
+      // Check if response has results
+      if (!response.data || !response.data.results) {
+        console.warn(`[API:${requestId}] [${new Date().toISOString()}] Warning: Empty results returned from Google API`);
+      } else {
+        console.log(`[API:${requestId}] [${new Date().toISOString()}] Transcription successful with ${response.data.results.length} result segments`);
+      }
+      
+      // Return the response data
+      return response.data;
+    } catch (axiosError: any) {
+      // Enhanced error handling for specific API errors
+      if (axiosError.response && axiosError.response.data && axiosError.response.data.error) {
+        const googleError = axiosError.response.data.error;
+        
+        // Check for specific Google API errors
+        if (googleError.message && googleError.message.includes("exceeds duration limit")) {
+          console.error(`[API:${requestId}] Google API duration limit error: ${googleError.message}`);
+          throw new Error(`Google API error: ${googleError.message}`);
+        }
+        
+        // Log detailed error info
+        console.error(`[API:${requestId}] Google API error:`, googleError);
+        throw new Error(`Google API error: ${googleError.message}`);
+      }
+      
+      // Re-throw with more details
+      throw axiosError;
     }
-    
-    // Log success
-    console.log(`[API:${requestId}] [${new Date().toISOString()}] Received successful response from Google Speech API`);
-    
-    // Check if response has results
-    if (!response.data || !response.data.results) {
-      console.warn(`[API:${requestId}] [${new Date().toISOString()}] Warning: Empty results returned from Google API`);
-    } else {
-      console.log(`[API:${requestId}] [${new Date().toISOString()}] Transcription successful with ${response.data.results.length} result segments`);
-    }
-    
-    // Return the response data
-    return response.data;
   } catch (error: any) {
     // Enhanced error logging with detailed context
     console.error(`[API:${requestId}] [${new Date().toISOString()}] Google API error occurred:`, error.message);
