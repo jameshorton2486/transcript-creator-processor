@@ -31,12 +31,23 @@ export const sendTranscriptionRequest = async (
     if (actualEncoding && actualEncoding !== 'AUTO') {
       validateEncoding(actualEncoding);
       finalOptions.encoding = actualEncoding;
+      
+      // For WAV files, always let Google detect the sample rate from the header
+      if (actualEncoding === 'LINEAR16') {
+        delete finalOptions.sampleRateHertz;
+      }
     } else if (actualEncoding === 'AUTO') {
-      // If set to AUTO, remove encoding to let Google detect it
+      // If set to AUTO, remove encoding and sampleRateHertz to let Google detect it
       delete finalOptions.encoding;
-      console.log(`[API:${requestId}] Auto-detecting encoding from audio content`);
+      delete finalOptions.sampleRateHertz;
+      console.log(`[API:${requestId}] Auto-detecting encoding and sample rate from audio content`);
     } else {
       validateEncoding(options.encoding);
+      
+      // For WAV files, always let Google detect the sample rate from the header
+      if (options.encoding === 'LINEAR16') {
+        delete finalOptions.sampleRateHertz;
+      }
     }
     
     // Verify audio content seems valid
@@ -76,8 +87,12 @@ export const sendTranscriptionRequest = async (
       },
     };
     
-    // ALWAYS use longrunningrecognize now for better reliability
-    const apiEndpoint = 'speech:longrunningrecognize';
+    // For any audio larger than 1MB or potentially longer than 10 seconds, use longrunningrecognize
+    // This ensures more reliable transcription for all but the smallest audio segments
+    let apiEndpoint = 'speech:recognize';
+    if (parseFloat(payloadSizeMB) > 0.3) { // If larger than 300KB, use longrunning
+      apiEndpoint = 'speech:longrunningrecognize';
+    }
     
     console.log(`[API:${requestId}] Using API endpoint: ${apiEndpoint} for ${payloadSizeMB}MB payload`);
     
@@ -102,9 +117,10 @@ export const sendTranscriptionRequest = async (
       }
       
       // Handle specific encoding errors
-      if (error.response.data?.error?.message?.includes('Encoding in RecognitionConfig')) {
-        console.error(`[API:${requestId}] Encoding mismatch detected. Will retry with auto-detection.`);
-        throw new Error('Google API detected encoding mismatch. The application will automatically retry with auto-detection.');
+      if (error.response.data?.error?.message?.includes('Encoding in RecognitionConfig') ||
+          error.response.data?.error?.message?.includes('sample_rate_hertz')) {
+        console.error(`[API:${requestId}] Encoding/sample rate mismatch detected. Will retry with auto-detection.`);
+        throw new Error('Google API detected encoding/sample rate mismatch. The application will automatically retry with auto-detection.');
       }
     }
     
@@ -127,7 +143,7 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
       controller.abort();
     }, 300000); // 5-minute timeout
     
-    // Send the request with longrunningrecognize
+    // Send the request
     const response = await axios.post(
       `https://speech.googleapis.com/v1/${apiEndpoint}?key=${apiKey}`,
       requestData,
@@ -175,19 +191,22 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
       // Check for specific Google API errors
       if (googleError.message && googleError.message.includes("exceeds duration limit")) {
         console.error(`[API:${requestId}] Google API duration limit error: ${googleError.message}`);
-        throw new Error(`Google API error: ${googleError.message}`);
+        throw new Error(`Google API error: Audio exceeds maximum duration limit. The file will be automatically split into smaller chunks on retry.`);
       }
       
       // Special handling for encoding errors
-      if (googleError.message && googleError.message.includes("Encoding in RecognitionConfig must")) {
-        console.error(`[API:${requestId}] Encoding mismatch error: ${googleError.message}`);
-        throw new Error('Encoding mismatch detected. Try uploading a different format or let the application handle encoding automatically.');
+      if (googleError.message && (
+          googleError.message.includes("Encoding in RecognitionConfig must") ||
+          googleError.message.includes("sample_rate_hertz")
+      )) {
+        console.error(`[API:${requestId}] Encoding/sample rate mismatch error: ${googleError.message}`);
+        throw new Error('Audio format issue detected. The application will automatically retry with auto-detection of format parameters.');
       }
       
       // Handle poor audio quality errors with more specific guidance
       if (googleError.message && googleError.message.includes("audio quality")) {
         console.error(`[API:${requestId}] Poor audio quality error: ${googleError.message}`);
-        throw new Error('Audio quality issue detected. Try: 1) Converting to 16kHz mono WAV, 2) Reducing background noise, 3) Ensuring clear speech in the recording.');
+        throw new Error('Audio quality issue detected. Try: 1) Converting to mono WAV, 2) Reducing background noise, 3) Ensuring clear speech in the recording.');
       }
       
       // Log detailed error info
@@ -197,7 +216,7 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
     
     // Check if the request was aborted
     if (axiosError.code === 'ECONNABORTED' || axiosError.message.includes('timeout')) {
-      throw new Error('Request to Google API timed out. Try processing a smaller audio segment.');
+      throw new Error('Request to Google API timed out. The system will automatically retry with smaller audio segments.');
     }
     
     // Re-throw with more details

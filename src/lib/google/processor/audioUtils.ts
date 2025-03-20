@@ -30,14 +30,31 @@ export const processAudioContent = async (
     
     // For WAV (LINEAR16) files, detect sample rate from header
     if (encoding === 'LINEAR16') {
-      const detectedSampleRate = detectSampleRateFromWav(rawBuffer);
-      if (detectedSampleRate) {
-        actualSampleRate = detectedSampleRate;
-        console.log(`[AUDIO] Detected sample rate from WAV header: ${actualSampleRate}Hz`);
-      } else {
-        console.warn('[AUDIO] Could not detect sample rate from WAV header, will let Google detect it');
-        // Set encoding to undefined to let Google detect it
+      try {
+        const detectedSampleRate = detectSampleRateFromWav(rawBuffer);
+        if (detectedSampleRate) {
+          actualSampleRate = detectedSampleRate;
+          console.log(`[AUDIO] Detected sample rate from WAV header: ${actualSampleRate}Hz`);
+          
+          // Verify if detected sample rate is reasonable
+          const validSampleRates = [8000, 16000, 22050, 24000, 32000, 44100, 48000];
+          if (!validSampleRates.includes(actualSampleRate)) {
+            console.warn(`[AUDIO] Unusual sample rate detected: ${actualSampleRate}Hz. Will let Google auto-detect.`);
+            actualEncoding = 'AUTO';
+          }
+        } else {
+          console.warn('[AUDIO] Could not detect sample rate from WAV header, will let Google detect it');
+          // Set encoding to undefined to let Google detect it
+          actualEncoding = 'AUTO';
+        }
+      } catch (wavParseError) {
+        console.warn('[AUDIO] Error parsing WAV header:', wavParseError);
         actualEncoding = 'AUTO';
+      }
+      
+      // For WAV files, also check if stereo and warn
+      if (isStereoWav(rawBuffer)) {
+        console.warn('[AUDIO] Stereo WAV detected. Google prefers mono audio. Will continue but consider converting to mono.');
       }
     }
     
@@ -64,6 +81,30 @@ export const processAudioContent = async (
   
   return { base64Audio, actualSampleRate, actualEncoding };
 };
+
+/**
+ * Detects if a WAV file is stereo from its header
+ * @param {ArrayBuffer} buffer - WAV file buffer
+ * @returns {boolean} - Whether the WAV is stereo
+ */
+function isStereoWav(buffer: ArrayBuffer): boolean {
+  try {
+    // WAV header should be at least 44 bytes
+    if (buffer.byteLength < 44) {
+      return false;
+    }
+    
+    const view = new DataView(buffer);
+    
+    // Extract number of channels (bytes 22-23)
+    const numChannels = view.getUint16(22, true);
+    
+    return numChannels > 1;
+  } catch (error) {
+    console.error('[AUDIO] Error checking WAV channels:', error);
+    return false;
+  }
+}
 
 /**
  * Verifies WAV header to ensure it's properly formatted
@@ -118,12 +159,6 @@ function verifyWavHeader(buffer: ArrayBuffer): boolean {
     console.error('[VERIFY] Error checking WAV header:', error);
     return false;
   }
-}
-
-// Helper function to get standard sample rate based on encoding
-function getStandardSampleRate(encoding: string): number {
-  // Always return 16000 Hz regardless of encoding
-  return TARGET_SAMPLE_RATE;
 }
 
 // Determines if direct upload should be used based on file characteristics

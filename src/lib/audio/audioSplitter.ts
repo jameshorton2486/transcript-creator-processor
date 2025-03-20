@@ -14,7 +14,7 @@ import { createAudioBufferFromChunk } from './audioBufferUtils';
  */
 export const splitAudioBuffer = (
   audioBuffer: AudioBuffer, 
-  optimalDuration: number = 60
+  optimalDuration: number = 15 // Default to 15 seconds for better compatibility
 ): Float32Array[] => {
   try {
     console.log(`[SPLIT] Splitting audio buffer into chunks of ~${optimalDuration}s`);
@@ -27,9 +27,26 @@ export const splitAudioBuffer = (
     // Log details for debugging
     console.log(`[SPLIT] Audio details: ${numberOfChannels} channels, ${sampleRate}Hz, ${audioBuffer.length} samples (${(audioBuffer.length / sampleRate).toFixed(1)}s)`);
     
-    // For now, use only the first channel for mono processing
+    // For stereo files (more than 1 channel), mix down to mono
     // This ensures compatibility with Google Speech API
-    const audioData = audioBuffer.getChannelData(0);
+    let audioData: Float32Array;
+    
+    if (numberOfChannels > 1) {
+      console.log(`[SPLIT] Converting ${numberOfChannels} channels to mono (mixed down)`);
+      // Mix all channels down to mono
+      audioData = new Float32Array(audioBuffer.length);
+      for (let i = 0; i < audioBuffer.length; i++) {
+        let sum = 0;
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          sum += audioBuffer.getChannelData(channel)[i];
+        }
+        // Average the samples across all channels
+        audioData[i] = sum / numberOfChannels;
+      }
+    } else {
+      // Single channel, just use it directly
+      audioData = audioBuffer.getChannelData(0);
+    }
     
     // Calculate number of chunks needed
     const numChunks = Math.ceil(audioData.length / samplesPerChunk);
@@ -87,8 +104,13 @@ export const splitAudioIntoChunks = async (
       // Decode the audio file
       const audioBuffer = await decodeAudioFile(file);
       
-      // Get the split chunks
-      console.log(`[SPLIT] Successfully decoded audio, splitting into ~${optimalDuration}s chunks`);
+      // Analyze audio quality
+      const isStereo = audioBuffer.numberOfChannels > 1;
+      const sampleRate = audioBuffer.sampleRate;
+      
+      console.log(`[SPLIT] Audio analysis: ${isStereo ? 'Stereo' : 'Mono'}, ${sampleRate}Hz, ${(audioBuffer.duration).toFixed(1)}s`);
+      
+      // Get the split chunks with shorter duration for more reliable processing
       const audioChunks = splitAudioBuffer(audioBuffer, optimalDuration);
       
       // Convert Float32Array chunks back to blobs
@@ -101,7 +123,7 @@ export const splitAudioIntoChunks = async (
         audioChunkBlobs.push(blob);
       }
       
-      console.log(`[SPLIT] Successfully split audio into ${audioChunkBlobs.length} chunks`);
+      console.log(`[SPLIT] Successfully split audio into ${audioChunkBlobs.length} chunks (${isStereo ? 'converted to mono' : 'kept as mono'})`);
       return audioChunkBlobs;
     } catch (decodeError) {
       console.warn('[SPLIT] Error decoding audio, returning original file:', decodeError);

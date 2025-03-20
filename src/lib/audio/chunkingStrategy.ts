@@ -23,11 +23,11 @@ export const determineOptimalChunking = async (
     return { shouldChunk: false, optimalDuration: 0 };
   }
   
-  // More aggressive chunking strategy - for any file over 0.5MB, use much smaller chunks
+  // More aggressive chunking strategy - much smaller chunks for all files
   // to avoid "exceeds duration limit" errors with Google's Speech API
   const baseChunkDuration = Math.min(
-    MAX_CHUNK_DURATION_SECONDS,
-    // Use 10 second chunks for files under 4MB, 5 seconds for larger files
+    MAX_CHUNK_DURATION_SECONDS, 
+    // Use even shorter chunks (5-10 sec) for more reliable processing
     fileSizeMB < 4 ? 10 : 5
   );
   
@@ -50,7 +50,8 @@ export const determineOptimalChunking = async (
 export const shouldSplitFile = (file: File): boolean => {
   const fileSizeMB = file.size / (1024 * 1024);
   
-  // Always split files larger than 0.5MB to avoid Google API duration limits
+  // Almost always split files to avoid Google API duration limits
+  // Only very small files (<0.5MB) can be processed directly
   if (fileSizeMB > 0.5) {
     return true;
   }

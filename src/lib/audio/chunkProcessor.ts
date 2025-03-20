@@ -9,7 +9,7 @@ import { encodeWavFile } from './wavEncoder';
  * Maximum duration for a single chunk in seconds (reduced to avoid Google's "exceeds duration limit" error)
  * Google recommends a maximum of 60 seconds for synchronous requests, but we'll use an even more conservative limit
  */
-export const MAX_CHUNK_DURATION_SECONDS = 15; // Even more conservative limit than before
+export const MAX_CHUNK_DURATION_SECONDS = 15; // Reduced from previous value to a more conservative 15 seconds
 
 /**
  * Safely wraps a promise to ensure it properly handles cancellation
@@ -110,6 +110,11 @@ export const processAudioChunk = async (
     // Verify WAV blob is valid
     if (!wavBlob || wavBlob.size === 0) {
       throw new Error('Failed to encode WAV file from audio chunk');
+    }
+    
+    // Additional validation - verify WAV has proper headers
+    if (wavBlob.size < 44) { // WAV header is at least 44 bytes
+      throw new Error('Generated WAV file appears to be corrupted (invalid header size)');
     }
     
     console.log(`[CHUNK] Successfully processed chunk ${index+1}/${total} (${chunkDurationSeconds.toFixed(1)}s, ${(wavBlob.size / 1024).toFixed(1)}KB)`);

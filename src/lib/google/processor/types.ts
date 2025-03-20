@@ -19,6 +19,16 @@ export interface TranscriptionConfig {
     phrases: string[];
     boost: number;
   }[];
+  // Added fields for audio quality improvement
+  audioChannelCount?: number;
+  enableSeparateRecognitionPerChannel?: boolean;
+  profanityFilter?: boolean;
+  adaptation?: {
+    phraseSets?: Array<{
+      phrases: string[];
+      boost: number;
+    }>;
+  };
 }
 
 export interface TranscriptionOptions {
@@ -34,5 +44,9 @@ export interface TranscriptionOptions {
   enableWordTimeOffsets?: boolean;
   enableWordConfidence?: boolean;
   customTerms?: string[];
+  // Added fields for audio quality handling
+  audioChannelCount?: number;
+  enableSeparateRecognitionPerChannel?: boolean;
+  profanityFilter?: boolean;
   [key: string]: any; // Allow for additional properties
 }
