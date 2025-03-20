@@ -1,5 +1,5 @@
 
-import { WhisperTranscriber } from "@/components/WhisperTranscriber";
+import { AssemblyAITranscriber } from "@/components/AssemblyAITranscriber";
 import { TranscriptProcessor } from "@/components/TranscriptProcessor";
 import { TranscriptReviewer } from "@/components/TranscriptReviewer";
 import { ClearTranscriptButton } from "@/components/transcript/ClearTranscriptButton";
@@ -29,7 +29,7 @@ export const TranscriptControls = ({
   
   return (
     <div className="h-full flex flex-col space-y-6">
-      <WhisperTranscriber 
+      <AssemblyAITranscriber 
         onTranscriptCreated={onTranscriptCreated} 
       />
       
