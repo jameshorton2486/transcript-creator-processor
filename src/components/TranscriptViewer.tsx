@@ -1,8 +1,9 @@
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useRef, useEffect, useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Copy, Download, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Clipboard, Download, Check } from "lucide-react";
 
 interface TranscriptViewerProps {
   text: string;
@@ -10,148 +11,147 @@ interface TranscriptViewerProps {
 }
 
 export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptViewerProps) => {
-  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("formatted");
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Enhanced formatted transcript with better speaker label highlighting
+  const formattedText = useMemo(() => formatTranscript(text), [text]);
+  
+  // Reset copied state after 2 seconds
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (copied) {
+      timer = setTimeout(() => setCopied(false), 2000);
+    }
+    return () => clearTimeout(timer);
+  }, [copied]);
 
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: "Copied to clipboard",
-        description: "The transcript has been copied to your clipboard.",
-      });
-    } catch (err) {
-      console.error("Failed to copy:", err);
-      toast({
-        title: "Copy failed",
-        description: "Could not copy to clipboard. Please try again.",
-        variant: "destructive",
-      });
+  // Function to copy transcript text to clipboard
+  const copyToClipboard = () => {
+    if (textAreaRef.current) {
+      navigator.clipboard.writeText(activeTab === "raw" ? text : formattedText)
+        .then(() => setCopied(true))
+        .catch(err => console.error('Failed to copy: ', err));
     }
   };
 
+  // Function to download transcript as a text file
   const downloadTranscript = () => {
-    try {
-      const element = document.createElement("a");
-      const file = new Blob([text], { type: "text/plain" });
-      element.href = URL.createObjectURL(file);
-      element.download = `${fileName}.txt`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      
-      toast({
-        title: "Download started",
-        description: "The transcript is being downloaded to your device.",
-      });
-    } catch (err) {
-      console.error("Failed to download:", err);
-      toast({
-        title: "Download failed",
-        description: "Could not download the transcript. Please try again.",
-        variant: "destructive",
-      });
-    }
+    const element = document.createElement("a");
+    const fileToDownload = activeTab === "raw" ? text : formattedText;
+    const file = new Blob([fileToDownload], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = `${fileName}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
-  // Function to format the transcript for better display
-  const formatTranscript = (text: string) => {
-    if (!text) return "No text available";
+  // Helper function to enhance transcript formatting especially for speaker labels
+  function formatTranscript(text: string): string {
+    if (!text) return "";
     
-    // Remove duplicate lines that often occur in raw transcripts
-    const lines = text.split('\n');
-    const uniqueLines: string[] = [];
-    let prevContent = '';
-    
-    for (let i = 0; i < lines.length; i++) {
-      const currentLine = lines[i].trim();
+    // Apply special formatting to speaker labels
+    return text
+      // Style standard speaker format (Speaker 1:)
+      .replace(/^(Speaker \d+:)/gm, match => `\n${match}`)
       
-      // Skip empty lines and duplicate content
-      if (currentLine && currentLine !== prevContent) {
-        uniqueLines.push(currentLine);
-        prevContent = currentLine;
-      }
-    }
-    
-    let cleanedText = uniqueLines.join('\n');
-    
-    // Format common legal transcript patterns
-    cleanedText = cleanedText
-      // Format standard legal case citations
-      .replace(/([A-Za-z]+)\s+v\.?\s+([A-Za-z]+)/g, '<span class="font-semibold">$1 v. $2</span>')
+      // Style legal transcript format (THE COURT:, WITNESS:, etc.)
+      .replace(/^([A-Z][A-Z\s']+:)/gm, match => `\n${match}`)
       
-      // Format legal statute references
-      .replace(/(\d+)\s+U\.S\.C\.\s+§\s+(\d+)/gi, '<span class="font-semibold">$1 U.S.C. § $2</span>')
+      // Style Q&A format
+      .replace(/^(Q|A):\s/gm, match => `\n${match}`)
       
-      // Format case numbers
-      .replace(/case\s+no\.\s+([A-Za-z0-9\-]+)/gi, 'Case No. <span class="font-semibold">$1</span>')
+      // Ensure proper spacing after speaker changes
+      .replace(/(Speaker \d+:|[A-Z][A-Z\s']+:)(\s*)/g, '$1\n    ')
       
-      // Format docket numbers
-      .replace(/docket\s+no\.\s+([A-Za-z0-9\-]+)/gi, 'Docket No. <span class="font-semibold">$1</span>')
-      
-      // Format exhibit references
-      .replace(/exhibit\s+([A-Za-z0-9\-]+)/gi, 'Exhibit <span class="font-semibold">$1</span>');
-    
-    // Identify and format speaker labels with different colors for each speaker
-    const speakerRegex = /(Speaker \d+:|THE COURT:|[A-Z][A-Z\s']+(?:'S COUNSEL|COUNSEL)?:)/g;
-    
-    // Get all unique speakers
-    const speakers = Array.from(new Set(cleanedText.match(speakerRegex) || []));
-    const colors = ['text-blue-600', 'text-green-600', 'text-purple-600', 'text-red-600', 'text-amber-600'];
-    
-    // Replace each speaker with a colored version
-    speakers.forEach((speaker, index) => {
-      const colorClass = colors[index % colors.length];
-      const escapedSpeaker = speaker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      cleanedText = cleanedText.replace(
-        new RegExp(`(${escapedSpeaker})`, 'g'),
-        `<span class="font-bold ${colorClass}">$1</span>`
-      );
-    });
-    
-    // Add proper line breaks and indentation for readability
-    cleanedText = cleanedText
-      // Add paragraph breaks after consecutive sentences
-      .replace(/(\.)(\s*)([A-Z])/g, '$1<br />$3')
-      // Add indentation after speaker labels
-      .replace(/(class="font-bold [^"]+">.*?:)(\s*)/g, '$1</span><br /><span class="pl-4">');
-    
-    return cleanedText;
-  };
+      // Clean up any excessive newlines
+      .replace(/\n{3,}/g, '\n\n');
+  }
+
+  if (!text) {
+    return (
+      <Card className="h-full">
+        <CardContent className="p-6 flex items-center justify-center h-full">
+          <div className="text-center text-slate-500">
+            No transcript available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="border rounded-md h-full flex flex-col">
-      <div className="flex justify-between items-center p-3 border-b bg-slate-50">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-slate-500" />
-          <h3 className="font-medium text-slate-700">Transcript</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadTranscript}
-            className="flex items-center gap-1"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+    <Card className="h-full flex flex-col">
+      <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList>
+            <TabsTrigger value="formatted">Formatted</TabsTrigger>
+            <TabsTrigger value="raw">Raw Text</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
             onClick={copyToClipboard}
             className="flex items-center gap-1"
           >
-            <Copy className="h-3.5 w-3.5" />
-            Copy
+            {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={downloadTranscript}
+            className="flex items-center gap-1"
+          >
+            <Download className="h-4 w-4" />
+            Download
           </Button>
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4 min-h-[600px]">
-        <div 
-          className="whitespace-pre-wrap font-mono text-sm text-slate-800 leading-relaxed text-left"
-          dangerouslySetInnerHTML={{ __html: formatTranscript(text) }}
-        />
-      </ScrollArea>
-    </div>
+      
+      <CardContent className="p-0 flex-1 overflow-auto">
+        <TabsContent value="formatted" className="m-0 h-full">
+          <div className="prose max-w-none p-6 h-full">
+            {formattedText.split('\n').map((line, i) => {
+              // Apply special styling to speaker labels
+              if (/^(Speaker \d+:|[A-Z][A-Z\s']+:)/.test(line)) {
+                return (
+                  <div key={i} className="mt-4 font-semibold">
+                    {line}
+                  </div>
+                );
+              } 
+              // Apply special styling to Q&A format
+              else if (/^(Q|A):/.test(line)) {
+                return (
+                  <div key={i} className="mt-3 font-semibold">
+                    {line}
+                  </div>
+                );
+              }
+              // Regular text
+              else {
+                return <p key={i} className="my-1">{line}</p>;
+              }
+            })}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="raw" className="m-0 h-full">
+          <textarea
+            ref={textAreaRef}
+            className="w-full h-full p-6 text-sm font-mono border-0 focus:outline-none focus:ring-0 resize-none"
+            value={text}
+            readOnly
+          />
+        </TabsContent>
+      </CardContent>
+    </Card>
   );
 };

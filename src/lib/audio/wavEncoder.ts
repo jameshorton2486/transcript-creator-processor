@@ -1,84 +1,51 @@
 
-/**
- * WAV encoding utilities
- */
-import { writeString } from './wavUtils';
+// Functions for WAV encoding/decoding
 
 /**
- * Encodes an AudioBuffer to a WAV file
- * @param {AudioBuffer} audioBuffer - Audio buffer to encode
- * @returns {Blob} WAV file as a Blob
+ * Convert a Float32Array to a WAV file blob
+ * This is used for processing audio chunks
  */
-export const encodeWavFile = (audioBuffer: AudioBuffer): Blob => {
-  try {
-    // Get the number of samples and sample rate
-    const length = audioBuffer.length;
-    const sampleRate = audioBuffer.sampleRate;
-    
-    // Create the WAV file container
-    const buffer = new ArrayBuffer(44 + length * 2); // 44 bytes header + 2 bytes per sample
-    const view = new DataView(buffer);
-    
-    // Write WAV header
-    // "RIFF" chunk descriptor
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + length * 2, true);
-    writeString(view, 8, 'WAVE');
-    
-    // "fmt " sub-chunk
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true); // subchunk1 size
-    view.setUint16(20, 1, true); // PCM format
-    view.setUint16(22, 1, true); // Mono - 1 channel
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true); // byte rate (sampleRate * 1 channel * 2 bytes per sample)
-    view.setUint16(32, 2, true); // block align (1 channel * 2 bytes per sample)
-    view.setUint16(34, 16, true); // bits per sample
-    
-    // "data" sub-chunk
-    writeString(view, 36, 'data');
-    view.setUint32(40, length * 2, true);
-    
-    // Write audio data
-    const dataView = new DataView(buffer, 44);
-    const channelData = audioBuffer.getChannelData(0);
-    
-    // Convert to 16-bit samples
-    for (let i = 0; i < length; i++) {
-      // Convert float32 (-1 to 1) to int16 (-32768 to 32767)
-      const sample = Math.max(-1, Math.min(1, channelData[i]));
-      const value = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-      dataView.setInt16(i * 2, value, true);
-    }
-    
-    return new Blob([buffer], { type: 'audio/wav' });
-  } catch (error) {
-    console.error('[CONVERT] Error encoding WAV file:', error);
-    throw error;
-  }
-};
+export function float32ArrayToWav(samples: Float32Array, sampleRate: number): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
 
-/**
- * Converts a Float32Array to a WAV file blob
- * @param {Float32Array} samples - Float32Array of audio samples
- * @param {number} sampleRate - Sample rate of the audio
- * @returns {Blob} WAV file as a Blob
- */
-export const float32ArrayToWav = (samples: Float32Array, sampleRate: number): Blob => {
-  try {
-    // Create a new audio context
-    const audioContext = new AudioContext();
-    
-    // Create a new AudioBuffer
-    const buffer = audioContext.createBuffer(1, samples.length, sampleRate);
-    
-    // Copy the samples into the buffer
-    buffer.getChannelData(0).set(samples);
-    
-    // Encode the AudioBuffer to WAV
-    return encodeWavFile(buffer);
-  } catch (error) {
-    console.error('[CONVERT] Error converting Float32Array to WAV:', error);
-    throw error;
+  // Write WAV header
+  // "RIFF" chunk descriptor
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(view, 8, 'WAVE');
+  
+  // "fmt " sub-chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);               // Subchunk1Size (16 for PCM)
+  view.setUint16(20, 1, true);                // AudioFormat (1 for PCM)
+  view.setUint16(22, 1, true);                // NumChannels (1 for mono)
+  view.setUint32(24, sampleRate, true);       // SampleRate
+  view.setUint32(28, sampleRate * 2, true);   // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+  view.setUint16(32, 2, true);                // BlockAlign (NumChannels * BitsPerSample/8)
+  view.setUint16(34, 16, true);               // BitsPerSample (16 bits)
+  
+  // "data" sub-chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  
+  // Write audio data
+  floatTo16BitPCM(view, 44, samples);
+  
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+// Helper function to write a string to a DataView
+function writeString(view: DataView, offset: number, string: string): void {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
   }
-};
+}
+
+// Helper function to convert Float32 samples to 16-bit PCM
+function floatTo16BitPCM(output: DataView, offset: number, input: Float32Array): void {
+  for (let i = 0; i < input.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+}
