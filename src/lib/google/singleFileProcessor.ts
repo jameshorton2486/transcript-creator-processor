@@ -168,11 +168,12 @@ export const transcribeSingleFile = async (
     const fileName = fileToProcess instanceof File ? fileToProcess.name.toLowerCase() : '';
     const fileType = fileToProcess.type.toLowerCase();
     
-    // Default to LINEAR16 for WAV files, detect otherwise
-    let encoding = 'LINEAR16';
+    // Default to AUTO for WAV files, detect otherwise
+    let encoding = 'AUTO'; // Changed default to AUTO
     
     if (fileName.endsWith('.wav') || fileType.includes('wav')) {
-      encoding = 'LINEAR16';
+      encoding = 'AUTO'; // Always use AUTO for WAV files
+      console.log(`[TRANSCRIBE:${requestId}] WAV file detected, using AUTO encoding to let Google determine parameters`);
     } else if (fileName.endsWith('.mp3') || fileType.includes('mp3')) {
       encoding = 'MP3';
     } else if (fileName.endsWith('.flac') || fileType.includes('flac')) {
@@ -187,11 +188,21 @@ export const transcribeSingleFile = async (
       // If unable to determine from name/type, try audio validation
       const detected = detectAudioEncoding(file as File);
       encoding = detected.encoding;
+      
+      // If it's LINEAR16 (WAV), still use AUTO
+      if (encoding === 'LINEAR16') {
+        encoding = 'AUTO';
+      }
     }
     
     // Override with explicit encoding from options if provided
     if (options.encoding) {
-      encoding = options.encoding;
+      // But still force AUTO for LINEAR16 (WAV) files
+      if (options.encoding === 'LINEAR16') {
+        encoding = 'AUTO';
+      } else {
+        encoding = options.encoding;
+      }
     }
     
     console.info(`[TRANSCRIBE:${requestId}] Using encoding: ${encoding}`);
@@ -207,7 +218,7 @@ export const transcribeSingleFile = async (
     console.log(`[TRANSCRIBE:${requestId}] Read file as ArrayBuffer: ${(audioArrayBuffer.byteLength / 1024).toFixed(1)}KB`);
     
     // If this is a WAV file, verify the header
-    if ((fileName.endsWith('.wav') || fileType.includes('wav')) && encoding === 'LINEAR16') {
+    if ((fileName.endsWith('.wav') || fileType.includes('wav'))) {
       const isValidWav = verifyWavHeader(audioArrayBuffer);
       if (!isValidWav) {
         console.warn(`[TRANSCRIBE:${requestId}] WARNING: WAV file has invalid header`);
@@ -232,8 +243,12 @@ export const transcribeSingleFile = async (
       customTerms: [...(options.customTerms || []), ...legalTerms]
     };
     
-    // NEVER include sample rate - let Google API detect it automatically
-    console.info(`[TRANSCRIBE:${requestId}] Omitting sample rate to allow Google API to detect it automatically`);
+    // NEVER include sample rate for WAV files - let Google API detect it automatically
+    if (encoding === 'AUTO' || encoding === 'LINEAR16' || 
+        fileName.endsWith('.wav') || fileType.includes('wav')) {
+      delete transcriptionOptions.sampleRateHertz;
+      console.info(`[TRANSCRIBE:${requestId}] Omitting sample rate to allow Google API to detect it automatically from WAV header`);
+    }
     
     console.log(`[TRANSCRIBE:${requestId}] Sending request to Google Speech API with encoding ${encoding}`);
     

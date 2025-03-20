@@ -35,6 +35,7 @@ export const sendTranscriptionRequest = async (
       // For WAV files, always let Google detect the sample rate from the header
       if (actualEncoding === 'LINEAR16') {
         delete finalOptions.sampleRateHertz;
+        console.log(`[API:${requestId}] WAV format detected, omitting sampleRateHertz to use file header value`);
       }
     } else if (actualEncoding === 'AUTO') {
       // If set to AUTO, remove encoding and sampleRateHertz to let Google detect it
@@ -47,6 +48,7 @@ export const sendTranscriptionRequest = async (
       // For WAV files, always let Google detect the sample rate from the header
       if (options.encoding === 'LINEAR16') {
         delete finalOptions.sampleRateHertz;
+        console.log(`[API:${requestId}] WAV format detected, omitting sampleRateHertz to use file header value`);
       }
     }
     
