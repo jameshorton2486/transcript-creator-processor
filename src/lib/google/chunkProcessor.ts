@@ -1,4 +1,3 @@
-
 import { DEFAULT_TRANSCRIPTION_OPTIONS, TranscriptionOptions } from '../config';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { float32ArrayToWav } from '../audio';

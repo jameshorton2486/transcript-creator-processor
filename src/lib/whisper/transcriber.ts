@@ -1,4 +1,3 @@
-
 /**
  * Client-side transcription using Whisper.js via the Hugging Face Transformers.js library
  */
@@ -73,12 +72,12 @@ export const loadWhisperModel = async (
         modelName,
         {
           progress_callback: (progressInfo: any) => {
-            const progressPercent = Math.round((progressInfo?.progress || 0) * 90);
+            // Handle progress updates safely with optional chaining
+            const progressPercent = Math.round(((progressInfo as any)?.progress || 0) * 90);
             onProgress?.(5 + progressPercent);
             console.log(`[WHISPER] Model loading progress: ${progressPercent}%`);
           },
           revision: 'main',
-          quantized: true, // Use quantized model for smaller size
           device: device,
         }
       );
@@ -241,8 +240,8 @@ const determineOptimalDevice = async (): Promise<'cpu' | 'webgpu'> => {
   // Check for WebGPU support (fastest)
   if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
     try {
-      // @ts-ignore - TypeScript doesn't know about navigator.gpu yet
-      const adapter = await navigator.gpu?.requestAdapter();
+      // Use type assertion to handle the gpu property
+      const adapter = await (navigator as any).gpu?.requestAdapter();
       if (adapter) {
         console.log('[WHISPER] WebGPU support detected');
         return 'webgpu';

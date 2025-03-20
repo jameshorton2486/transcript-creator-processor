@@ -15,6 +15,7 @@ import { useTranscription } from "@/hooks/useTranscription";
 import { useState, useEffect } from "react";
 import { estimateMemoryRequirements } from "@/lib/google/audio/fileChunker";
 import { MAX_CHUNK_DURATION_SECONDS } from "@/lib/audio/chunkProcessor";
+import { TranscriptionOptions } from "@/lib/config";
 
 // Increased file size threshold to 200MB
 const LARGE_FILE_THRESHOLD = 200 * 1024 * 1024;
@@ -77,6 +78,11 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     }
   }, [file]);
 
+  // Create a wrapper function to handle type compatibility
+  const handleOptionsChange = (newOptions: TranscriptionOptions) => {
+    setOptions(newOptions as any);
+  };
+
   return (
     <Card className="bg-white">
       <CardHeader className="pb-2">
@@ -122,7 +128,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         
         <TranscriptionOptionsSelector 
           options={options}
-          onOptionsChange={setOptions}
+          onOptionsChange={handleOptionsChange}
         />
         
         <TranscribeButton 
@@ -138,3 +144,4 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     </Card>
   );
 };
+
