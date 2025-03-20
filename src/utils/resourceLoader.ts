@@ -48,27 +48,55 @@ const isValidScriptUrl = (url: string): boolean => {
 };
 
 /**
- * Preloads a resource only when needed
+ * Preloads a resource only when it will be used immediately
+ * Modified to avoid "preloaded but not used" console warnings
  * 
  * @param url The URL of the resource to preload
  * @param type The type of resource (e.g., 'script', 'style', 'image')
  * @param immediate Whether to load immediately or when browser is idle
+ * @param ttl Time-to-live in ms before removing the preload if unused (default: 3000ms)
  */
-export const preloadResource = (url: string, type: string, immediate = false): void => {
+export const preloadResource = (
+  url: string, 
+  type: string, 
+  immediate = false, 
+  ttl = 3000
+): void => {
   const preload = () => {
+    // Check if the resource is already loaded or preloaded
+    const existingLinks = document.querySelectorAll(`link[href="${url}"]`);
+    if (existingLinks.length > 0) {
+      console.debug(`Resource already preloaded: ${url}`);
+      return;
+    }
+    
     const link = document.createElement('link');
     link.rel = 'preload';
     link.href = url;
     link.as = type;
     
+    // Add crossorigin attribute for fonts
+    if (type === 'font') {
+      link.setAttribute('crossorigin', 'anonymous');
+    }
+    
     document.head.appendChild(link);
     
-    // Set a timeout to check if the resource was used
+    // Remove the preload link if the resource isn't used within the TTL
+    // This helps prevent "preloaded but not used" console warnings
     setTimeout(() => {
-      // This is a simple way to monitor if the resource was used
-      // In a production app, you might want more sophisticated tracking
-      console.debug(`Preloaded resource: ${url}`);
-    }, 5000);
+      // Check if the resource has been used
+      const isResourceUsed = type === 'script' 
+        ? document.querySelector(`script[src="${url}"]`) !== null
+        : type === 'style'
+          ? document.querySelector(`link[rel="stylesheet"][href="${url}"]`) !== null
+          : false;
+          
+      if (!isResourceUsed) {
+        console.debug(`Removing unused preload for: ${url}`);
+        document.head.removeChild(link);
+      }
+    }, ttl);
   };
   
   if (immediate) {
