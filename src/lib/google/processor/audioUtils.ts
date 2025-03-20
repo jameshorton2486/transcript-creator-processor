@@ -12,6 +12,7 @@ export const processAudioContent = async (
   console.log(`Processing audio content, direct upload: ${useDirectUpload}, encoding: ${encoding}`);
   
   let base64Audio;
+  let actualEncoding = encoding;
   
   try {
     // Get original audio buffer
@@ -27,7 +28,12 @@ export const processAudioContent = async (
     
     // For WAV (LINEAR16) files, verify the header is valid
     if (encoding === 'LINEAR16') {
-      verifyWavHeader(rawBuffer);
+      const isValidWav = verifyWavHeader(rawBuffer);
+      if (!isValidWav) {
+        console.warn('[AUDIO] WAV header validation failed, will omit encoding in request');
+        // Set encoding to undefined to let Google detect it
+        actualEncoding = 'AUTO';
+      }
     }
     
     // Convert buffer to base64
@@ -39,7 +45,7 @@ export const processAudioContent = async (
       throw new Error('Base64 conversion failed or produced invalid output');
     }
     
-    console.log(`[AUDIO] Successfully processed audio: encoding=${encoding}, base64 length=${base64Audio.length}`);
+    console.log(`[AUDIO] Successfully processed audio: encoding=${actualEncoding}, base64 length=${base64Audio.length}`);
   } catch (error) {
     console.error("[AUDIO] Error processing audio:", error);
     
@@ -47,9 +53,10 @@ export const processAudioContent = async (
     console.log("[AUDIO] Using direct upload as fallback");
     const rawBuffer = await file.arrayBuffer();
     base64Audio = await arrayBufferToBase64(rawBuffer);
+    actualEncoding = 'AUTO'; // Let Google auto-detect on failure
   }
   
-  return { base64Audio, actualSampleRate: TARGET_SAMPLE_RATE };
+  return { base64Audio, actualSampleRate: TARGET_SAMPLE_RATE, actualEncoding };
 };
 
 /**

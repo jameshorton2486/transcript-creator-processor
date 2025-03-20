@@ -21,12 +21,16 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
 
   // Create the configuration object
   const config: TranscriptionConfig = {
-    encoding,
     languageCode,
     enableAutomaticPunctuation,
     model,
     useEnhanced,
   };
+  
+  // Only set encoding if it's not LINEAR16 (WAV), as Google prefers to detect from header
+  if (encoding !== 'LINEAR16') {
+    config.encoding = encoding;
+  }
   
   // Explicitly set sampleRateHertz for LINEAR16 (WAV) files to avoid detection issues
   if (encoding === 'LINEAR16') {

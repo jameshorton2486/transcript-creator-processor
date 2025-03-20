@@ -75,70 +75,100 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     console.log(`Transcription options:`, options);
     console.log(`Custom terms: ${customTerms.length} terms provided`);
     
-    try {
-      // First, verify the API key is valid
-      const isKeyValid = await safePromise(testApiKey(apiKey));
-      if (!isKeyValid) {
-        throw new Error("API key is invalid or unauthorized");
-      }
-      
-      const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
-      
-      if (isLargeFile) {
+    // Auto-retry logic for encoding issues
+    let autoRetryAttempted = false;
+    
+    const attemptTranscription = async (retryWithAutoDetect = false) => {
+      try {
+        // First, verify the API key is valid
+        const isKeyValid = await safePromise(testApiKey(apiKey));
+        if (!isKeyValid) {
+          throw new Error("API key is invalid or unauthorized");
+        }
+        
+        const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
+        
+        if (isLargeFile) {
+          toast({
+            title: "Processing large file",
+            description: "Your file will be processed in batches. This may take several minutes.",
+          });
+          setState(prev => ({ ...prev, isBatchProcessing: true }));
+          console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)} MB) - using batch processing`);
+        }
+        
+        console.log(`Starting transcription for file: ${file.name} (${file.type})`);
+        
+        if (customTerms.length > 0) {
+          console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
+        }
+        
+        // If retrying with auto-detect, modify the options
+        const transcriptionOptions = retryWithAutoDetect 
+          ? { ...options, encoding: 'AUTO' }
+          : options;
+        
+        // Use safePromise to handle potential promise errors
+        const response = await safePromise(
+          transcribeAudio(
+            file, 
+            apiKey, 
+            transcriptionOptions, 
+            isLargeFile ? (progress) => setState(prev => ({ ...prev, progress })) : undefined,
+            customTerms
+          )
+        );
+        
+        console.log("Transcription response received:", response);
+        
+        // Enhanced validation of the transcript
+        const transcriptText = validateTranscript(response);
+        
+        onTranscriptCreated(transcriptText, response);
         toast({
-          title: "Processing large file",
-          description: "Your file will be processed in batches. This may take several minutes.",
+          title: "Transcription complete",
+          description: "The audio has been successfully transcribed.",
         });
-        setState(prev => ({ ...prev, isBatchProcessing: true }));
-        console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)} MB) - using batch processing`);
+        
+        // Log successful completion
+        console.log("Transcription completed successfully");
+        console.log(`Transcript length: ${transcriptText.length} characters`);
+      } catch (error: any) {
+        console.error("Transcription error:", error);
+        
+        // Detect encoding error and auto-retry
+        if (!autoRetryAttempted && 
+            error.message && 
+            (error.message.includes("Encoding in RecognitionConfig") || 
+             error.message.includes("encoding mismatch"))) {
+          
+          console.log("Encoding issue detected, automatically retrying with auto-detection");
+          toast({
+            title: "Retrying transcription",
+            description: "Encoding issue detected. Automatically retrying with auto-detection.",
+          });
+          
+          autoRetryAttempted = true;
+          return await attemptTranscription(true);
+        }
+        
+        // Enhanced error logging with context
+        const errorContext = createErrorContext(file, options, customTerms, error);
+        console.error("Detailed error context:", errorContext);
+        
+        const errorMessage = formatErrorMessage(error);
+        
+        setState(prev => ({ ...prev, error: errorMessage }));
+        toast({
+          title: "Transcription failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
-      
-      console.log(`Starting transcription for file: ${file.name} (${file.type})`);
-      
-      if (customTerms.length > 0) {
-        console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
-      }
-      
-      // Use safePromise to handle potential promise errors
-      const response = await safePromise(
-        transcribeAudio(
-          file, 
-          apiKey, 
-          options, 
-          isLargeFile ? (progress) => setState(prev => ({ ...prev, progress })) : undefined,
-          customTerms
-        )
-      );
-      
-      console.log("Transcription response received:", response);
-      
-      // Enhanced validation of the transcript
-      const transcriptText = validateTranscript(response);
-      
-      onTranscriptCreated(transcriptText, response);
-      toast({
-        title: "Transcription complete",
-        description: "The audio has been successfully transcribed.",
-      });
-      
-      // Log successful completion
-      console.log("Transcription completed successfully");
-      console.log(`Transcript length: ${transcriptText.length} characters`);
-    } catch (error: any) {
-      console.error("Transcription error:", error);
-      
-      // Enhanced error logging with context
-      const errorContext = createErrorContext(file, options, customTerms, error);
-      console.error("Detailed error context:", errorContext);
-      
-      const errorMessage = formatErrorMessage(error);
-      
-      setState(prev => ({ ...prev, error: errorMessage }));
-      toast({
-        title: "Transcription failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    };
+    
+    try {
+      await attemptTranscription();
     } finally {
       setState(prev => ({
         ...prev,

@@ -15,7 +15,8 @@ import { pollOperationStatus } from './operationPoller';
 export const sendTranscriptionRequest = async (
   apiKey: string, 
   audioContent: string, 
-  options: TranscriptionOptions
+  options: TranscriptionOptions,
+  actualEncoding?: string
 ) => {
   // Generate a request ID for logging
   const requestId = Math.random().toString(36).substring(2, 15);
@@ -24,7 +25,19 @@ export const sendTranscriptionRequest = async (
   try {
     // Validate inputs
     validateApiRequest(apiKey, audioContent);
-    validateEncoding(options.encoding);
+    
+    // If actualEncoding is provided (and not AUTO), use it instead of the options encoding
+    const finalOptions = { ...options };
+    if (actualEncoding && actualEncoding !== 'AUTO') {
+      validateEncoding(actualEncoding);
+      finalOptions.encoding = actualEncoding;
+    } else if (actualEncoding === 'AUTO') {
+      // If set to AUTO, remove encoding to let Google detect it
+      delete finalOptions.encoding;
+      console.log(`[API:${requestId}] Auto-detecting encoding from audio content`);
+    } else {
+      validateEncoding(options.encoding);
+    }
     
     // Verify audio content seems valid
     if (audioContent.length < 1000) {
@@ -33,7 +46,7 @@ export const sendTranscriptionRequest = async (
     }
     
     // Build the configuration object
-    const config = buildRequestConfig(options);
+    const config = buildRequestConfig(finalOptions);
     
     // Log custom terms
     const customTerms = options.customTerms || [];
@@ -45,7 +58,7 @@ export const sendTranscriptionRequest = async (
     const payloadSizeMB = (audioContent.length * 0.75 / 1024 / 1024).toFixed(2); // Convert base64 length to bytes, then to MB
     
     console.info(`[API:${requestId}] [${new Date().toISOString()}] Request config:`, {
-      encoding: options.encoding,
+      encoding: finalOptions.encoding || 'AUTO-DETECT',
       sampleRateHertz: config.sampleRateHertz || 'Omitted (using file header value)',
       languageCode: options.languageCode || 'en-US',
       model: config.model,
@@ -86,6 +99,12 @@ export const sendTranscriptionRequest = async (
       if (error.response.data?.error?.message?.includes('audio quality')) {
         console.error(`[API:${requestId}] Poor audio quality detected. Providing detailed troubleshooting.`);
         throw new Error('Google API reports poor audio quality. Try: 1) Converting audio to 16-bit WAV mono, 2) Ensuring clear speech with minimal background noise, 3) Using a smaller audio segment for testing.');
+      }
+      
+      // Handle specific encoding errors
+      if (error.response.data?.error?.message?.includes('Encoding in RecognitionConfig')) {
+        console.error(`[API:${requestId}] Encoding mismatch detected. Will retry with auto-detection.`);
+        throw new Error('Google API detected encoding mismatch. The application will automatically retry with auto-detection.');
       }
     }
     
@@ -157,6 +176,12 @@ async function executeTranscriptionRequest(apiKey: string, requestId: string, ap
       if (googleError.message && googleError.message.includes("exceeds duration limit")) {
         console.error(`[API:${requestId}] Google API duration limit error: ${googleError.message}`);
         throw new Error(`Google API error: ${googleError.message}`);
+      }
+      
+      // Special handling for encoding errors
+      if (googleError.message && googleError.message.includes("Encoding in RecognitionConfig must")) {
+        console.error(`[API:${requestId}] Encoding mismatch error: ${googleError.message}`);
+        throw new Error('Encoding mismatch detected. Try uploading a different format or let the application handle encoding automatically.');
       }
       
       // Handle poor audio quality errors with more specific guidance
