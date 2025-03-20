@@ -16,6 +16,7 @@ interface TranscriptionOptions {
   enableWordTimeOffsets?: boolean;
   enableWordConfidence?: boolean;
   customTerms?: string[];
+  sampleRateHertz?: number; // Added this missing property
   [key: string]: any; 
 }
 
@@ -246,7 +247,9 @@ export const transcribeSingleFile = async (
     // NEVER include sample rate for WAV files - let Google API detect it automatically
     if (encoding === 'AUTO' || encoding === 'LINEAR16' || 
         fileName.endsWith('.wav') || fileType.includes('wav')) {
-      delete transcriptionOptions.sampleRateHertz;
+      if (transcriptionOptions.sampleRateHertz) {
+        delete transcriptionOptions.sampleRateHertz;
+      }
       console.info(`[TRANSCRIBE:${requestId}] Omitting sample rate to allow Google API to detect it automatically from WAV header`);
     }
     

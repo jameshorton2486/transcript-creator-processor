@@ -4,7 +4,7 @@
  */
 import { pipeline, env } from '@huggingface/transformers';
 
-// Configure transformers.js to use WebGPU if available (faster) or fall back to WebGL/WASM
+// Configure transformers.js to use cache and allow local models
 env.useBrowserCache = true;
 env.allowLocalModels = false;
 
@@ -72,8 +72,8 @@ export const loadWhisperModel = async (
         'automatic-speech-recognition',
         modelName,
         {
-          progress_callback: (progress) => {
-            const progressPercent = Math.round((progress.progress || 0) * 90);
+          progress_callback: (progressInfo: any) => {
+            const progressPercent = Math.round((progressInfo?.progress || 0) * 90);
             onProgress?.(5 + progressPercent);
             console.log(`[WHISPER] Model loading progress: ${progressPercent}%`);
           },
@@ -159,8 +159,8 @@ export const transcribeAudio = async (
         chunk_length_s: 30, // Process in 30-second chunks
         stride_length_s: 5, // 5-second overlap for better continuity
         return_timestamps: true, // Get word timestamps
-        progress_callback: (progress: any) => {
-          const percent = 50 + Math.round((progress.progress || 0) * 50);
+        callback_function: (progressInfo: any) => {
+          const percent = 50 + Math.round((progressInfo?.progress || 0) * 50);
           onProgress(percent);
           console.log(`[WHISPER] Transcription progress: ${percent}%`);
         },
@@ -237,27 +237,18 @@ export const getAvailableModels = () => {
 /**
  * Determines the best device to use for inference
  */
-const determineOptimalDevice = async (): Promise<'cpu' | 'webgl' | 'webgpu'> => {
+const determineOptimalDevice = async (): Promise<'cpu' | 'webgpu'> => {
   // Check for WebGPU support (fastest)
-  if (navigator.gpu) {
+  if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
     try {
-      const adapter = await navigator.gpu.requestAdapter();
+      // @ts-ignore - TypeScript doesn't know about navigator.gpu yet
+      const adapter = await navigator.gpu?.requestAdapter();
       if (adapter) {
         console.log('[WHISPER] WebGPU support detected');
         return 'webgpu';
       }
     } catch (e) {
       console.warn('[WHISPER] WebGPU available but failed to initialize');
-    }
-  }
-  
-  // Check for WebGL support (fallback)
-  if (window.WebGLRenderingContext) {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl) {
-      console.log('[WHISPER] WebGL support detected');
-      return 'webgl';
     }
   }
   
