@@ -1,4 +1,3 @@
-
 import { DEFAULT_TRANSCRIPTION_OPTIONS, TranscriptionOptions } from '../config';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { float32ArrayToWav } from '../audio';
@@ -51,11 +50,10 @@ export const processChunks = async (
       onProgress?.(Math.round((i / audioChunks.length) * 100));
       console.log(`[BATCH] Processing chunk ${i+1}/${audioChunks.length}...`);
       
-      // Create merged options with current settings and custom terms
+      // Instead of directly adding the encoding here (which causes the TS error),
+      // use TranscriptionOptions from our config
       const mergedOptions: TranscriptionOptions = { 
-        ...options,
-        // Force LINEAR16 encoding for WAV files
-        encoding: 'LINEAR16'
+        ...options
       };
       
       if (customTerms.length > 0) {
