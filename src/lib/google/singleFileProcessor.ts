@@ -1,3 +1,4 @@
+
 import { sendTranscriptionRequest } from './processor/apiRequest';
 import { isValidAudioFile, detectAudioEncoding } from './audio/audioValidation';
 import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
@@ -34,6 +35,61 @@ const readFileAsArrayBuffer = async (file: File | Blob): Promise<ArrayBuffer> =>
 };
 
 /**
+ * Verifies WAV header information to ensure it's properly formatted
+ * @param {ArrayBuffer} buffer - WAV file buffer
+ * @returns {boolean} - Whether the WAV header is valid
+ */
+const verifyWavHeader = (buffer: ArrayBuffer): boolean => {
+  try {
+    // WAV header should be at least 44 bytes
+    if (buffer.byteLength < 44) {
+      console.warn('[VERIFY] WAV buffer too small to contain a valid header');
+      return false;
+    }
+    
+    const view = new DataView(buffer);
+    
+    // Check "RIFF" signature (first 4 bytes)
+    const riff = String.fromCharCode(
+      view.getUint8(0), view.getUint8(1), 
+      view.getUint8(2), view.getUint8(3)
+    );
+    
+    // Check "WAVE" format (bytes 8-11)
+    const wave = String.fromCharCode(
+      view.getUint8(8), view.getUint8(9), 
+      view.getUint8(10), view.getUint8(11)
+    );
+    
+    // Check "fmt " subchunk (bytes 12-15)
+    const fmt = String.fromCharCode(
+      view.getUint8(12), view.getUint8(13), 
+      view.getUint8(14), view.getUint8(15)
+    );
+    
+    if (riff !== 'RIFF' || wave !== 'WAVE' || fmt !== 'fmt ') {
+      console.warn(`[VERIFY] Invalid WAV header: RIFF=${riff}, WAVE=${wave}, fmt=${fmt}`);
+      return false;
+    }
+    
+    // Extract sample rate (bytes 24-27)
+    const sampleRate = view.getUint32(24, true);
+    
+    // Extract number of channels (bytes 22-23)
+    const numChannels = view.getUint16(22, true);
+    
+    // Extract bits per sample (bytes 34-35)
+    const bitsPerSample = view.getUint16(34, true);
+    
+    console.log(`[VERIFY] WAV header valid: ${sampleRate}Hz, ${numChannels} channel(s), ${bitsPerSample} bits`);
+    return true;
+  } catch (error) {
+    console.error('[VERIFY] Error checking WAV header:', error);
+    return false;
+  }
+};
+
+/**
  * Attempts to pre-process audio file for better compatibility
  */
 const preprocessAudioFile = async (file: File): Promise<File> => {
@@ -46,6 +102,15 @@ const preprocessAudioFile = async (file: File): Promise<File> => {
     // If the file is WAV, ensure it's properly normalized (mono, correct sample rate)
     if (normalizedFile.type.includes('wav') || normalizedFile.name.toLowerCase().endsWith('.wav')) {
       console.log('[PREPROCESS] Normalizing WAV file');
+      
+      // Read the file to verify WAV header
+      const arrayBuffer = await normalizedFile.arrayBuffer();
+      const isValidWav = verifyWavHeader(arrayBuffer);
+      
+      if (!isValidWav) {
+        console.warn('[PREPROCESS] WAV header invalid, attempting full normalization');
+      }
+      
       return await normalizeWavFile(normalizedFile);
     }
     
@@ -69,8 +134,11 @@ export const transcribeSingleFile = async (
   options: TranscriptionOptions = {}
 ) => {
   try {
+    // Generate a unique ID for this request for logging
+    const requestId = Math.random().toString(36).substring(2, 10);
+    
     // Log file details
-    console.info(`Processing file: ${(file as File).name || 'unnamed blob'}, type: ${file.type}, size: ${file.size} bytes`);
+    console.info(`[TRANSCRIBE:${requestId}] Processing file: ${(file as File).name || 'unnamed blob'}, type: ${file.type}, size: ${(file.size / 1024).toFixed(1)}KB`);
     
     // Validate file is a supported audio type
     if (file instanceof File && !isValidAudioFile(file)) {
@@ -82,23 +150,51 @@ export const transcribeSingleFile = async (
     // Attempt to preprocess the file if it's a File (not a Blob)
     if (file instanceof File) {
       try {
-        console.log('[PROCESSING] Attempting to preprocess audio file for better compatibility');
+        console.log(`[TRANSCRIBE:${requestId}] Attempting to preprocess audio file for better compatibility`);
         fileToProcess = await preprocessAudioFile(file);
         
         if (fileToProcess !== file) {
-          console.log('[PROCESSING] File was successfully preprocessed');
+          console.log(`[TRANSCRIBE:${requestId}] File was successfully preprocessed`);
         } else {
-          console.log('[PROCESSING] File preprocessing skipped, using original file');
+          console.log(`[TRANSCRIBE:${requestId}] File preprocessing skipped, using original file`);
         }
       } catch (preprocessError) {
-        console.warn('[PROCESSING] Error during preprocessing, falling back to original file:', preprocessError);
+        console.warn(`[TRANSCRIBE:${requestId}] Error during preprocessing, falling back to original file:`, preprocessError);
         fileToProcess = file; // Fall back to original file
       }
     }
     
     // Determine encoding based on file type
-    const { encoding } = file instanceof File ? detectAudioEncoding(file as File) : { encoding: options.encoding || 'LINEAR16' };
-    console.info(`[PROCESSING] Detected encoding: ${encoding}`);
+    const fileName = fileToProcess instanceof File ? fileToProcess.name.toLowerCase() : '';
+    const fileType = fileToProcess.type.toLowerCase();
+    
+    // Default to LINEAR16 for WAV files, detect otherwise
+    let encoding = 'LINEAR16';
+    
+    if (fileName.endsWith('.wav') || fileType.includes('wav')) {
+      encoding = 'LINEAR16';
+    } else if (fileName.endsWith('.mp3') || fileType.includes('mp3')) {
+      encoding = 'MP3';
+    } else if (fileName.endsWith('.flac') || fileType.includes('flac')) {
+      encoding = 'FLAC';
+    } else if (fileName.endsWith('.ogg') || fileType.includes('ogg')) {
+      encoding = 'OGG_OPUS';
+    } else if (fileName.endsWith('.amr') || fileType.includes('amr')) {
+      encoding = 'AMR';
+    } else if (fileName.endsWith('.webm') || fileType.includes('webm')) {
+      encoding = 'WEBM_OPUS';
+    } else if (file instanceof File) {
+      // If unable to determine from name/type, try audio validation
+      const detected = detectAudioEncoding(file as File);
+      encoding = detected.encoding;
+    }
+    
+    // Override with explicit encoding from options if provided
+    if (options.encoding) {
+      encoding = options.encoding;
+    }
+    
+    console.info(`[TRANSCRIBE:${requestId}] Using encoding: ${encoding}`);
     
     // Read the file content as ArrayBuffer for processing
     const audioArrayBuffer = await readFileAsArrayBuffer(fileToProcess);
@@ -108,9 +204,19 @@ export const transcribeSingleFile = async (
       throw new Error('The audio file is empty or could not be read.');
     }
     
+    console.log(`[TRANSCRIBE:${requestId}] Read file as ArrayBuffer: ${(audioArrayBuffer.byteLength / 1024).toFixed(1)}KB`);
+    
+    // If this is a WAV file, verify the header
+    if ((fileName.endsWith('.wav') || fileType.includes('wav')) && encoding === 'LINEAR16') {
+      const isValidWav = verifyWavHeader(audioArrayBuffer);
+      if (!isValidWav) {
+        console.warn(`[TRANSCRIBE:${requestId}] WARNING: WAV file has invalid header`);
+      }
+    }
+    
     // Convert to base64 for API request
     const audioBase64 = await arrayBufferToBase64(audioArrayBuffer);
-    console.info('[PROCESSING] Successfully encoded audio to base64, ready for transmission');
+    console.info(`[TRANSCRIBE:${requestId}] Successfully encoded audio to base64, ready for transmission`);
     
     // Create custom terms list for legal vocabulary
     const legalTerms = [
@@ -119,29 +225,27 @@ export const transcribeSingleFile = async (
       'stipulation', 'pursuant to'
     ];
     
-    if (legalTerms.length > 0) {
-      console.info(`[PROCESSING] Added ${legalTerms.length} common legal terms to speech context`);
-    }
-    
     // Prepare transcription options with custom terms
     const transcriptionOptions = {
-      encoding: encoding, // Use the detected encoding
+      encoding: encoding,
       ...options,
       customTerms: [...(options.customTerms || []), ...legalTerms]
     };
     
-    // We never want to include sample rate - let Google API detect it automatically
-    console.info('[PROCESSING] Omitting sample rate to allow Google API to use the one from audio header');
+    // NEVER include sample rate - let Google API detect it automatically
+    console.info(`[TRANSCRIBE:${requestId}] Omitting sample rate to allow Google API to detect it automatically`);
     
-    console.log('[PROCESSING] Sending request to Google Speech API');
+    console.log(`[TRANSCRIBE:${requestId}] Sending request to Google Speech API with encoding ${encoding}`);
     
     // Send the request to Google's Speech-to-Text API
     const response = await sendTranscriptionRequest(apiKey, audioBase64, transcriptionOptions);
     
     if (!response.results || response.results.length === 0) {
-      console.warn('[PROCESSING] Google API returned empty results. This may mean no speech was detected.');
+      console.warn(`[TRANSCRIBE:${requestId}] Google API returned empty results. This may mean no speech was detected.`);
       throw new Error('No speech was detected in the audio file. The file may be silent or contain background noise only.');
     }
+    
+    console.log(`[TRANSCRIBE:${requestId}] Successfully received transcription results with ${response.results.length} segments`);
     
     return response;
   } catch (error) {

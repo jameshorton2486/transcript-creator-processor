@@ -9,7 +9,7 @@ import { encodeWavFile } from './wavEncoder';
  * Maximum duration for a single chunk in seconds (reduced to avoid Google's "exceeds duration limit" error)
  * Google recommends a maximum of 60 seconds for synchronous requests, but we'll use an even more conservative limit
  */
-export const MAX_CHUNK_DURATION_SECONDS = 20; // More conservative limit to avoid API errors
+export const MAX_CHUNK_DURATION_SECONDS = 15; // Even more conservative limit than before
 
 /**
  * Processes a single audio chunk into a WAV blob
@@ -26,23 +26,36 @@ export const processAudioChunk = async (
   total: number
 ): Promise<Blob> => {
   try {
+    // Validate chunk data
+    if (!chunk || chunk.length === 0) {
+      throw new Error('Empty audio chunk data');
+    }
+    
+    // Log chunk details for debugging
+    console.log(`[CHUNK] Processing chunk ${index+1}/${total} with ${chunk.length} samples at ${sampleRate}Hz`);
+    
     // Create a new AudioBuffer for this chunk
     const chunkBuffer = createAudioBufferFromChunk(chunk, sampleRate);
     
     // Check if chunk duration exceeds Google's limit
     const chunkDurationSeconds = chunkBuffer.duration;
     if (chunkDurationSeconds > MAX_CHUNK_DURATION_SECONDS) {
-      console.warn(`[SPLIT] Warning: Chunk ${index+1}/${total} exceeds Google's duration limit (${chunkDurationSeconds.toFixed(1)}s > ${MAX_CHUNK_DURATION_SECONDS}s). This may cause API errors.`);
+      console.warn(`[CHUNK] Warning: Chunk ${index+1}/${total} exceeds Google's duration limit (${chunkDurationSeconds.toFixed(1)}s > ${MAX_CHUNK_DURATION_SECONDS}s). This may cause API errors.`);
     }
     
     // Convert to WAV for better compatibility
     const wavBlob = encodeWavFile(chunkBuffer);
     
-    console.log(`[SPLIT] Processed chunk ${index+1}/${total} (${chunkDurationSeconds.toFixed(1)}s)`);
+    // Verify WAV blob is valid
+    if (!wavBlob || wavBlob.size === 0) {
+      throw new Error('Failed to encode WAV file from audio chunk');
+    }
+    
+    console.log(`[CHUNK] Successfully processed chunk ${index+1}/${total} (${chunkDurationSeconds.toFixed(1)}s, ${(wavBlob.size / 1024).toFixed(1)}KB)`);
     
     return wavBlob;
   } catch (error) {
-    console.error(`[SPLIT] Error processing chunk ${index+1}/${total}:`, error);
+    console.error(`[CHUNK] Error processing chunk ${index+1}/${total}:`, error);
     throw new Error(`Failed to process audio chunk ${index+1}: ${error instanceof Error ? error.message : String(error)}`);
   }
 };

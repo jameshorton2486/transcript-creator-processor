@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { TranscriptionConfig, TranscriptionOptions } from './types';
 import { validateApiRequest, validateEncoding, getDetailedErrorMessage } from './requestValidator';
@@ -114,7 +115,7 @@ export const sendTranscriptionRequest = async (
       },
     };
     
-    // Use the appropriate API endpoint - ALWAYS use longrunningrecognize now
+    // ALWAYS use longrunningrecognize now for better reliability
     const apiEndpoint = 'speech:longrunningrecognize';
     
     console.log(`[API:${requestId}] Using API endpoint: ${apiEndpoint} for ${payloadSizeMB}MB payload`);
@@ -195,7 +196,7 @@ export const sendTranscriptionRequest = async (
 };
 
 /**
- * Polls for the status of a long-running operation
+ * Polls for the status of a long-running operation with improved retry logic
  * @param {string} apiKey - Google API key
  * @param {string} operationName - The operation name to poll
  * @param {string} requestId - Request ID for logging
