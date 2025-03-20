@@ -1,3 +1,4 @@
+
 import { DEFAULT_TRANSCRIPTION_OPTIONS, TranscriptionOptions } from '../config';
 import { transcribeSingleFile } from './singleFileProcessor';
 import { float32ArrayToWav } from '../audio';
@@ -50,10 +51,10 @@ export const processChunks = async (
       onProgress?.(Math.round((i / audioChunks.length) * 100));
       console.log(`[BATCH] Processing chunk ${i+1}/${audioChunks.length}...`);
       
-      // Instead of directly adding the encoding here (which causes the TS error),
-      // use TranscriptionOptions from our config
+      // Create a merged options object with the correct sample rate for the chunk
       const mergedOptions: TranscriptionOptions = { 
-        ...options
+        ...options,
+        sampleRateHertz: sampleRate  // Pass the actual sample rate used when creating the WAV
       };
       
       if (customTerms.length > 0) {
@@ -61,7 +62,7 @@ export const processChunks = async (
       }
       
       // Process this chunk with explicit error handling
-      console.log(`[BATCH] Sending chunk ${i+1} to transcribeSingleFile`);
+      console.log(`[BATCH] Sending chunk ${i+1} to transcribeSingleFile with sample rate ${sampleRate}Hz`);
       const chunkResult = await transcribeSingleFile(chunkFile, apiKey, mergedOptions);
       
       // If we get here, the chunk was processed successfully
@@ -147,7 +148,11 @@ export const processExtremelyLargeFile = async (
         console.log(`[LARGE] Created chunk file ${i+1}/${totalChunks}: ${(chunkBlob.size / 1024).toFixed(1)}KB`);
         
         // Transcribe this chunk with full error logging
-        const mergedOptions: TranscriptionOptions = { ...options };
+        const mergedOptions: TranscriptionOptions = { 
+          ...options,
+          // Don't set sampleRateHertz and let Google detect it for direct file slices
+        };
+        
         if (customTerms.length > 0) {
           mergedOptions.customTerms = customTerms;
         }

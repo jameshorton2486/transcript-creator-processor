@@ -29,10 +29,10 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     useEnhanced,
   };
   
-  // Only set encoding if it's not LINEAR16 (WAV), as Google prefers to detect from header
-  if (encoding === 'LINEAR16') {
-    // For LINEAR16 (WAV), we'll still set the encoding but also add sample rate
-    config.sampleRateHertz = 16000; // Standard rate for speech recognition
+  // For LINEAR16 (WAV), don't set sampleRateHertz to let Google detect it from the header
+  // Only set sampleRateHertz for other encodings or if explicitly provided in options
+  if (encoding !== 'LINEAR16' && options.sampleRateHertz) {
+    config.sampleRateHertz = options.sampleRateHertz;
   }
   
   // Add diarization if enabled

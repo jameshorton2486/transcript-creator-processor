@@ -2,6 +2,7 @@
 // Constants for audio processing
 const TARGET_SAMPLE_RATE = 16000; // 16kHz for Google Speech API
 import { arrayBufferToBase64 } from '@/lib/audio/base64Converter';
+import { detectSampleRateFromWav } from '../audio/formatDetection';
 
 // Processes audio content for API request
 export const processAudioContent = async (
@@ -13,6 +14,7 @@ export const processAudioContent = async (
   
   let base64Audio;
   let actualEncoding = encoding;
+  let actualSampleRate = null;
   
   try {
     // Get original audio buffer
@@ -26,11 +28,14 @@ export const processAudioContent = async (
     // Log audio file details for debugging
     console.log(`[AUDIO] Processing ${file.name} (${file.type}), size: ${(file.size / 1024).toFixed(1)}KB`);
     
-    // For WAV (LINEAR16) files, verify the header is valid
+    // For WAV (LINEAR16) files, detect sample rate from header
     if (encoding === 'LINEAR16') {
-      const isValidWav = verifyWavHeader(rawBuffer);
-      if (!isValidWav) {
-        console.warn('[AUDIO] WAV header validation failed, will omit encoding in request');
+      const detectedSampleRate = detectSampleRateFromWav(rawBuffer);
+      if (detectedSampleRate) {
+        actualSampleRate = detectedSampleRate;
+        console.log(`[AUDIO] Detected sample rate from WAV header: ${actualSampleRate}Hz`);
+      } else {
+        console.warn('[AUDIO] Could not detect sample rate from WAV header, will let Google detect it');
         // Set encoding to undefined to let Google detect it
         actualEncoding = 'AUTO';
       }
@@ -45,7 +50,7 @@ export const processAudioContent = async (
       throw new Error('Base64 conversion failed or produced invalid output');
     }
     
-    console.log(`[AUDIO] Successfully processed audio: encoding=${actualEncoding}, base64 length=${base64Audio.length}`);
+    console.log(`[AUDIO] Successfully processed audio: encoding=${actualEncoding}, sample rate=${actualSampleRate || 'auto-detect'}, base64 length=${base64Audio.length}`);
   } catch (error) {
     console.error("[AUDIO] Error processing audio:", error);
     
@@ -54,9 +59,10 @@ export const processAudioContent = async (
     const rawBuffer = await file.arrayBuffer();
     base64Audio = await arrayBufferToBase64(rawBuffer);
     actualEncoding = 'AUTO'; // Let Google auto-detect on failure
+    actualSampleRate = null;
   }
   
-  return { base64Audio, actualSampleRate: TARGET_SAMPLE_RATE, actualEncoding };
+  return { base64Audio, actualSampleRate, actualEncoding };
 };
 
 /**
