@@ -19,8 +19,10 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     customTerms = [],
   } = options;
 
-  // Create the configuration object
+  // Create the configuration object with required encoding property
+  // Default to LINEAR16 if not provided
   const config: TranscriptionConfig = {
+    encoding: encoding || 'LINEAR16', // Set a default value to satisfy the TypeScript requirement
     languageCode,
     enableAutomaticPunctuation,
     model,
@@ -28,12 +30,8 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
   };
   
   // Only set encoding if it's not LINEAR16 (WAV), as Google prefers to detect from header
-  if (encoding !== 'LINEAR16') {
-    config.encoding = encoding;
-  }
-  
-  // Explicitly set sampleRateHertz for LINEAR16 (WAV) files to avoid detection issues
   if (encoding === 'LINEAR16') {
+    // For LINEAR16 (WAV), we'll still set the encoding but also add sample rate
     config.sampleRateHertz = 16000; // Standard rate for speech recognition
   }
   
