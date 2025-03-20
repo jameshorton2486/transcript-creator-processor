@@ -23,15 +23,18 @@ export const determineOptimalChunking = async (
     return { shouldChunk: false, optimalDuration: 0 };
   }
   
-  // More aggressive chunking strategy - much smaller chunks for all files
-  // to avoid "exceeds duration limit" errors with Google's Speech API
+  // Check if it's a WAV file (special handling for sample rate issues)
+  const isWavFile = file.type.includes('wav') || file.name.toLowerCase().endsWith('.wav');
+  
+  // More aggressive chunking strategy for WAV files to avoid sample rate issues
+  // and for all files to avoid "exceeds duration limit" errors with Google's Speech API
   const baseChunkDuration = Math.min(
     MAX_CHUNK_DURATION_SECONDS, 
-    // Use even shorter chunks (5-10 sec) for more reliable processing
-    fileSizeMB < 4 ? 10 : 5
+    // Use even shorter chunks for WAV files and large files
+    isWavFile || fileSizeMB > 4 ? 5 : 10
   );
   
-  console.log(`[SPLIT] Using aggressive chunking with ${baseChunkDuration}s chunks`);
+  console.log(`[SPLIT] Using chunking with ${baseChunkDuration}s chunks for ${isWavFile ? 'WAV' : 'non-WAV'} file`);
   
   // For audio formats we can't decode easily, return the original file
   if (!/^(audio|video)/.test(file.type) && !file.name.match(/\.(wav|mp3|flac|ogg|m4a|webm)$/i)) {

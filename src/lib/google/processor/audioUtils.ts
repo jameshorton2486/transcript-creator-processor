@@ -28,25 +28,17 @@ export const processAudioContent = async (
     // Log audio file details for debugging
     console.log(`[AUDIO] Processing ${file.name} (${file.type}), size: ${(file.size / 1024).toFixed(1)}KB`);
     
-    // For WAV (LINEAR16) files, detect sample rate from header
+    // For WAV (LINEAR16) files, we will NEVER send sampleRateHertz
     if (encoding === 'LINEAR16') {
       try {
         const detectedSampleRate = detectSampleRateFromWav(rawBuffer);
         if (detectedSampleRate) {
           actualSampleRate = detectedSampleRate;
           console.log(`[AUDIO] Detected sample rate from WAV header: ${actualSampleRate}Hz`);
-          
-          // Verify if detected sample rate is reasonable
-          const validSampleRates = [8000, 16000, 22050, 24000, 32000, 44100, 48000];
-          if (!validSampleRates.includes(actualSampleRate)) {
-            console.warn(`[AUDIO] Unusual sample rate detected: ${actualSampleRate}Hz. Will let Google auto-detect.`);
-            actualEncoding = 'AUTO';
-          }
-        } else {
-          console.warn('[AUDIO] Could not detect sample rate from WAV header, will let Google detect it');
-          // Set encoding to undefined to let Google detect it
-          actualEncoding = 'AUTO';
+          console.log(`[AUDIO] For WAV files, letting Google detect sample rate automatically`);
         }
+        // For WAV files, explicitly set encoding to AUTO to let Google detect everything
+        actualEncoding = 'AUTO';
       } catch (wavParseError) {
         console.warn('[AUDIO] Error parsing WAV header:', wavParseError);
         actualEncoding = 'AUTO';
@@ -169,10 +161,14 @@ export const shouldUseDirectUpload = (
   const encoding = detectAudioEncoding(file);
   console.log(`Detected encoding: ${encoding}`);
   
+  // For WAV files, always process with auto-detection to avoid sample rate issues
+  const isWavFile = encoding === "LINEAR16";
+  
   // For FLAC files, we might want to use direct upload
-  // but for others, we'll process them to ensure correct sample rate
-  const useDirectUpload = skipBrowserDecoding && encoding === "FLAC";
-  return { encoding, useDirectUpload };
+  // but for WAV files, always use auto-detection
+  const useDirectUpload = skipBrowserDecoding && !isWavFile && encoding === "FLAC";
+  
+  return { encoding: isWavFile ? "AUTO" : encoding, useDirectUpload };
 };
 
 // Function to detect audio encoding based on file type

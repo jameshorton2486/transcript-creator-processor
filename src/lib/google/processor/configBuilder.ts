@@ -1,3 +1,4 @@
+
 import { TranscriptionConfig, TranscriptionOptions } from './types';
 
 /**
@@ -28,20 +29,10 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     useEnhanced,
   };
   
-  // For LINEAR16 (WAV), don't set sampleRateHertz to let Google detect it from the header
-  // Only set sampleRateHertz for other encodings or if explicitly provided in options
+  // For LINEAR16 (WAV), NEVER set sampleRateHertz to let Google detect it from the header
+  // Only set sampleRateHertz for other encodings
   if (encoding !== 'LINEAR16' && options.sampleRateHertz) {
     config.sampleRateHertz = options.sampleRateHertz;
-  } else if (encoding === 'LINEAR16' && options.sampleRateHertz) {
-    // For LINEAR16, only set sample rate if we're 100% sure it's correct
-    // Otherwise, let Google detect it from the WAV header
-    if (options.sampleRateHertz === 8000 || 
-        options.sampleRateHertz === 16000 || 
-        options.sampleRateHertz === 22050 || 
-        options.sampleRateHertz === 44100 || 
-        options.sampleRateHertz === 48000) {
-      config.sampleRateHertz = options.sampleRateHertz;
-    }
   }
   
   // Add diarization if enabled
