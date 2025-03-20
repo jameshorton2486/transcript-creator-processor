@@ -23,9 +23,6 @@ export const determineOptimalChunking = async (
     return { shouldChunk: false, optimalDuration: 0 };
   }
   
-  // Estimate audio duration based on file size (rough estimate: 16-bit mono at 16kHz = ~32KB per second)
-  const estimatedDurationSec = file.size / (32 * 1024);
-  
   // More aggressive chunking strategy - for any file over 0.5MB, use much smaller chunks
   // to avoid "exceeds duration limit" errors with Google's Speech API
   const baseChunkDuration = Math.min(

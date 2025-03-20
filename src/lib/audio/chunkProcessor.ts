@@ -6,10 +6,10 @@ import { createAudioBufferFromChunk } from './audioBufferUtils';
 import { encodeWavFile } from './wavEncoder';
 
 /**
- * Maximum duration for a single chunk in seconds (to avoid Google's "exceeds duration limit" error)
- * Google recommends a maximum of 60 seconds for synchronous requests, but we'll use a much lower limit
+ * Maximum duration for a single chunk in seconds (reduced to avoid Google's "exceeds duration limit" error)
+ * Google recommends a maximum of 60 seconds for synchronous requests, but we'll use an even more conservative limit
  */
-export const MAX_CHUNK_DURATION_SECONDS = 20; // Much more conservative limit to avoid API errors
+export const MAX_CHUNK_DURATION_SECONDS = 20; // More conservative limit to avoid API errors
 
 /**
  * Processes a single audio chunk into a WAV blob

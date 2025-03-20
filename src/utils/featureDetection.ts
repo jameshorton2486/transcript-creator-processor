@@ -16,12 +16,15 @@ export const isFeatureSupported = (featureName: string): boolean => {
   }
   
   // Check if the feature is available as a permission
-  if ('permissions' in navigator) {
+  if ('permissions' in navigator && navigator.permissions) {
     try {
-      // @ts-ignore - TypeScript might not know about the permissions API
-      return navigator.permissions.query({ name: featureName })
-        .then(() => true)
-        .catch(() => false);
+      // Only query for permissions that are likely to be supported
+      if (SUPPORTED_FEATURE_POLICIES.includes(featureName)) {
+        // @ts-ignore - TypeScript might not know about the permissions API
+        return navigator.permissions.query({ name: featureName })
+          .then(() => true)
+          .catch(() => false);
+      }
     } catch {
       return false;
     }
@@ -43,6 +46,7 @@ export const getSupportedFeatures = (featureNames: string[]): string[] => {
 /**
  * Modern supported feature policies that can be used
  * Updated list of well-supported features across browsers
+ * Removed deprecated APIs: vr, ambient-light-sensor, battery
  */
 export const SUPPORTED_FEATURE_POLICIES = [
   'accelerometer',
@@ -65,3 +69,4 @@ export const SUPPORTED_FEATURE_POLICIES = [
   'web-share',
   'xr-spatial-tracking'
 ];
+
