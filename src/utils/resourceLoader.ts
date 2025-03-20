@@ -74,16 +74,23 @@ export const loadResource = (url: string, type: string): void => {
     link.href = url;
     document.head.appendChild(link);
   } else if (type === 'font') {
+    // Use font-display: swap for better performance with fonts
     const link = document.createElement('link');
-    link.rel = 'preload';
+    link.rel = 'stylesheet'; // Use stylesheet instead of preload to avoid warnings
     link.href = url;
-    link.as = 'font';
-    link.setAttribute('crossorigin', 'anonymous');
-    link.onload = () => {
-      // Convert preload to stylesheet to ensure it's used
-      link.rel = 'stylesheet';
-    };
     document.head.appendChild(link);
+    
+    // Add font-display: swap CSS if loading Google Fonts
+    if (url.includes('fonts.googleapis.com')) {
+      const style = document.createElement('style');
+      style.textContent = `
+        @font-face {
+          font-family: 'CustomFont';
+          font-display: swap;
+        }
+      `;
+      document.head.appendChild(style);
+    }
   } else if (type === 'image') {
     const img = new Image();
     img.src = url;
@@ -108,3 +115,4 @@ export const prefetchResource = (url: string): void => {
   link.href = url;
   document.head.appendChild(link);
 };
+
