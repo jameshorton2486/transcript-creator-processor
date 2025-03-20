@@ -94,6 +94,20 @@ export const loadResource = (url: string, type: string): void => {
   } else if (type === 'image') {
     const img = new Image();
     img.src = url;
+  } else if (type === 'tracking-pixel') {
+    // Handle tracking pixels correctly by creating a proper noscript iframe
+    // This avoids preload warnings as it's loaded directly without preloading
+    const noscript = document.createElement('noscript');
+    const iframe = document.createElement('iframe');
+    
+    iframe.src = url;
+    iframe.height = '1';
+    iframe.width = '1';
+    iframe.style.display = 'none';
+    iframe.style.visibility = 'hidden';
+    
+    noscript.appendChild(iframe);
+    document.body.appendChild(noscript);
   }
 };
 
@@ -116,3 +130,37 @@ export const prefetchResource = (url: string): void => {
   document.head.appendChild(link);
 };
 
+/**
+ * Correctly loads tracking pixels (like Facebook Pixel)
+ * This method ensures pixels are loaded appropriately without preload warnings
+ * 
+ * @param pixelId The ID of the tracking pixel
+ * @param type The type of pixel ('facebook', 'google', etc.)
+ */
+export const loadTrackingPixel = (pixelId: string, type: 'facebook' | 'google' | 'other'): void => {
+  if (type === 'facebook') {
+    // Create Facebook Pixel script correctly without preloading
+    const script = document.createElement('script');
+    script.innerHTML = `
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '${pixelId}');
+      fbq('track', 'PageView');
+    `;
+    document.head.appendChild(script);
+    
+    // Add noscript fallback
+    loadResource(`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`, 'tracking-pixel');
+  } else if (type === 'google') {
+    // Handle Google tracking pixel implementation
+    console.log('Google tracking pixel support would be implemented here');
+  } else {
+    console.log('Other tracking pixel types would be implemented here');
+  }
+};
