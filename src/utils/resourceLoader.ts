@@ -49,7 +49,7 @@ const isValidScriptUrl = (url: string): boolean => {
 
 /**
  * Improved resource loading function that avoids "preloaded but not used" warnings
- * Only loads resources when they're actually needed
+ * by using more appropriate loading techniques
  * 
  * @param url The URL of the resource to load
  * @param type The type of resource (e.g., 'script', 'style', 'image')
@@ -74,9 +74,9 @@ export const loadResource = (url: string, type: string): void => {
     link.href = url;
     document.head.appendChild(link);
   } else if (type === 'font') {
-    // Use font-display: swap for better performance with fonts
+    // Use stylesheet instead of preload for fonts to avoid warnings
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; // Use stylesheet instead of preload to avoid warnings
+    link.rel = 'stylesheet'; 
     link.href = url;
     document.head.appendChild(link);
     
@@ -92,11 +92,11 @@ export const loadResource = (url: string, type: string): void => {
       document.head.appendChild(style);
     }
   } else if (type === 'image') {
+    // For images, directly create an Image object instead of preloading
     const img = new Image();
     img.src = url;
   } else if (type === 'tracking-pixel') {
-    // Handle tracking pixels correctly by creating a proper noscript iframe
-    // This avoids preload warnings as it's loaded directly without preloading
+    // Create noscript iframe for tracking pixels to avoid preload warnings
     const noscript = document.createElement('noscript');
     const iframe = document.createElement('iframe');
     
@@ -139,7 +139,7 @@ export const prefetchResource = (url: string): void => {
  */
 export const loadTrackingPixel = (pixelId: string, type: 'facebook' | 'google' | 'other'): void => {
   if (type === 'facebook') {
-    // Create Facebook Pixel script correctly without preloading
+    // Create Facebook Pixel script directly instead of preloading
     const script = document.createElement('script');
     script.innerHTML = `
       !function(f,b,e,v,n,t,s)
