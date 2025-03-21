@@ -9,9 +9,6 @@ import { Label } from "@/components/ui/label";
 import { TranscriberFooter } from "@/components/audio/TranscriberFooter";
 import { useAssemblyAITranscription } from "@/hooks/useAssemblyAITranscription";
 import { Mic, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { testApiKey } from "@/lib/assemblyai";
 
 interface AssemblyAITranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
@@ -24,54 +21,17 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
     error,
     progress,
     apiKey,
+    keyStatus,
+    testingKey,
     handleFileSelected,
     transcribeAudioFile,
     setApiKey,
-    cancelTranscription
+    cancelTranscription,
+    handleTestApiKey
   } = useAssemblyAITranscription(onTranscriptCreated);
-
-  const [keyStatus, setKeyStatus] = useState<"untested" | "valid" | "invalid">("untested");
-  const [testingKey, setTestingKey] = useState(false);
-  const { toast } = useToast();
 
   // Calculate estimated file size in MB
   const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : "0";
-
-  const handleTestApiKey = async () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "No API key",
-        description: "Please enter an AssemblyAI API key to test",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setTestingKey(true);
-    setKeyStatus("untested");
-
-    try {
-      const isValid = await testApiKey(apiKey);
-      setKeyStatus(isValid ? "valid" : "invalid");
-      
-      toast({
-        title: isValid ? "API key is valid" : "API key is invalid",
-        description: isValid 
-          ? "Your AssemblyAI API key is working correctly" 
-          : "The provided API key was rejected. Please check your key and try again.",
-        variant: isValid ? "default" : "destructive",
-      });
-    } catch (error) {
-      setKeyStatus("invalid");
-      toast({
-        title: "Error testing API key",
-        description: "Could not connect to AssemblyAI API. Please check your internet connection.",
-        variant: "destructive",
-      });
-    } finally {
-      setTestingKey(false);
-    }
-  };
 
   return (
     <Card className="bg-white">
@@ -96,7 +56,7 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Enter your AssemblyAI API key"
               disabled={isLoading}
-              className="flex-1"
+              className={`flex-1 ${keyStatus === "invalid" ? "border-red-400" : ""}`}
             />
             <Button 
               variant="outline" 

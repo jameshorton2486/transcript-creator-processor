@@ -1,4 +1,3 @@
-
 /**
  * Client-side transcription using AssemblyAI's API
  */
@@ -51,6 +50,11 @@ export const transcribeAudio = async (
       onProgress = () => {},
       abortSignal
     } = options;
+    
+    // Validate API key format first to fail fast
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error('API key is required');
+    }
     
     console.log(`[ASSEMBLY] Starting transcription for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     onProgress(0);
@@ -119,6 +123,14 @@ export const transcribeAudio = async (
     
     if (errorMessage.includes('abort') || errorMessage.includes('cancel')) {
       throw new Error('Transcription was cancelled');
+    } else if (
+      errorMessage.toLowerCase().includes('authentication') || 
+      errorMessage.toLowerCase().includes('auth') || 
+      errorMessage.toLowerCase().includes('api key') || 
+      errorMessage.toLowerCase().includes('token') ||
+      errorMessage.toLowerCase().includes('unauthorized')
+    ) {
+      throw new Error('Authentication error: Your AssemblyAI API key appears to be invalid or missing');
     } else {
       throw new Error(`Failed to transcribe audio: ${errorMessage}`);
     }
@@ -223,8 +235,12 @@ const pollForTranscription = async (
         signal
       });
       
+      if (response.status === 401) {
+        throw new Error('Authentication error, API token missing/invalid');
+      }
+      
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
         throw new Error(`Polling failed: ${error.error || 'Unknown error'}`);
       }
       
