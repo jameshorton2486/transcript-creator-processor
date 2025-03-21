@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   transcribeAudio, 
@@ -28,6 +28,7 @@ export const useAssemblyAITranscription = (
   });
   
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleFileSelected = (selectedFile: File) => {
     setState(prev => ({
@@ -70,7 +71,7 @@ export const useAssemblyAITranscription = (
     }));
     
     // Create an AbortController for cancellation
-    const controller = new AbortController();
+    abortControllerRef.current = new AbortController();
     
     try {
       // Log transcription start
@@ -94,7 +95,7 @@ export const useAssemblyAITranscription = (
             progress
           }));
         },
-        abortSignal: controller.signal
+        abortSignal: abortControllerRef.current.signal
       };
       
       // Start transcription
@@ -129,6 +130,7 @@ export const useAssemblyAITranscription = (
         isLoading: false,
         progress: 0
       }));
+      abortControllerRef.current = null;
       console.log("Transcription process completed (success or error)");
     }
   };
@@ -138,10 +140,21 @@ export const useAssemblyAITranscription = (
   };
   
   const cancelTranscription = () => {
-    toast({
-      title: "Transcription cancelled",
-      description: "The transcription process was cancelled.",
-    });
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        progress: 0
+      }));
+      
+      toast({
+        title: "Transcription cancelled",
+        description: "The transcription process was cancelled.",
+      });
+    }
   };
 
   return {
