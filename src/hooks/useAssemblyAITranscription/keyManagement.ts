@@ -1,7 +1,6 @@
-
 import { AssemblyAITranscriptionHookState } from "./types";
 import { testApiKey } from "@/lib/assemblyai";
-import { UseToastReturn } from "@/hooks/use-toast";
+import { UseToastReturn } from "./toastTypes";
 
 export const loadApiKeyFromStorage = (): string => {
   return localStorage.getItem("assemblyai-api-key") || "";

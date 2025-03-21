@@ -5,7 +5,7 @@ import {
 } from "@/lib/assemblyai";
 import { formatErrorMessage } from "@/hooks/useTranscription/utils";
 import { AssemblyAITranscriptionHookState } from "./types";
-import { UseToastReturn } from "@/hooks/use-toast";
+import { UseToastReturn } from "./toastTypes";
 import { saveApiKeyToStorage } from "./keyManagement";
 
 export const handleTranscription = async (
