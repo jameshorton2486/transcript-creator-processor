@@ -108,12 +108,25 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
           ? { ...options, encoding: 'AUTO' }
           : options;
         
+        // Prepare the speech config based on our options
+        // This ensures diarization (speaker identification) is properly configured
+        const speechConfig = {
+          enableAutomaticPunctuation: transcriptionOptions.punctuate,
+          enableSpeakerDiarization: transcriptionOptions.diarize,
+          enableWordTimeOffsets: transcriptionOptions.diarize || transcriptionOptions.enableWordTimeOffsets,
+          diarizationSpeakerCount: 2, // Default to 2 speakers, can be adjusted
+          model: 'latest_long',
+          languageCode: 'en-US'
+        };
+        
+        console.log("Using speech config:", speechConfig);
+        
         // Use safePromise to handle potential promise errors
         const response = await safePromise(
           transcribeAudio(
             file, 
             apiKey, 
-            transcriptionOptions, 
+            speechConfig, 
             isLargeFile ? (progress) => setState(prev => ({ ...prev, progress })) : undefined,
             customTerms
           )

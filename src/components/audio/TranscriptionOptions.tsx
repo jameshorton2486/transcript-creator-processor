@@ -20,7 +20,8 @@ export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: Trans
       ...options, 
       diarize: checked,
       // When diarization is enabled, we need to ensure these settings are also enabled
-      enableWordTimeOffsets: checked ? true : options.enableWordTimeOffsets
+      enableWordTimeOffsets: checked ? true : options.enableWordTimeOffsets,
+      enableSpeakerDiarization: checked
     };
     
     onOptionsChange(updatedOptions);

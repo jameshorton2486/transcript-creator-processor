@@ -3,9 +3,11 @@
 export const DEFAULT_TRANSCRIPTION_OPTIONS = {
   punctuate: true,
   diarize: true,
+  paragraphs: true,
   formatParagraphs: true,
   formatNames: true,
   removeHesitations: true,
+  enableWordTimeOffsets: true,  // Always enable this for better results
 };
 
 // Transcription service options
