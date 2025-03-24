@@ -34,8 +34,12 @@ export const prepareRequest = (
     ...(config || {}),
   };
 
-  // Properly format diarization config for the Google API
+  console.log('Preparing Speech-to-Text request with config:', JSON.stringify(mergedConfig, null, 2));
+
+  // Always ensure diarization settings are properly configured when enabled
   if (mergedConfig.enableSpeakerDiarization) {
+    console.log('Speaker diarization is enabled, configuring with speaker count:', mergedConfig.diarizationSpeakerCount || 2);
+    
     // Remove the old property that Google doesn't use directly
     const { diarizationSpeakerCount, ...configWithoutDiarizationCount } = mergedConfig;
     

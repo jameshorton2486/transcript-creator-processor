@@ -19,11 +19,15 @@ export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: Trans
     const updatedOptions = {
       ...options, 
       diarize: checked,
-      // When diarization is enabled, we need to ensure these settings are also enabled
+      // When diarization is enabled, we need to ensure these API-specific settings are also enabled
       enableWordTimeOffsets: checked ? true : options.enableWordTimeOffsets,
-      enableSpeakerDiarization: checked
+      enableSpeakerDiarization: checked,
+      // Set reasonable speaker count limits when enabling diarization
+      minSpeakerCount: checked ? 2 : undefined,
+      maxSpeakerCount: checked ? 6 : undefined,
     };
     
+    console.log("Updated transcription options:", updatedOptions);
     onOptionsChange(updatedOptions);
   };
   
@@ -56,7 +60,7 @@ export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: Trans
             id="punctuate"
             checked={options.punctuate}
             onCheckedChange={(checked) => 
-              onOptionsChange({...options, punctuate: checked})
+              onOptionsChange({...options, punctuate: checked, enableAutomaticPunctuation: checked})
             }
           />
         </div>

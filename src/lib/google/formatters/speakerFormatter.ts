@@ -72,20 +72,31 @@ export function processSpeakerDiarization(results: any[]): {
     return { transcript: "No transcript available", speakerMap: {} };
   }
   
+  // Check if we have speaker diarization data
+  let hasSpeakerTags = false;
+  
   // Process all results to create a full transcript with speaker labels
-  results.forEach((result: any) => {
+  results.forEach((result: any, resultIndex: number) => {
+    console.log(`Processing result ${resultIndex + 1}/${results.length}`);
+    
     if (result.alternatives && result.alternatives.length > 0) {
       const transcript = result.alternatives[0].transcript || '';
       
-      // Log available words to see if speaker tags are present
+      // Debug: Check if there are any speaker tags in the words
       if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
         const sampleWords = result.alternatives[0].words.slice(0, 5);
-        console.log("Sample words with speaker info:", sampleWords);
+        console.log(`Sample words from result ${resultIndex + 1}:`, sampleWords);
         
-        // Debug: Check if there are any speaker tags
-        const hasSpeakerTags = result.alternatives[0].words.some((word: any) => word.speakerTag > 0);
-        if (!hasSpeakerTags) {
-          console.warn("No speaker tags found in words. Speaker diarization may not be enabled properly.");
+        // Check if there are any speaker tags
+        const resultHasSpeakerTags = result.alternatives[0].words.some((word: any) => 
+          word.speakerTag !== undefined && word.speakerTag > 0
+        );
+        
+        if (resultHasSpeakerTags) {
+          hasSpeakerTags = true;
+          console.log(`✅ Result ${resultIndex + 1} has speaker tags!`);
+        } else {
+          console.warn(`⚠️ Result ${resultIndex + 1} has NO speaker tags. Speaker diarization may not be enabled.`);
         }
         
         result.alternatives[0].words.forEach((word: any) => {
@@ -126,7 +137,7 @@ export function processSpeakerDiarization(results: any[]): {
           fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
         }
       } else {
-        console.log("No word-level information with speaker tags found, falling back to basic formatting");
+        console.log(`Result ${resultIndex + 1} has no word-level information, falling back to basic formatting`);
         
         // Enhanced detection for transcript formats
         const qaPattern = /\b(Q|A):\s/i;
@@ -150,6 +161,21 @@ export function processSpeakerDiarization(results: any[]): {
       }
     }
   });
+  
+  // If no speaker tags were found but diarization was requested, log a warning
+  if (!hasSpeakerTags) {
+    console.warn("⚠️ NO SPEAKER TAGS FOUND IN ANY RESULTS. Speaker diarization may not be properly enabled in the Google API request.");
+    console.warn("Double-check that enableSpeakerDiarization=true and diarizationConfig is properly set in the API request!");
+    
+    // If no transcript was generated due to lack of speaker tags, create a basic transcript
+    if (!fullTranscript.trim()) {
+      fullTranscript = results.map(result => 
+        result.alternatives && result.alternatives.length > 0 
+          ? `Speaker 1: ${result.alternatives[0].transcript || ''}\n\n`
+          : ''
+      ).join('').trim();
+    }
+  }
   
   console.log("Processed transcript with speakers:", fullTranscript.slice(0, 500) + "...");
   

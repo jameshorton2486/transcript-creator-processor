@@ -16,7 +16,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     documentFiles: [],
   });
   
-  const [options, setOptions] = useState(DEFAULT_TRANSCRIPTION_OPTIONS);
+  const [options, setOptions] = useState<TranscriptionOptions>(DEFAULT_TRANSCRIPTION_OPTIONS);
   const [customTerms, setCustomTerms] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -63,13 +63,21 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     setState(prev => ({ ...prev, error }));
   };
 
+  // Custom setter function to properly handle TranscriptionOptions
+  const updateOptions = (newOptions: TranscriptionOptions) => {
+    setOptions(current => ({
+      ...current,
+      ...newOptions
+    }));
+  };
+
   return {
     ...state,
     options,
     customTerms,
     handleFileSelected,
     transcribeAudioFile,
-    setOptions,
+    setOptions: updateOptions,
     setApiKey,
     setError,
     setCustomTerms,
