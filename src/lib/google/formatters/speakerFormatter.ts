@@ -64,13 +64,18 @@ export function processSpeakerDiarization(results: any[]): {
   let currentSpeaker = -1;
   let currentUtterance = '';
   
+  console.log("Processing speaker diarization with results:", results);
+  
   // Process all results to create a full transcript with speaker labels
   results.forEach((result: any) => {
     if (result.alternatives && result.alternatives.length > 0) {
       const transcript = result.alternatives[0].transcript || '';
       
-      // If speaker diarization is available
+      // Log available words to see if speaker tags are present
       if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
+        const sampleWords = result.alternatives[0].words.slice(0, 5);
+        console.log("Sample words with speaker info:", sampleWords);
+        
         result.alternatives[0].words.forEach((word: any) => {
           const speakerId = word.speakerTag || 0;
           
@@ -108,6 +113,8 @@ export function processSpeakerDiarization(results: any[]): {
           fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
         }
       } else {
+        console.log("No word-level information with speaker tags found, falling back to basic formatting");
+        
         // Enhanced detection for transcript formats
         const qaPattern = /\b(Q|A):\s/i;
         const speakerPattern = /^(Speaker \d+:|[A-Z][A-Z\s']+:)/;
@@ -130,6 +137,8 @@ export function processSpeakerDiarization(results: any[]): {
       }
     }
   });
+  
+  console.log("Processed transcript with speakers:", fullTranscript.slice(0, 500) + "...");
   
   return { transcript: fullTranscript.trim(), speakerMap };
 }

@@ -34,6 +34,15 @@ export const prepareRequest = (
     ...(config || {}),
   };
 
+  // Properly format diarization config for the Google API
+  if (mergedConfig.enableSpeakerDiarization) {
+    mergedConfig.diarizationConfig = {
+      enableSpeakerDiarization: true,
+      minSpeakerCount: 1,
+      maxSpeakerCount: mergedConfig.diarizationSpeakerCount || 2
+    };
+  }
+
   // Construct the request object
   return {
     audio: {

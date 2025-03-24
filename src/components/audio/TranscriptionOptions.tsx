@@ -27,9 +27,10 @@ export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: Trans
           <Switch
             id="diarize"
             checked={options.diarize}
-            onCheckedChange={(checked) => 
-              onOptionsChange({...options, diarize: checked})
-            }
+            onCheckedChange={(checked) => {
+              console.log("Speaker identification toggled:", checked);
+              onOptionsChange({...options, diarize: checked});
+            }}
           />
         </div>
         

@@ -25,15 +25,18 @@ export const sendTranscriptionRequest = async (
     // Convert base64 audio content to Uint8Array
     const audioBuffer = Buffer.from(audioContent, 'base64');
     
-    // Prepare the speech config
+    // Prepare the speech config with proper diarization settings
     const speechConfig = {
       encoding: actualEncoding || options.encoding || 'LINEAR16',
       languageCode: options.languageCode || 'en-US',
       enableAutomaticPunctuation: options.enableAutomaticPunctuation || true,
       model: options.model || 'latest_long',
-      enableSpeakerDiarization: options.enableSpeakerDiarization || true,
+      enableSpeakerDiarization: true, // Always enable speaker diarization
+      enableWordTimeOffsets: true, // Required for speaker diarization
       diarizationSpeakerCount: options.maxSpeakerCount || 2
     };
+    
+    console.log(`[API:${requestId}] Using diarization with ${speechConfig.diarizationSpeakerCount} speakers`);
     
     // Prepare the request
     const request = prepareRequest(audioBuffer, apiKey, speechConfig);
