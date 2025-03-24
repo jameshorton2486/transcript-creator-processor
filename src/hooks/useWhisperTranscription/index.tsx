@@ -1,156 +1,110 @@
+import React, { useState, useCallback, useRef } from 'react';
+import { transcribeAudio, preloadWhisperModel } from '@/lib/whisper';
+import { toast } from "@/hooks/use-toast";
 
-import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  transcribeAudio, 
-  WhisperTranscriptionOptions, 
-  loadWhisperModel,
-  getAvailableModels
-} from "@/lib/whisper";
-import { formatErrorMessage } from "@/hooks/useTranscription/utils";
-
-export interface WhisperTranscriptionHookState {
-  file: File | null;
-  isLoading: boolean;
-  error: string | null;
-  progress: number;
-  modelLoading: boolean;
-  modelLoadProgress: number;
-  availableModels: any[];
-  selectedModel: string;
-}
-
-export const useWhisperTranscription = (
-  onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void
-) => {
-  const [state, setState] = useState<WhisperTranscriptionHookState>({
-    file: null,
-    isLoading: false,
-    error: null,
-    progress: 0,
-    modelLoading: false,
-    modelLoadProgress: 0,
-    availableModels: getAvailableModels(),
-    selectedModel: getAvailableModels()[0].id, // Default to first model
-  });
+export const useWhisperTranscription = (onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [modelLoading, setModelLoading] = useState(false);
+  const [modelLoadProgress, setModelLoadProgress] = useState(0);
+  const [selectedModel, setSelectedModel] = useState('tiny');
+  const [availableModels] = useState(['tiny', 'base', 'small', 'medium', 'large']);
   
-  const { toast } = useToast();
+  const abortController = useRef<AbortController | null>(null);
 
-  const handleFileSelected = (selectedFile: File) => {
-    setState(prev => ({
-      ...prev,
-      file: selectedFile,
-      error: null,
-    }));
-    
-    console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
+  // Function to handle file selection
+  const handleFileSelected = (newFile: File | null) => {
+    setFile(newFile);
+    setError(null);
+    setProgress(0);
   };
 
-  const transcribeAudioFile = async () => {
-    const { file, selectedModel } = state;
-    
-    if (!file) {
-      setState(prev => ({ ...prev, error: "No file selected. Please select an audio or video file first." }));
+  // Function to handle model selection
+  const selectModel = (model: string) => {
+    setSelectedModel(model);
+  };
+
+  // Function to cancel ongoing transcription
+  const cancelTranscription = () => {
+    if (abortController.current) {
+      abortController.current.abort();
+      abortController.current = null;
+      setIsLoading(false);
       toast({
-        title: "No file selected",
-        description: "Please select an audio or video file first.",
-        variant: "destructive",
+        title: "Transcription Cancelled",
+        description: "The transcription process has been cancelled.",
       });
+    }
+  };
+
+  // Function to transcribe audio file
+  const transcribeAudioFile = useCallback(async () => {
+    if (!file) {
+      setError("Please select a file to transcribe");
       return;
     }
 
-    setState(prev => ({ 
-      ...prev, 
-      isLoading: true,
-      error: null,
-      progress: 0,
-      modelLoading: true
-    }));
-    
-    // Create an AbortController for cancellation
-    const controller = new AbortController();
-    
     try {
-      // Log transcription start
-      console.log(`Transcription started for: ${file.name}`);
-      console.log(`File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-      console.log(`Selected model: ${selectedModel}`);
+      setIsLoading(true);
+      setError(null);
+      setProgress(0);
       
-      // Set up options
-      const options: WhisperTranscriptionOptions = {
-        model: selectedModel,
-        onProgress: (progress) => {
-          // Update progress state
-          if (progress <= 40) {
-            // Model loading phase
-            setState(prev => ({
-              ...prev,
-              modelLoadProgress: progress * 2.5, // Scale 0-40 to 0-100
-              progress: progress
-            }));
-          } else {
-            // Transcription phase
-            setState(prev => ({
-              ...prev,
-              modelLoading: false,
-              progress: progress
-            }));
-          }
-        },
-        abortSignal: controller.signal
-      };
+      abortController.current = new AbortController();
       
-      // Start transcription
-      const response = await transcribeAudio(file, options);
+      // Preload the model first
+      setModelLoading(true);
       
-      // Process the transcript text
-      const transcriptText = response.results.transcripts[0].transcript;
-      
-      // Call the callback with the transcript
-      onTranscriptCreated(transcriptText, response, file);
-      
-      toast({
-        title: "Transcription complete",
-        description: "The audio has been successfully transcribed.",
+      await preloadWhisperModel(selectedModel, (progress: number) => {
+        setModelLoadProgress(Math.min(progress, 100));
       });
       
-      console.log("Transcription completed successfully");
-    } catch (error: any) {
-      console.error("Transcription error:", error);
+      setModelLoading(false);
       
-      const errorMessage = formatErrorMessage(error);
+      // Then transcribe the audio
+      const result = await transcribeAudio(file, selectedModel, (progress: number) => {
+        setProgress(Math.min(progress, 100));
+      }, abortController.current.signal);
       
-      setState(prev => ({ ...prev, error: errorMessage }));
+      // Process the transcription result
+      if (result && result.text) {
+        onTranscriptCreated(result.text, result, file);
+        toast({
+          title: "Transcription Complete",
+          description: "Your audio has been successfully transcribed.",
+        });
+      } else {
+        throw new Error("Failed to generate transcript");
+      }
+    } catch (err) {
+      // Don't show errors for aborted transcriptions
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
       toast({
-        title: "Transcription failed",
+        title: "Transcription Failed",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        modelLoading: false,
-        progress: 0
-      }));
-      console.log("Transcription process completed (success or error)");
+      setIsLoading(false);
+      abortController.current = null;
     }
-  };
-
-  const selectModel = (modelId: string) => {
-    setState(prev => ({ ...prev, selectedModel: modelId }));
-  };
-  
-  const cancelTranscription = () => {
-    // This would trigger the AbortController if implemented
-    toast({
-      title: "Transcription cancelled",
-      description: "The transcription process was cancelled.",
-    });
-  };
+  }, [file, selectedModel, onTranscriptCreated]);
 
   return {
-    ...state,
+    file,
+    isLoading,
+    error,
+    progress,
+    modelLoading,
+    modelLoadProgress,
+    availableModels,
+    selectedModel,
     handleFileSelected,
     transcribeAudioFile,
     selectModel,

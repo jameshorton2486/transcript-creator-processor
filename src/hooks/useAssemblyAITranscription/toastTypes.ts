@@ -1,6 +1,6 @@
 
-import { ToastActionElement, toast } from "@/components/ui/toast";
-import { ToastProps } from "@/components/ui/toast";
+import { ToastActionElement, Toast } from "@/components/ui/toast";
+import { toast } from "@/hooks/use-toast";
 
 // Define the correct type for the toast function
 export interface UseToastReturn {
