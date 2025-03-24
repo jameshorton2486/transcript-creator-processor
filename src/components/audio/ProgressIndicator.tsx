@@ -10,12 +10,15 @@ interface ProgressIndicatorProps {
 export const ProgressIndicator = ({ progress, isVisible, label }: ProgressIndicatorProps) => {
   if (!isVisible) return null;
   
+  // Ensure progress is capped between 0 and 100
+  const normalizedProgress = Math.min(Math.max(Math.round(progress), 0), 100);
+  
   return (
     <div className="space-y-2">
       {label && (
-        <p className="text-sm font-medium text-slate-700">{label} ({progress}%)</p>
+        <p className="text-sm font-medium text-slate-700">{label} ({normalizedProgress}%)</p>
       )}
-      <Progress value={progress} className="h-2" />
+      <Progress value={normalizedProgress} className="h-2" />
     </div>
   );
 };

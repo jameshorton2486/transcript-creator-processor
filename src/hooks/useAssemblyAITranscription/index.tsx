@@ -4,6 +4,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { verifyApiKey, loadApiKeyFromStorage } from "./keyManagement";
 import { handleTranscription } from "./transcriptionService";
 import { AssemblyAITranscriptionHookState, UseAssemblyAITranscriptionReturn } from "./types";
+import { UseToastReturn } from "./toastTypes";
 
 export * from "./types";
 
@@ -20,7 +21,7 @@ export const useAssemblyAITranscription = (
     testingKey: false
   });
   
-  const { toast } = useToast();
+  const toast = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
   
   // Load API key from localStorage on mount
@@ -43,10 +44,10 @@ export const useAssemblyAITranscription = (
 
   const handleTestApiKey = async () => {
     const { apiKey } = state;
-    const isValid = await verifyApiKey(apiKey, setState, toast);
+    const isValid = await verifyApiKey(apiKey, setState, toast as unknown as UseToastReturn);
     
     if (isValid) {
-      toast({
+      toast.toast({
         title: "API key is valid",
         description: "Your AssemblyAI API key is working correctly.",
       });
@@ -58,11 +59,11 @@ export const useAssemblyAITranscription = (
     
     // If key hasn't been tested or is invalid, verify it first
     if (keyStatus !== "valid") {
-      const isKeyValid = await verifyApiKey(apiKey, setState, toast);
+      const isKeyValid = await verifyApiKey(apiKey, setState, toast as unknown as UseToastReturn);
       if (!isKeyValid) return; // Error message already shown by verifyApiKey
     }
 
-    await handleTranscription(state, setState, toast, abortControllerRef, onTranscriptCreated);
+    await handleTranscription(state, setState, toast as unknown as UseToastReturn, abortControllerRef, onTranscriptCreated);
   };
 
   const setApiKey = (apiKey: string) => {
@@ -85,7 +86,7 @@ export const useAssemblyAITranscription = (
         progress: 0
       }));
       
-      toast({
+      toast.toast({
         title: "Transcription cancelled",
         description: "The transcription process was cancelled.",
       });

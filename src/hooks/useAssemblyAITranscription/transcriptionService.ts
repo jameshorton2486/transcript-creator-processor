@@ -19,7 +19,7 @@ export const handleTranscription = async (
   
   if (!file) {
     setState(prev => ({ ...prev, error: "No file selected. Please select an audio or video file first." }));
-    toast({
+    toast.toast({
       title: "No file selected",
       description: "Please select an audio or video file first.",
       variant: "destructive",
@@ -50,7 +50,7 @@ export const handleTranscription = async (
       onProgress: (progress) => {
         setState(prev => ({
           ...prev,
-          progress
+          progress: Math.min(Math.max(Math.round(progress), 0), 100) // Ensure progress is capped between 0 and 100
         }));
       },
       abortSignal: abortControllerRef.current.signal
@@ -68,7 +68,7 @@ export const handleTranscription = async (
     // Call the callback with the transcript
     onTranscriptCreated(transcriptText, response, file);
     
-    toast({
+    toast.toast({
       title: "Transcription complete",
       description: "The audio has been successfully transcribed.",
     });
@@ -92,7 +92,7 @@ export const handleTranscription = async (
       setState(prev => ({ ...prev, error: errorMessage }));
     }
     
-    toast({
+    toast.toast({
       title: "Transcription failed",
       description: errorMessage,
       variant: "destructive",

@@ -17,6 +17,9 @@ export const TranscribeButton = ({
   isBatchProcessing, 
   progress 
 }: TranscribeButtonProps) => {
+  // Ensure progress is capped between 0 and 100
+  const normalizedProgress = Math.min(Math.max(Math.round(progress), 0), 100);
+  
   return (
     <Button 
       className="w-full" 
@@ -27,7 +30,7 @@ export const TranscribeButton = ({
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           {isBatchProcessing 
-            ? `Processing in batches (${progress}%)`
+            ? `Processing in batches (${normalizedProgress}%)`
             : "Processing audio..."}
         </>
       ) : (
