@@ -6,7 +6,7 @@ import { TranscriptionOptions } from "@/lib/config";
 
 interface TranscriptionOptionsSelectorProps {
   options: TranscriptionOptions;
-  onOptionsChange: (options: TranscriptionOptions) => void;
+  onOptionsChange: (options: Partial<TranscriptionOptions>) => void;
 }
 
 export const TranscriptionOptionsSelector = ({ 

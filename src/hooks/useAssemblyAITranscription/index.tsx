@@ -1,11 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { 
   AssemblyAITranscriptionHookState, 
-  AssemblyAITranscriptionOptions
+  AssemblyAITranscriptionOptions,
+  UseAssemblyAITranscriptionReturn
 } from "./types";
-import { storeKey, getKey, clearKey } from "@/lib/assemblyai/auth";
+import { storeKey, getKey, clearKey, verifyApiKey } from "./keyManagement";
 import { transcribeAudio, testApiKey } from '@/lib/assemblyai';
 import { safePromise } from '@/hooks/useTranscription/promiseUtils';
 
@@ -15,79 +16,38 @@ const initialState: AssemblyAITranscriptionHookState = {
   error: null,
   progress: 0,
   apiKey: "",
-  transcriptionResult: null,
-  isConfigured: false,
-  language: 'en',
-  speakerLabels: false,
-  punctuate: true,
-  formatText: true,
+  keyStatus: "untested",
+  testingKey: false
 };
 
-export const useAssemblyAITranscription = () => {
+export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void): UseAssemblyAITranscriptionReturn => {
   const [state, setState] = useState<AssemblyAITranscriptionHookState>(initialState);
+  const [options, setTranscriptionOptions] = useState<AssemblyAITranscriptionOptions>({
+    language: 'en',
+    speakerLabels: false,
+    punctuate: true,
+    formatText: true,
+  });
   const { toast } = useToast();
-
+  
   // Load API key from local storage on component mount
-  useState(() => {
+  useEffect(() => {
     const storedKey = getKey();
     if (storedKey) {
-      setState(prevState => ({ ...prevState, apiKey: storedKey, isConfigured: true }));
+      setState(prevState => ({ 
+        ...prevState, 
+        apiKey: storedKey, 
+        keyStatus: "untested" 
+      }));
     }
-  });
+  }, []);
 
   const setApiKey = (apiKey: string) => {
     setState(prevState => ({ ...prevState, apiKey }));
   };
 
-  const configure = async (apiKey: string) => {
-    try {
-      // Validate API Key
-      const isValid = await safePromise(testApiKey(apiKey));
-      if (!isValid) {
-        throw new Error('Invalid API key provided.');
-      }
-
-      // Store API key in local storage
-      storeKey(apiKey);
-
-      setState(prevState => ({
-        ...prevState,
-        apiKey: apiKey,
-        isConfigured: true,
-        error: null,
-      }));
-
-      toast({
-        title: "Configuration successful",
-        description: "Your API key has been successfully configured.",
-      });
-    } catch (error: any) {
-      console.error("Configuration error:", error);
-      clearKey();
-      setState(prevState => ({
-        ...prevState,
-        isConfigured: false,
-        error: error.message || 'Failed to configure API key.',
-      }));
-      toast({
-        title: "Configuration failed",
-        description: error.message || "Failed to configure API key.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const clearConfiguration = () => {
-    clearKey();
-    setState(prevState => ({
-      ...prevState,
-      apiKey: "",
-      isConfigured: false,
-      error: null,
-    }));
-    toast({
-      description: "API key cleared. Please configure again to use the service.",
-    });
+  const handleTestApiKey = async () => {
+    await verifyApiKey(state.apiKey, setState, { toast });
   };
 
   const handleFileSelected = (file: File) => {
@@ -102,17 +62,14 @@ export const useAssemblyAITranscription = () => {
     setState(prevState => ({ ...prevState, error }));
   };
 
-  const setOptions = (options: Partial<AssemblyAITranscriptionOptions>) => {
-      setState(prevState => ({
-          ...prevState,
-          language: options.language || prevState.language,
-          speakerLabels: options.speakerLabels ?? prevState.speakerLabels,
-          punctuate: options.punctuate ?? prevState.punctuate,
-          formatText: options.formatText ?? prevState.formatText,
-      }));
+  const setOptions = (newOptions: Partial<AssemblyAITranscriptionOptions>) => {
+    setTranscriptionOptions(prev => ({
+      ...prev,
+      ...newOptions
+    }));
   };
 
-  const transcribe = async () => {
+  const transcribeAudioFile = async () => {
     if (!state.file) {
       setError("Please select a file to transcribe.");
       toast({
@@ -124,10 +81,10 @@ export const useAssemblyAITranscription = () => {
     }
 
     if (!state.apiKey) {
-      setError("API key is required. Please configure the API key.");
+      setError("API key is required. Please enter your API key.");
       toast({
         title: "API Key Required",
-        description: "Please configure your API key first.",
+        description: "Please enter your AssemblyAI API key.",
         variant: "destructive",
       });
       return;
@@ -140,10 +97,10 @@ export const useAssemblyAITranscription = () => {
         state.file,
         state.apiKey,
         {
-          language: state.language,
-          speakerLabels: state.speakerLabels,
-          punctuate: state.punctuate,
-          formatText: state.formatText,
+          language: options.language,
+          speakerLabels: options.speakerLabels,
+          punctuate: options.punctuate,
+          formatText: options.formatText,
           onProgress: (progress: number) => setState(prevState => ({ ...prevState, progress })),
         }
       );
@@ -151,9 +108,11 @@ export const useAssemblyAITranscription = () => {
       setState(prevState => ({
         ...prevState,
         isLoading: false,
-        transcriptionResult: result,
         error: null,
       }));
+
+      // Call the callback with the transcript text and full result data
+      onTranscriptCreated(result.text, result, state.file);
 
       toast({
         title: "Transcription complete",
@@ -171,19 +130,29 @@ export const useAssemblyAITranscription = () => {
         description: error.message || "Failed to transcribe audio.",
         variant: "destructive",
       });
-    } finally {
-      setState(prevState => ({ ...prevState, isLoading: false }));
     }
+  };
+
+  const cancelTranscription = () => {
+    setState(prevState => ({ 
+      ...prevState, 
+      isLoading: false, 
+      progress: 0 
+    }));
+    
+    toast({
+      title: "Transcription cancelled",
+      description: "The transcription process has been cancelled.",
+    });
   };
 
   return {
     ...state,
-    setApiKey,
-    configure,
-    clearConfiguration,
     handleFileSelected,
-    transcribe,
-    setError,
-    setOptions,
+    transcribeAudioFile,
+    setApiKey,
+    cancelTranscription,
+    handleTestApiKey,
+    setOptions
   };
 };

@@ -13,10 +13,37 @@ export interface AssemblyAITranscriptionHookState {
   testingKey: boolean;
 }
 
+export interface AssemblyAITranscriptionOptions {
+  language?: string;
+  speakerLabels?: boolean;
+  punctuate?: boolean;
+  formatText?: boolean;
+}
+
+export interface TranscriptionResult {
+  text: string;
+  words?: Array<{
+    text: string;
+    start: number;
+    end: number;
+    speaker?: string;
+  }>;
+  utterances?: Array<{
+    speaker: string;
+    text: string;
+    start: number;
+    end: number;
+  }>;
+  id?: string;
+  status?: string;
+}
+
 export interface UseAssemblyAITranscriptionReturn extends AssemblyAITranscriptionHookState {
   handleFileSelected: (selectedFile: File) => void;
   transcribeAudioFile: () => Promise<void>;
   setApiKey: (apiKey: string) => void;
   cancelTranscription: () => void;
   handleTestApiKey: () => Promise<void>;
+  setOptions: (options: Partial<AssemblyAITranscriptionOptions>) => void;
 }
+

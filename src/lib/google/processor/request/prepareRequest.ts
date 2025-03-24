@@ -1,46 +1,39 @@
 
-import { TranscriptionConfig } from '../types';
-
 /**
- * Prepares the request object for the Google Speech-to-Text API
- * This is a critical point where diarization settings MUST be properly configured
+ * Prepares the request payload for the Google Speech-to-Text API
  */
-export function prepareRequest(
-  audioContent: Buffer, 
+export const prepareRequest = (
+  audioBuffer: Buffer, 
   apiKey: string, 
-  config: TranscriptionConfig
-) {
-  const audio = {
-    content: audioContent.toString('base64')
+  config: any
+) => {
+  const requestBody: any = {
+    audio: {
+      content: audioBuffer.toString('base64')
+    },
+    config: {
+      encoding: config.encoding,
+      sampleRateHertz: config.sampleRateHertz || 16000,
+      languageCode: config.languageCode || 'en-US',
+      enableAutomaticPunctuation: config.enableAutomaticPunctuation !== false,
+      model: config.model || 'latest_long',
+      enableWordTimeOffsets: config.enableWordTimeOffsets === true,
+      useEnhanced: config.useEnhanced === true
+    }
   };
-  
-  // Ensure diarization settings are properly configured
-  const requestConfig: any = { ...config };
-  
-  // If speaker diarization is enabled, ensure we have the proper diarization config
-  if (config.enableSpeakerDiarization || (config.diarizationConfig && config.diarizationConfig.enableSpeakerDiarization)) {
-    // Make sure we always have a complete diarization config
-    requestConfig.diarizationConfig = {
+
+  // Add diarization config if it's provided
+  if (config.diarizationConfig && config.diarizationConfig.enableSpeakerDiarization) {
+    requestBody.config.diarizationConfig = {
       enableSpeakerDiarization: true,
-      minSpeakerCount: config.diarizationConfig?.minSpeakerCount || 2,
-      maxSpeakerCount: config.diarizationConfig?.maxSpeakerCount || 6
+      minSpeakerCount: config.diarizationConfig.minSpeakerCount || 2,
+      maxSpeakerCount: config.diarizationConfig.maxSpeakerCount || 6
     };
     
-    // Ensure word time offsets are enabled - required for speaker diarization
-    requestConfig.enableWordTimeOffsets = true;
-    
-    // Log the diarization configuration for debugging
-    console.log('Prepared request with diarization config:', {
-      enableSpeakerDiarization: requestConfig.diarizationConfig.enableSpeakerDiarization,
-      minSpeakerCount: requestConfig.diarizationConfig.minSpeakerCount,
-      maxSpeakerCount: requestConfig.diarizationConfig.maxSpeakerCount,
-      enableWordTimeOffsets: requestConfig.enableWordTimeOffsets
-    });
+    // Ensure word time offsets are enabled when using diarization
+    requestBody.config.enableWordTimeOffsets = true;
   }
-  
-  // Prepare the full request object
-  return {
-    audio,
-    config: requestConfig
-  };
-}
+
+  // Add API key
+  return requestBody;
+};

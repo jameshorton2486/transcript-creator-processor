@@ -27,30 +27,60 @@ export const sendTranscriptionRequest = async (
     const audioBuffer = Buffer.from(audioContent, 'base64');
     
     // Prepare the speech config with proper diarization settings
-    const speechConfig = {
+    const config = {
       encoding: actualEncoding || options.encoding || 'LINEAR16',
       languageCode: options.languageCode || 'en-US',
       enableAutomaticPunctuation: options.enableAutomaticPunctuation !== false,
       model: options.model || 'latest_long',
-      enableWordTimeOffsets: true, // Always enable word time offsets for better results
-      diarizationConfig: {
-        enableSpeakerDiarization: options.enableSpeakerDiarization !== false,
-        minSpeakerCount: 2,
-        maxSpeakerCount: options.maxSpeakerCount || 6
-      }
+      enableWordTimeOffsets: options.enableWordTimeOffsets === true,
+      useEnhanced: options.useEnhanced === true
     };
     
-    console.log(`[API:${requestId}] Using diarization with ${speechConfig.diarizationConfig.maxSpeakerCount} speakers, enableSpeakerDiarization=${speechConfig.diarizationConfig.enableSpeakerDiarization}`);
-    console.log(`[API:${requestId}] Word time offsets enabled: ${speechConfig.enableWordTimeOffsets}`);
-    
-    // Prepare the request
-    const request = prepareRequest(audioBuffer, apiKey, speechConfig);
-    
-    // Set the API endpoint
-    const apiEndpoint = 'speech:recognize';
-    
-    // Execute the request
-    return await executeTranscriptionRequest(apiKey, requestId, apiEndpoint, request);
+    // Only add diarization config if speaker diarization is enabled
+    if (options.diarize) {
+      console.log(`[API:${requestId}] Diarization enabled with ${options.maxSpeakerCount || 6} speakers`);
+      
+      // Make sure to add the diarization configuration separately to avoid type errors
+      const requestConfig = {
+        ...config,
+        diarizationConfig: {
+          enableSpeakerDiarization: true,
+          minSpeakerCount: 2,
+          maxSpeakerCount: options.maxSpeakerCount || 6
+        }
+      };
+      
+      // Verify word time offsets are enabled when using diarization
+      if (!options.enableWordTimeOffsets) {
+        console.warn(`[API:${requestId}] Word time offsets should be enabled for diarization to work properly`);
+        requestConfig.enableWordTimeOffsets = true;
+      }
+      
+      console.log(`[API:${requestId}] Using diarization config:`, requestConfig.diarizationConfig);
+      console.log(`[API:${requestId}] Word time offsets enabled: ${requestConfig.enableWordTimeOffsets}`);
+      
+      // Prepare the request
+      const request = prepareRequest(audioBuffer, apiKey, requestConfig);
+      
+      // Set the API endpoint
+      const apiEndpoint = 'speech:recognize';
+      
+      // Execute the request
+      return await executeTranscriptionRequest(apiKey, requestId, apiEndpoint, request);
+    } else {
+      // When diarization is not enabled, just use the basic config
+      console.log(`[API:${requestId}] Diarization disabled`);
+      console.log(`[API:${requestId}] Word time offsets enabled: ${config.enableWordTimeOffsets}`);
+      
+      // Prepare the request
+      const request = prepareRequest(audioBuffer, apiKey, config);
+      
+      // Set the API endpoint
+      const apiEndpoint = 'speech:recognize';
+      
+      // Execute the request
+      return await executeTranscriptionRequest(apiKey, requestId, apiEndpoint, request);
+    }
   } catch (error: any) {
     // Enhanced error logging with detailed context
     console.error(`[API:${requestId}] [${new Date().toISOString()}] Google API error occurred:`, error.message);

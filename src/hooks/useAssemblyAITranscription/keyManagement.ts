@@ -88,7 +88,7 @@ export const verifyApiKey = async (
 /**
  * Loads the API key from localStorage
  */
-export const loadApiKeyFromStorage = (): string => {
+export const getKey = (): string => {
   if (typeof window === "undefined") return "";
   
   try {
@@ -103,12 +103,25 @@ export const loadApiKeyFromStorage = (): string => {
 /**
  * Saves the API key to localStorage
  */
-export const saveApiKeyToStorage = (apiKey: string): void => {
+export const storeKey = (apiKey: string): void => {
   if (typeof window === "undefined") return;
   
   try {
     localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
   } catch (e) {
     console.warn("Error saving API key to storage:", e);
+  }
+};
+
+/**
+ * Clears the API key from localStorage
+ */
+export const clearKey = (): void => {
+  if (typeof window === "undefined") return;
+  
+  try {
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Error clearing API key from storage:", e);
   }
 };
