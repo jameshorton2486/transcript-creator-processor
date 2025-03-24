@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for building Google Speech-to-Text API configuration
  */
@@ -20,6 +21,15 @@ export interface SpeechConfig {
   maxAlternatives?: number;
   useEnhanced?: boolean;
   profanityFilter?: boolean;
+  diarizationConfig?: {
+    enableSpeakerDiarization: boolean;
+    minSpeakerCount: number;
+    maxSpeakerCount: number;
+  };
+  speechContexts?: Array<{
+    phrases: string[];
+    boost: number;
+  }>;
 }
 
 /**
@@ -106,4 +116,3 @@ const addSpeechAdaptation = (
     console.log(`[CONFIG] Added ${commonLegalTerms.length} common legal terms to speech context`);
   }
 };
-

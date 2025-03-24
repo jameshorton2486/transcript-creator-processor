@@ -48,4 +48,3 @@ export const prepareRequest = (
  * Alias for prepareRequest to maintain compatibility with existing code
  */
 export const prepareTranscriptionRequest = prepareRequest;
-

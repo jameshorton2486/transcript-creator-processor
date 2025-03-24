@@ -1,7 +1,7 @@
 
 import { TranscriptionOptions } from './types';
 import { handleApiError } from './request/errorHandler';
-import { prepareRequest, prepareTranscriptionRequest } from './request/prepareRequest';
+import { prepareRequest } from './request/prepareRequest';
 import { executeTranscriptionRequest } from './request/executeRequest';
 
 /**
@@ -22,17 +22,27 @@ export const sendTranscriptionRequest = async (
   console.info(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API...`);
   
   try {
-    // Prepare and validate the request
-    const { requestData, apiEndpoint } = prepareTranscriptionRequest(
-      apiKey, 
-      audioContent, 
-      options, 
-      actualEncoding,
-      requestId
-    );
+    // Convert base64 audio content to Uint8Array
+    const audioBuffer = Buffer.from(audioContent, 'base64');
+    
+    // Prepare the speech config
+    const speechConfig = {
+      encoding: actualEncoding || options.encoding || 'LINEAR16',
+      languageCode: options.languageCode || 'en-US',
+      enableAutomaticPunctuation: options.enableAutomaticPunctuation || true,
+      model: options.model || 'latest_long',
+      enableSpeakerDiarization: options.enableSpeakerDiarization || true,
+      diarizationSpeakerCount: options.maxSpeakerCount || 2
+    };
+    
+    // Prepare the request
+    const request = prepareRequest(audioBuffer, apiKey, speechConfig);
+    
+    // Set the API endpoint
+    const apiEndpoint = 'speech:recognize';
     
     // Execute the request
-    return await executeTranscriptionRequest(apiKey, requestId, apiEndpoint, requestData);
+    return await executeTranscriptionRequest(apiKey, requestId, apiEndpoint, request);
   } catch (error: any) {
     // Enhanced error logging with detailed context
     console.error(`[API:${requestId}] [${new Date().toISOString()}] Google API error occurred:`, error.message);
@@ -41,4 +51,3 @@ export const sendTranscriptionRequest = async (
     throw handleApiError(error, requestId);
   }
 };
-

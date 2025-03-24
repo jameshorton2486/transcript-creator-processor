@@ -1,3 +1,4 @@
+
 // Define shared types for API request/response handling
 
 export interface TranscriptionConfig {
@@ -58,5 +59,14 @@ export interface TranscriptionRequest {
     content: string;
   };
   config: any;
+  apiKey: string;
+}
+
+/**
+ * Extended TranscriptionRequest for prepared requests including requestData and apiEndpoint
+ */
+export interface PreparedTranscriptionRequest {
+  requestData: any;
+  apiEndpoint: string;
   apiKey: string;
 }

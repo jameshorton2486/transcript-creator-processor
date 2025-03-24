@@ -10,14 +10,23 @@ import { Label } from "@/components/ui/label";
 import { HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+// Update the interface to use WhisperModel instead of string
 interface WhisperModelSelectorProps {
   availableModels: Array<{
     id: string;
     name: string;
     size: string;
   }>;
-  selectedModel: string;
-  onModelSelect: (modelId: string) => void;
+  selectedModel: {
+    id: string;
+    name: string;
+    size: string;
+  };
+  onModelSelect: (model: {
+    id: string;
+    name: string;
+    size: string;
+  }) => void;
   disabled?: boolean;
 }
 
@@ -48,8 +57,13 @@ export const WhisperModelSelector = ({
       </div>
 
       <Select 
-        value={selectedModel} 
-        onValueChange={onModelSelect}
+        value={selectedModel.id} 
+        onValueChange={(value) => {
+          const model = availableModels.find(m => m.id === value);
+          if (model) {
+            onModelSelect(model);
+          }
+        }}
         disabled={disabled}
       >
         <SelectTrigger id="model-selector" className="w-full">
