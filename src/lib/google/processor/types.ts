@@ -11,12 +11,24 @@ export interface TranscriptionOptions {
   model?: string;
   useEnhanced?: boolean;
   enableWordTimeOffsets?: boolean;
-  diarize?: boolean;
+  enableSpeakerDiarization?: boolean;
+  minSpeakerCount?: number;
   maxSpeakerCount?: number;
+  diarize?: boolean;
+  customTerms?: string[];
+  enableWordConfidence?: boolean;
 }
 
 export interface TranscriptionConfig extends TranscriptionOptions {
   useEnhanced: boolean;
+  diarizationConfig?: {
+    enableSpeakerDiarization: boolean;
+    minSpeakerCount?: number;
+    maxSpeakerCount?: number;
+  };
+  speechContexts?: Array<{
+    phrases: string[];
+  }>;
 }
 
 export interface TranscriptionResult {

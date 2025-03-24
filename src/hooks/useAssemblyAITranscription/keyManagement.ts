@@ -46,7 +46,7 @@ export const verifyApiKey = async (
       }));
       
       // Save the key to localStorage
-      saveApiKeyToStorage(apiKey);
+      storeKey(apiKey);
       
       return true;
     } else {

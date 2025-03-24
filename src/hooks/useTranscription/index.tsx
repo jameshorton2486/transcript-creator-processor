@@ -16,7 +16,16 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     documentFiles: [],
   });
   
-  const [options, setOptions] = useState<TranscriptionOptions>(DEFAULT_TRANSCRIPTION_OPTIONS);
+  const [options, setOptions] = useState<TranscriptionOptions>({
+    ...DEFAULT_TRANSCRIPTION_OPTIONS,
+    punctuate: true,
+    diarize: false,
+    paragraphs: false,
+    formatParagraphs: false,
+    formatNames: false,
+    removeHesitations: false,
+    enableWordTimeOffsets: false,
+  });
   const [customTerms, setCustomTerms] = useState<string[]>([]);
   const { toast } = useToast();
 

@@ -46,4 +46,3 @@ export interface UseAssemblyAITranscriptionReturn extends AssemblyAITranscriptio
   handleTestApiKey: () => Promise<void>;
   setOptions: (options: Partial<AssemblyAITranscriptionOptions>) => void;
 }
-
