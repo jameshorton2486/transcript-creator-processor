@@ -43,17 +43,26 @@ export const buildRequestConfig = (
   customTerms: string[] = []
 ) => {
   console.log(`[CONFIG] Building speech config with encoding=${encoding}, sample rate=${sampleRate || 'auto'}`);
+  console.log(`[CONFIG] Transcription options:`, options);
   
   const config: SpeechConfig = {
     encoding: encoding,
     languageCode: 'en-US', // Default to en-US as the TranscriptionOptions doesn't have a language property
     enableAutomaticPunctuation: options.punctuate,
     model: "latest_long",
-    useEnhanced: true, // Use enhanced model for better quality
+    useEnhanced: options.useEnhanced || true,
   };
   
   // Explicitly remove any sampleRateHertz parameter to let Google API auto-detect it
   // We NEVER add sampleRateHertz now to avoid conflicts with file headers
+  
+  // Always enable word time offsets when diarization is enabled
+  // This is required for speaker diarization
+  if (options.diarize) {
+    config.enableWordTimeOffsets = true;
+  } else if (options.enableWordTimeOffsets) {
+    config.enableWordTimeOffsets = true;
+  }
   
   // Add diarization config if enabled
   if (options.diarize) {
@@ -62,6 +71,8 @@ export const buildRequestConfig = (
       minSpeakerCount: 2,
       maxSpeakerCount: 8
     };
+    
+    console.log(`[CONFIG] Speaker diarization enabled with min=${config.diarizationConfig.minSpeakerCount}, max=${config.diarizationConfig.maxSpeakerCount} speakers`);
   }
   
   // Add speech adaptation with customTerms

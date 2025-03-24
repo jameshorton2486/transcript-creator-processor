@@ -20,6 +20,7 @@ export const sendTranscriptionRequest = async (
   // Generate a request ID for logging
   const requestId = Math.random().toString(36).substring(2, 15);
   console.info(`[API:${requestId}] [${new Date().toISOString()}] Sending request to Google Speech API...`);
+  console.log(`[API:${requestId}] Transcription options:`, options);
   
   try {
     // Convert base64 audio content to Uint8Array
@@ -29,14 +30,18 @@ export const sendTranscriptionRequest = async (
     const speechConfig = {
       encoding: actualEncoding || options.encoding || 'LINEAR16',
       languageCode: options.languageCode || 'en-US',
-      enableAutomaticPunctuation: options.enableAutomaticPunctuation || true,
+      enableAutomaticPunctuation: options.enableAutomaticPunctuation !== false,
       model: options.model || 'latest_long',
-      enableSpeakerDiarization: true, // Always enable speaker diarization
-      enableWordTimeOffsets: true, // Required for speaker diarization
-      diarizationSpeakerCount: options.maxSpeakerCount || 2
+      enableWordTimeOffsets: true, // Always enable word time offsets for better results
+      diarizationConfig: {
+        enableSpeakerDiarization: options.enableSpeakerDiarization !== false,
+        minSpeakerCount: 2,
+        maxSpeakerCount: options.maxSpeakerCount || 6
+      }
     };
     
-    console.log(`[API:${requestId}] Using diarization with ${speechConfig.diarizationSpeakerCount} speakers`);
+    console.log(`[API:${requestId}] Using diarization with ${speechConfig.diarizationConfig.maxSpeakerCount} speakers, enableSpeakerDiarization=${speechConfig.diarizationConfig.enableSpeakerDiarization}`);
+    console.log(`[API:${requestId}] Word time offsets enabled: ${speechConfig.enableWordTimeOffsets}`);
     
     // Prepare the request
     const request = prepareRequest(audioBuffer, apiKey, speechConfig);

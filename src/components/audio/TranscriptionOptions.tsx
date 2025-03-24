@@ -20,9 +20,11 @@ export const TranscriptionOptionsSelector = ({
       [key]: value 
     };
     
-    // When enabling diarize, also enable word time offsets as it's required
+    // When enabling speaker identification (diarize), always enable word time offsets
+    // This is REQUIRED for Google's speaker diarization to work properly
     if (key === 'diarize' && value === true) {
       updatedOptions.enableWordTimeOffsets = true;
+      console.log('Enabling word time offsets as required for speaker identification');
     }
     
     console.log('Updated transcription options:', updatedOptions);
@@ -60,10 +62,14 @@ export const TranscriptionOptionsSelector = ({
           <Checkbox 
             id="word-timestamps"
             checked={options.enableWordTimeOffsets}
+            disabled={options.diarize} // Disable this when diarize is enabled as it's required
             onCheckedChange={(checked) => updateOption('enableWordTimeOffsets', checked === true)}
           />
-          <Label htmlFor="word-timestamps" className="cursor-pointer text-sm">
-            Word timestamps
+          <Label 
+            htmlFor="word-timestamps" 
+            className={`cursor-pointer text-sm ${options.diarize ? 'text-gray-500' : ''}`}
+          >
+            Word timestamps {options.diarize && "(required for speaker identification)"}
           </Label>
         </div>
         

@@ -65,10 +65,20 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
 
   // Custom setter function to properly handle TranscriptionOptions
   const updateOptions = (newOptions: Partial<TranscriptionOptions>) => {
-    setOptions(current => ({
-      ...current,
-      ...newOptions
-    }));
+    setOptions(current => {
+      // Ensure we preserve all required properties
+      return {
+        ...current,
+        ...newOptions,
+        // Make sure required properties from TranscriptionOptions are never undefined
+        punctuate: newOptions.punctuate !== undefined ? newOptions.punctuate : current.punctuate,
+        diarize: newOptions.diarize !== undefined ? newOptions.diarize : current.diarize,
+        enableWordTimeOffsets: newOptions.enableWordTimeOffsets !== undefined 
+          ? newOptions.enableWordTimeOffsets 
+          : current.enableWordTimeOffsets,
+        useEnhanced: newOptions.useEnhanced !== undefined ? newOptions.useEnhanced : current.useEnhanced
+      };
+    });
   };
 
   return {
