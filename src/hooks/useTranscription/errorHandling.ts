@@ -1,4 +1,3 @@
-import { extractTranscriptText } from "@/lib/google";
 
 // Formats error messages based on error type
 export const formatErrorMessage = (error: any): string => {
@@ -72,50 +71,6 @@ export const formatErrorMessage = (error: any): string => {
   return errorMessage;
 };
 
-// Validates transcript response
-export const validateTranscript = (response: any): string => {
-  try {
-    // First check if the response is valid
-    if (!response) {
-      console.error("Empty response received from API");
-      throw new Error("No response received from API");
-    }
-    
-    // Check for API errors in the response
-    if (response.error) {
-      console.error("API error in response:", response.error);
-      throw new Error(`API error: ${response.error.message || "Unknown API error"}`);
-    }
-    
-    // Extract the transcript text
-    const transcriptText = extractTranscriptText(response);
-    
-    if (!transcriptText || 
-        transcriptText === "No transcript available" || 
-        transcriptText === "Error extracting transcript") {
-      console.error("Failed to extract transcript from response:", response);
-      
-      // Check for empty results which might indicate audio decoding issues
-      if (!response.results || response.results.length === 0) {
-        throw new Error("No transcription results. This could be due to silent audio or an unsupported format.");
-      }
-      
-      if (response.results && Array.isArray(response.results) && 
-          response.results.length > 0 && 
-          (!response.results[0].alternatives || response.results[0].alternatives.length === 0)) {
-        throw new Error("Google could not recognize any speech in this audio file.");
-      }
-      
-      throw new Error("Failed to extract transcript from the API response.");
-    }
-    
-    return transcriptText;
-  } catch (error) {
-    console.error("Error validating transcript:", error);
-    throw error;
-  }
-};
-
 // Creates error context for detailed logging
 export const createErrorContext = (file: File | null, options: any, customTerms: string[], error: any) => {
   if (!file) return { error: String(error) };
@@ -139,70 +94,4 @@ export const createErrorContext = (file: File | null, options: any, customTerms:
       platform: navigator.platform,
     }
   };
-};
-
-/**
- * Enhanced promise handler to safely resolve promises and avoid "message channel closed" errors
- * Includes additional safeguards for browser navigation events
- */
-export const safePromise = async <T>(promise: Promise<T>, timeout = 30000): Promise<T> => {
-  let timeoutId: number;
-  let isCancelled = false;
-  
-  // Create a controller to help with cleanup
-  const controller = new AbortController();
-  const signal = controller.signal;
-  
-  // Setup handlers for page visibility and navigation
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'hidden') {
-      window.clearTimeout(timeoutId);
-      controller.abort();
-      isCancelled = true;
-    }
-  };
-  
-  const handleBeforeUnload = () => {
-    window.clearTimeout(timeoutId);
-    controller.abort();
-    isCancelled = true;
-  };
-  
-  // Add event listeners
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  
-  // Create a timeout promise that rejects after specified timeout
-  const timeoutPromise = new Promise<T>((_, reject) => {
-    timeoutId = window.setTimeout(() => {
-      if (!isCancelled) {
-        console.warn(`Promise timed out after ${timeout}ms`);
-        reject(new Error(`Promise timed out after ${timeout}ms`));
-      }
-    }, timeout);
-  });
-  
-  try {
-    // Race the original promise against the timeout
-    const result = await Promise.race([
-      promise.catch(error => {
-        // If the operation was intentionally cancelled, provide a clearer error
-        if (isCancelled) {
-          throw new Error("Operation cancelled due to page navigation");
-        }
-        throw error;
-      }), 
-      timeoutPromise
-    ]);
-    
-    window.clearTimeout(timeoutId);
-    return result;
-  } catch (error) {
-    window.clearTimeout(timeoutId);
-    throw error;
-  } finally {
-    // Clean up event listeners
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-  }
 };

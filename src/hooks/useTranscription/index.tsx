@@ -64,7 +64,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   };
 
   // Custom setter function to properly handle TranscriptionOptions
-  const updateOptions = (newOptions: TranscriptionOptions) => {
+  const updateOptions = (newOptions: Partial<TranscriptionOptions>) => {
     setOptions(current => ({
       ...current,
       ...newOptions

@@ -2,7 +2,9 @@
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_TRANSCRIPTION_OPTIONS, TranscriptionOptions } from "@/lib/config";
 import { transcribeAudio, testApiKey } from "@/lib/google";
-import { formatErrorMessage, validateTranscript, createErrorContext, safePromise } from "./utils";
+import { formatErrorMessage, createErrorContext } from "./errorHandling";
+import { validateTranscript } from "./transcriptValidation";
+import { safePromise } from "./promiseUtils";
 
 export const performTranscription = async (
   file: File | null,
