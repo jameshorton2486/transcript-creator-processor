@@ -108,8 +108,9 @@ export function processSpeakerDiarization(results: any[]): {
           fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
         }
       } else {
-        // Detection of Q&A patterns for court transcripts
+        // Enhanced detection for transcript formats
         const qaPattern = /\b(Q|A):\s/i;
+        const speakerPattern = /^(Speaker \d+:|[A-Z][A-Z\s']+:)/;
         
         if (qaPattern.test(transcript)) {
           // Format as question and answer
@@ -119,19 +120,18 @@ export function processSpeakerDiarization(results: any[]): {
               fullTranscript += segment.trim() + '\n\n';
             }
           });
+        } else if (speakerPattern.test(transcript)) {
+          // The transcript already has speaker labels
+          fullTranscript += transcript.trim() + '\n\n';
         } else {
-          // No speaker diarization, format as paragraphs based on punctuation
-          const sentences = transcript.split(/(?<=[.!?])\s+/);
-          
-          if (sentences.length > 0) {
-            fullTranscript += `Speaker ${speakerNumber}: ${sentences.join(' ')}\n\n`;
-          }
+          // No speaker diarization or existing formatting, format as a single speaker
+          fullTranscript += `Speaker 1: ${transcript.trim()}\n\n`;
         }
       }
     }
   });
   
-  return { transcript: fullTranscript, speakerMap };
+  return { transcript: fullTranscript.trim(), speakerMap };
 }
 
 /**
@@ -150,5 +150,8 @@ export function formatSpeakerTurns(transcript: string): string {
     .replace(/(WITNESS:)(\s*)([A-Za-z])/g, '$1\n     $3')
     
     // Ensure proper spacing between speaker changes
-    .replace(/(\n\n)([A-Z][A-Z\s']+:)/g, '\n$2');
+    .replace(/(\n\n)([A-Z][A-Z\s']+:)/g, '\n$2')
+    
+    // Better format for Speaker X: labels
+    .replace(/(Speaker \d+:)(\s*)([A-Za-z])/g, '$1\n     $3');
 }
