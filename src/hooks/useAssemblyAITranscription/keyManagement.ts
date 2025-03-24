@@ -1,4 +1,3 @@
-
 import { type UseToastReturn } from "./toastTypes";
 
 // Storage key for the API key
@@ -44,10 +43,10 @@ export const verifyApiKey = async (
         keyStatus: "valid",
         testingKey: false
       }));
-      
+    
       // Save the key to localStorage
       storeKey(apiKey);
-      
+    
       return true;
     } else {
       setState((prev: any) => ({
@@ -56,13 +55,13 @@ export const verifyApiKey = async (
         testingKey: false,
         error: "Invalid API key. Please check and try again."
       }));
-      
+    
       toast.toast({
         title: "Invalid API Key",
         description: "The API key you provided seems to be invalid. Please check and try again.",
         variant: "destructive",
       });
-      
+    
       return false;
     }
   } catch (error) {
@@ -118,7 +117,7 @@ export const storeKey = (apiKey: string): void => {
  */
 export const clearKey = (): void => {
   if (typeof window === "undefined") return;
-  
+
   try {
     localStorage.removeItem(API_KEY_STORAGE_KEY);
   } catch (e) {
