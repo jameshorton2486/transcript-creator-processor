@@ -66,6 +66,12 @@ export function processSpeakerDiarization(results: any[]): {
   
   console.log("Processing speaker diarization with results:", results);
   
+  // Check if we have any results at all
+  if (!results || results.length === 0) {
+    console.warn("No results to process for speaker diarization");
+    return { transcript: "No transcript available", speakerMap: {} };
+  }
+  
   // Process all results to create a full transcript with speaker labels
   results.forEach((result: any) => {
     if (result.alternatives && result.alternatives.length > 0) {
@@ -76,12 +82,19 @@ export function processSpeakerDiarization(results: any[]): {
         const sampleWords = result.alternatives[0].words.slice(0, 5);
         console.log("Sample words with speaker info:", sampleWords);
         
+        // Debug: Check if there are any speaker tags
+        const hasSpeakerTags = result.alternatives[0].words.some((word: any) => word.speakerTag > 0);
+        if (!hasSpeakerTags) {
+          console.warn("No speaker tags found in words. Speaker diarization may not be enabled properly.");
+        }
+        
         result.alternatives[0].words.forEach((word: any) => {
           const speakerId = word.speakerTag || 0;
           
           // Map Google speaker tags to our format (Speaker 1, Speaker 2, etc.)
           if (!speakerMap[speakerId] && speakerId > 0) {
             speakerMap[speakerId] = speakerNumber++;
+            console.log(`Mapped speaker ${speakerId} to Speaker ${speakerMap[speakerId]}`);
           }
           
           // If speaker changed or if we have a punctuation that suggests a natural break
@@ -139,6 +152,13 @@ export function processSpeakerDiarization(results: any[]): {
   });
   
   console.log("Processed transcript with speakers:", fullTranscript.slice(0, 500) + "...");
+  
+  // If we couldn't identify any speakers, let's just use a simple format
+  if (fullTranscript.trim() === '') {
+    fullTranscript = "Speaker 1: " + results.map(r => 
+      r.alternatives && r.alternatives.length > 0 ? r.alternatives[0].transcript : ''
+    ).join(' ').trim();
+  }
   
   return { transcript: fullTranscript.trim(), speakerMap };
 }

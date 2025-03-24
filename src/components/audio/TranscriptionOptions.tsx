@@ -11,6 +11,21 @@ interface TranscriptionOptionsProps {
 }
 
 export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: TranscriptionOptionsProps) => {
+  // This function logs and updates the diarize option
+  const handleDiarizeChange = (checked: boolean) => {
+    console.log("Speaker identification toggled:", checked);
+    
+    // If enabling diarization, also enable word time offsets as they're required for speaker identification
+    const updatedOptions = {
+      ...options, 
+      diarize: checked,
+      // When diarization is enabled, we need to ensure these settings are also enabled
+      enableWordTimeOffsets: checked ? true : options.enableWordTimeOffsets
+    };
+    
+    onOptionsChange(updatedOptions);
+  };
+  
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-medium flex items-center gap-2">
@@ -27,10 +42,7 @@ export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: Trans
           <Switch
             id="diarize"
             checked={options.diarize}
-            onCheckedChange={(checked) => {
-              console.log("Speaker identification toggled:", checked);
-              onOptionsChange({...options, diarize: checked});
-            }}
+            onCheckedChange={handleDiarizeChange}
           />
         </div>
         

@@ -36,14 +36,30 @@ export const prepareRequest = (
 
   // Properly format diarization config for the Google API
   if (mergedConfig.enableSpeakerDiarization) {
-    mergedConfig.diarizationConfig = {
-      enableSpeakerDiarization: true,
-      minSpeakerCount: 1,
-      maxSpeakerCount: mergedConfig.diarizationSpeakerCount || 2
+    // Remove the old property that Google doesn't use directly
+    const { diarizationSpeakerCount, ...configWithoutDiarizationCount } = mergedConfig;
+    
+    // Create the properly structured config with the diarizationConfig object
+    const configWithDiarization = {
+      ...configWithoutDiarizationCount,
+      diarizationConfig: {
+        enableSpeakerDiarization: true,
+        minSpeakerCount: 1,
+        maxSpeakerCount: diarizationSpeakerCount || 2
+      }
+    };
+    
+    // Construct the request object with diarization
+    return {
+      audio: {
+        content: Buffer.from(audioBuffer).toString('base64'),
+      },
+      config: configWithDiarization,
+      apiKey,
     };
   }
 
-  // Construct the request object
+  // Construct the request object without diarization
   return {
     audio: {
       content: Buffer.from(audioBuffer).toString('base64'),
