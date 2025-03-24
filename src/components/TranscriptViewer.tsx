@@ -3,7 +3,9 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clipboard, Download, Check } from "lucide-react";
+import { Clipboard, Download, Check, FileText } from "lucide-react";
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 interface TranscriptViewerProps {
   text: string;
@@ -46,6 +48,65 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  // Function to download transcript as a Word document
+  const downloadWordDocument = () => {
+    // Create a new document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: formattedText.split('\n').map(line => {
+            // Apply special styling to speaker labels and Q&A format
+            if (/^(Speaker \d+:|[A-Z][A-Z\s']+:)/.test(line)) {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line,
+                    bold: true,
+                  }),
+                ],
+                spacing: {
+                  before: 400,
+                }
+              });
+            } 
+            else if (/^(Q|A):/.test(line)) {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line,
+                    bold: true,
+                  }),
+                ],
+                spacing: {
+                  before: 300,
+                }
+              });
+            } 
+            // Regular text
+            else {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line || " ", // Ensure at least a space for empty lines
+                  }),
+                ],
+                spacing: {
+                  before: 100,
+                }
+              });
+            }
+          }),
+        },
+      ],
+    });
+
+    // Generate and save the file
+    Packer.toBlob(doc).then(blob => {
+      saveAs(blob, `${fileName}.docx`);
+    });
   };
 
   // Helper function to enhance transcript formatting especially for speaker labels
@@ -111,6 +172,16 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
           >
             <Download className="h-4 w-4" />
             Download
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={downloadWordDocument}
+            className="flex items-center gap-1"
+          >
+            <FileText className="h-4 w-4" />
+            Word
           </Button>
         </div>
       </div>
