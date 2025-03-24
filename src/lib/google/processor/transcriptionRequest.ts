@@ -1,7 +1,7 @@
 
 import { TranscriptionOptions } from './types';
 import { handleApiError } from './request/errorHandler';
-import { prepareTranscriptionRequest } from './request/prepareRequest';
+import { prepareRequest, prepareTranscriptionRequest } from './request/prepareRequest';
 import { executeTranscriptionRequest } from './request/executeRequest';
 
 /**
@@ -41,3 +41,4 @@ export const sendTranscriptionRequest = async (
     throw handleApiError(error, requestId);
   }
 };
+

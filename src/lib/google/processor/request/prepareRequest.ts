@@ -43,3 +43,9 @@ export const prepareRequest = (
     apiKey,
   };
 };
+
+/**
+ * Alias for prepareRequest to maintain compatibility with existing code
+ */
+export const prepareTranscriptionRequest = prepareRequest;
+

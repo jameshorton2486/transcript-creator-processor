@@ -1,10 +1,26 @@
-
 /**
  * Helper functions for building Google Speech-to-Text API configuration
  */
 import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
 
-type TranscriptionOptions = typeof DEFAULT_TRANSCRIPTION_OPTIONS;
+export type TranscriptionOptions = typeof DEFAULT_TRANSCRIPTION_OPTIONS;
+
+/**
+ * Defines the shape of the speech configuration object for Google Speech-to-Text API
+ */
+export interface SpeechConfig {
+  encoding: string;
+  sampleRateHertz?: number;
+  languageCode: string;
+  enableAutomaticPunctuation?: boolean;
+  model?: string;
+  enableWordTimeOffsets?: boolean;
+  enableSpeakerDiarization?: boolean;
+  diarizationSpeakerCount?: number;
+  maxAlternatives?: number;
+  useEnhanced?: boolean;
+  profanityFilter?: boolean;
+}
 
 /**
  * Builds the request configuration for Google Speech-to-Text API
@@ -18,23 +34,7 @@ export const buildRequestConfig = (
 ) => {
   console.log(`[CONFIG] Building speech config with encoding=${encoding}, sample rate=${sampleRate || 'auto'}`);
   
-  const config: {
-    encoding: string;
-    languageCode: string;
-    enableAutomaticPunctuation: boolean;
-    model: string;
-    diarizationConfig?: {
-      enableSpeakerDiarization: boolean;
-      minSpeakerCount: number;
-      maxSpeakerCount: number;
-    };
-    speechContexts?: {
-      phrases: string[];
-      boost?: number;
-    }[];
-    profanityFilter?: boolean;
-    useEnhanced?: boolean;
-  } = {
+  const config: SpeechConfig = {
     encoding: encoding,
     languageCode: 'en-US', // Default to en-US as the TranscriptionOptions doesn't have a language property
     enableAutomaticPunctuation: options.punctuate,
@@ -106,3 +106,4 @@ const addSpeechAdaptation = (
     console.log(`[CONFIG] Added ${commonLegalTerms.length} common legal terms to speech context`);
   }
 };
+

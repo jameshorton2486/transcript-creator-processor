@@ -1,4 +1,3 @@
-
 // Define shared types for API request/response handling
 
 export interface TranscriptionConfig {
@@ -49,4 +48,15 @@ export interface TranscriptionOptions {
   enableSeparateRecognitionPerChannel?: boolean;
   profanityFilter?: boolean;
   [key: string]: any; // Allow for additional properties
+}
+
+/**
+ * Interface for the transcription request object sent to Google Speech API
+ */
+export interface TranscriptionRequest {
+  audio: {
+    content: string;
+  };
+  config: any;
+  apiKey: string;
 }
