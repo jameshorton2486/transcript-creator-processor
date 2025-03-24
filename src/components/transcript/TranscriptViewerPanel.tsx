@@ -37,6 +37,11 @@ export const TranscriptViewerPanel = ({
     "Locations": ["Travis County, Texas", "Austin, Texas", "San Antonio, Texas"],
   };
 
+  // Determine which tab should be active by default
+  const defaultTab = aiReviewedTranscript ? "ai-reviewed" : 
+                    processedTranscript ? "processed" : 
+                    originalTranscript ? "original" : "";
+
   if (!originalTranscript && !processedTranscript && !aiReviewedTranscript) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-sm flex flex-col items-center justify-center h-full text-center text-gray-500">
@@ -50,7 +55,7 @@ export const TranscriptViewerPanel = ({
     <Card className="h-full">
       <CardContent className="p-6 h-full">
         <div className="flex justify-between items-center mb-4">
-          <Tabs defaultValue={aiReviewedTranscript ? "ai-reviewed" : processedTranscript ? "processed" : "original"} className="w-full">
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList>
               {originalTranscript && (
                 <TabsTrigger value="original">Original Transcript</TabsTrigger>
@@ -68,6 +73,50 @@ export const TranscriptViewerPanel = ({
                 <TabsTrigger value="entities">Extracted Entities</TabsTrigger>
               )}
             </TabsList>
+            
+            <div className="h-[calc(100%-3rem)] overflow-hidden mt-4">
+              {originalTranscript && (
+                <TabsContent value="original" className="h-full m-0">
+                  <TranscriptViewer 
+                    text={originalTranscript} 
+                    fileName="original_transcript" 
+                  />
+                </TabsContent>
+              )}
+              
+              {processedTranscript && (
+                <TabsContent value="processed" className="h-full m-0">
+                  <TranscriptViewer 
+                    text={processedTranscript} 
+                    fileName="processed_transcript" 
+                  />
+                </TabsContent>
+              )}
+              
+              {aiReviewedTranscript && (
+                <TabsContent value="ai-reviewed" className="h-full m-0">
+                  <TranscriptViewer 
+                    text={aiReviewedTranscript} 
+                    fileName="ai_reviewed_transcript" 
+                  />
+                </TabsContent>
+              )}
+              
+              {jsonData && (
+                <TabsContent value="json" className="h-full m-0">
+                  <TranscriptViewer 
+                    text={JSON.stringify(jsonData, null, 2)} 
+                    fileName="transcript_data.json" 
+                  />
+                </TabsContent>
+              )}
+              
+              {currentTranscript && (
+                <TabsContent value="entities" className="h-full m-0">
+                  <EntityDisplay entities={mockEntities} />
+                </TabsContent>
+              )}
+            </div>
           </Tabs>
           
           {currentTranscript && (
@@ -104,50 +153,6 @@ export const TranscriptViewerPanel = ({
                 </div>
               </DrawerContent>
             </Drawer>
-          )}
-        </div>
-        
-        <div className="h-[calc(100%-3rem)] overflow-hidden">
-          {originalTranscript && (
-            <TabsContent value="original" className="h-full m-0">
-              <TranscriptViewer 
-                text={originalTranscript} 
-                fileName="original_transcript" 
-              />
-            </TabsContent>
-          )}
-          
-          {processedTranscript && (
-            <TabsContent value="processed" className="h-full m-0">
-              <TranscriptViewer 
-                text={processedTranscript} 
-                fileName="processed_transcript" 
-              />
-            </TabsContent>
-          )}
-          
-          {aiReviewedTranscript && (
-            <TabsContent value="ai-reviewed" className="h-full m-0">
-              <TranscriptViewer 
-                text={aiReviewedTranscript} 
-                fileName="ai_reviewed_transcript" 
-              />
-            </TabsContent>
-          )}
-          
-          {jsonData && (
-            <TabsContent value="json" className="h-full m-0">
-              <TranscriptViewer 
-                text={JSON.stringify(jsonData, null, 2)} 
-                fileName="transcript_data.json" 
-              />
-            </TabsContent>
-          )}
-          
-          {currentTranscript && (
-            <TabsContent value="entities" className="h-full m-0">
-              <EntityDisplay entities={mockEntities} />
-            </TabsContent>
           )}
         </div>
       </CardContent>
