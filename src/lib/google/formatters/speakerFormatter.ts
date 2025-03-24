@@ -75,69 +75,114 @@ export function processSpeakerDiarization(results: any[]): {
   // Check if we have speaker diarization data
   let hasSpeakerTags = false;
   
-  // Process all results to create a full transcript with speaker labels
-  results.forEach((result: any, resultIndex: number) => {
-    console.log(`Processing result ${resultIndex + 1}/${results.length}`);
+  // Find the most suitable result with speaker tags - usually the last one
+  let speakerResult = results[results.length - 1];
+  
+  // Check if the last result contains speaker tags
+  if (speakerResult && 
+      speakerResult.alternatives && 
+      speakerResult.alternatives[0] && 
+      speakerResult.alternatives[0].words) {
+    const words = speakerResult.alternatives[0].words;
     
-    if (result.alternatives && result.alternatives.length > 0) {
-      const transcript = result.alternatives[0].transcript || '';
+    // Check for speaker tags
+    hasSpeakerTags = words.some((word: any) => 
+      word.speakerTag !== undefined && word.speakerTag > 0
+    );
+    
+    if (hasSpeakerTags) {
+      console.log("✅ Found speaker tags in the last result!");
+    } else {
+      console.warn("⚠️ No speaker tags found in the last result.");
       
-      // Debug: Check if there are any speaker tags in the words
-      if (result.alternatives[0].words && result.alternatives[0].words.length > 0) {
-        const sampleWords = result.alternatives[0].words.slice(0, 5);
-        console.log(`Sample words from result ${resultIndex + 1}:`, sampleWords);
-        
-        // Check if there are any speaker tags
-        const resultHasSpeakerTags = result.alternatives[0].words.some((word: any) => 
-          word.speakerTag !== undefined && word.speakerTag > 0
-        );
-        
-        if (resultHasSpeakerTags) {
-          hasSpeakerTags = true;
-          console.log(`✅ Result ${resultIndex + 1} has speaker tags!`);
-        } else {
-          console.warn(`⚠️ Result ${resultIndex + 1} has NO speaker tags. Speaker diarization may not be enabled.`);
+      // If no speaker tags in the last result, search through all results
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.alternatives && 
+            result.alternatives[0] && 
+            result.alternatives[0].words) {
+          const resultHasSpeakerTags = result.alternatives[0].words.some((word: any) => 
+            word.speakerTag !== undefined && word.speakerTag > 0
+          );
+          
+          if (resultHasSpeakerTags) {
+            hasSpeakerTags = true;
+            speakerResult = result;
+            console.log(`✅ Found speaker tags in result ${i + 1}!`);
+            break;
+          }
         }
-        
-        result.alternatives[0].words.forEach((word: any) => {
-          const speakerId = word.speakerTag || 0;
-          
-          // Map Google speaker tags to our format (Speaker 1, Speaker 2, etc.)
-          if (!speakerMap[speakerId] && speakerId > 0) {
-            speakerMap[speakerId] = speakerNumber++;
-            console.log(`Mapped speaker ${speakerId} to Speaker ${speakerMap[speakerId]}`);
-          }
-          
-          // If speaker changed or if we have a punctuation that suggests a natural break
-          const isPunctuation = word.word.match(/[.!?]$/);
-          
-          if ((currentSpeaker !== -1 && currentSpeaker !== speakerId) || 
-              (isPunctuation && currentUtterance.length > 50)) {
-            // Only add the speaker label if we have text to add
-            if (currentUtterance.trim()) {
-              const speakerLabel = currentSpeaker > 0 ? 
-                `Speaker ${speakerMap[currentSpeaker] || speakerNumber}:` : 
-                "Speaker 1:";
-              
-              fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
-            }
-            currentUtterance = '';
-          }
-          
-          currentSpeaker = speakerId;
-          currentUtterance += ` ${word.word}`;
-        });
-        
-        // Add the last segment
+      }
+    }
+  }
+  
+  // Now process the speaker result if we found tags
+  if (hasSpeakerTags && 
+      speakerResult && 
+      speakerResult.alternatives && 
+      speakerResult.alternatives[0] && 
+      speakerResult.alternatives[0].words) {
+    
+    console.log("Processing speaker diarization with speaker tags...");
+    
+    // Process all words with speaker tags
+    const words = speakerResult.alternatives[0].words;
+    
+    // Debug output of the first few words with speaker tags
+    console.log("Sample words with speaker tags:", 
+      words.slice(0, 10).map((w: any) => ({ 
+        word: w.word, 
+        speakerTag: w.speakerTag 
+      }))
+    );
+    
+    words.forEach((word: any) => {
+      const speakerId = word.speakerTag || 0;
+      
+      // Map Google speaker tags to our format (Speaker 1, Speaker 2, etc.)
+      if (!speakerMap[speakerId] && speakerId > 0) {
+        speakerMap[speakerId] = speakerNumber++;
+        console.log(`Mapped speaker ${speakerId} to Speaker ${speakerMap[speakerId]}`);
+      }
+      
+      // If speaker changed or if we have a punctuation that suggests a natural break
+      const isPunctuation = word.word.match(/[.!?]$/);
+      
+      if ((currentSpeaker !== -1 && currentSpeaker !== speakerId) || 
+          (isPunctuation && currentUtterance.length > 50)) {
+        // Only add the speaker label if we have text to add
         if (currentUtterance.trim()) {
           const speakerLabel = currentSpeaker > 0 ? 
-            `Speaker ${speakerMap[currentSpeaker] || 1}:` : 
+            `Speaker ${speakerMap[currentSpeaker] || '1'}:` : 
             "Speaker 1:";
           
           fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
         }
-      } else {
-        console.log(`Result ${resultIndex + 1} has no word-level information, falling back to basic formatting`);
+        currentUtterance = '';
+      }
+      
+      currentSpeaker = speakerId;
+      currentUtterance += ` ${word.word}`;
+    });
+    
+    // Add the last segment
+    if (currentUtterance.trim()) {
+      const speakerLabel = currentSpeaker > 0 ? 
+        `Speaker ${speakerMap[currentSpeaker] || '1'}:` : 
+        "Speaker 1:";
+      
+      fullTranscript += `${speakerLabel} ${currentUtterance.trim()}\n\n`;
+    }
+  } else {
+    // Fallback: No speaker tags found, use traditional approach
+    console.warn("No speaker tags found in any results. Falling back to basic formatting.");
+    
+    // Process all results to create a basic transcript
+    results.forEach((result: any, resultIndex: number) => {
+      console.log(`Processing result ${resultIndex + 1}/${results.length} (without speaker tags)`);
+      
+      if (result.alternatives && result.alternatives.length > 0) {
+        const transcript = result.alternatives[0].transcript || '';
         
         // Enhanced detection for transcript formats
         const qaPattern = /\b(Q|A):\s/i;
@@ -156,11 +201,11 @@ export function processSpeakerDiarization(results: any[]): {
           fullTranscript += transcript.trim() + '\n\n';
         } else {
           // No speaker diarization or existing formatting, format as a single speaker
-          fullTranscript += `Speaker 1: ${transcript.trim()}\n\n`;
+          fullTranscript += `Speaker ${resultIndex % 2 + 1}: ${transcript.trim()}\n\n`;
         }
       }
-    }
-  });
+    });
+  }
   
   // If no speaker tags were found but diarization was requested, log a warning
   if (!hasSpeakerTags) {
@@ -169,9 +214,10 @@ export function processSpeakerDiarization(results: any[]): {
     
     // If no transcript was generated due to lack of speaker tags, create a basic transcript
     if (!fullTranscript.trim()) {
-      fullTranscript = results.map(result => 
+      console.log("Generating basic transcript without speaker diarization");
+      fullTranscript = results.map((result, idx) => 
         result.alternatives && result.alternatives.length > 0 
-          ? `Speaker 1: ${result.alternatives[0].transcript || ''}\n\n`
+          ? `Speaker ${(idx % 2) + 1}: ${result.alternatives[0].transcript || ''}\n\n`
           : ''
       ).join('').trim();
     }

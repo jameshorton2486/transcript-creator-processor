@@ -1,82 +1,81 @@
 
-import { Info, Mic } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import React from 'react';
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TranscriptionOptions } from "@/lib/config";
-import { Separator } from "@/components/ui/separator";
 
-interface TranscriptionOptionsProps {
+interface TranscriptionOptionsSelectorProps {
   options: TranscriptionOptions;
   onOptionsChange: (options: TranscriptionOptions) => void;
 }
 
-export const TranscriptionOptionsSelector = ({ options, onOptionsChange }: TranscriptionOptionsProps) => {
-  // This function logs and updates the diarize option
-  const handleDiarizeChange = (checked: boolean) => {
-    console.log("Speaker identification toggled:", checked);
-    
-    // If enabling diarization, also enable word time offsets as they're required for speaker identification
-    const updatedOptions = {
+export const TranscriptionOptionsSelector = ({ 
+  options, 
+  onOptionsChange 
+}: TranscriptionOptionsSelectorProps) => {
+  // Function to update a specific option
+  const updateOption = (key: keyof TranscriptionOptions, value: boolean) => {
+    const updatedOptions = { 
       ...options, 
-      diarize: checked,
-      // When diarization is enabled, we need to ensure these API-specific settings are also enabled
-      enableWordTimeOffsets: checked ? true : options.enableWordTimeOffsets,
-      enableSpeakerDiarization: checked,
-      // Set reasonable speaker count limits when enabling diarization
-      minSpeakerCount: checked ? 2 : undefined,
-      maxSpeakerCount: checked ? 6 : undefined,
+      [key]: value 
     };
     
-    console.log("Updated transcription options:", updatedOptions);
+    // When enabling diarize, also enable word time offsets as it's required
+    if (key === 'diarize' && value === true) {
+      updatedOptions.enableWordTimeOffsets = true;
+    }
+    
+    console.log('Updated transcription options:', updatedOptions);
     onOptionsChange(updatedOptions);
   };
   
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium flex items-center gap-2">
-        <Mic className="h-4 w-4 text-slate-500" />
-        Transcription Options
-      </h3>
+      <h3 className="text-sm font-medium">Transcription Options</h3>
       
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-slate-400" />
-            <Label htmlFor="diarize">Speaker Identification</Label>
-          </div>
-          <Switch
-            id="diarize"
-            checked={options.diarize}
-            onCheckedChange={handleDiarizeChange}
-          />
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-slate-400" />
-            <Label htmlFor="punctuate">Automatic Punctuation</Label>
-          </div>
-          <Switch
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex items-center space-x-2">
+          <Checkbox 
             id="punctuate"
             checked={options.punctuate}
-            onCheckedChange={(checked) => 
-              onOptionsChange({...options, punctuate: checked, enableAutomaticPunctuation: checked})
-            }
+            onCheckedChange={(checked) => updateOption('punctuate', checked === true)}
           />
+          <Label htmlFor="punctuate" className="cursor-pointer text-sm">
+            Automatic punctuation
+          </Label>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Info className="h-4 w-4 text-slate-400" />
-            <Label htmlFor="paragraphs">Paragraph Detection</Label>
-          </div>
-          <Switch
-            id="paragraphs"
-            checked={options.paragraphs}
-            onCheckedChange={(checked) => 
-              onOptionsChange({...options, paragraphs: checked})
-            }
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="diarize"
+            checked={options.diarize}
+            onCheckedChange={(checked) => updateOption('diarize', checked === true)}
           />
+          <Label htmlFor="diarize" className="cursor-pointer text-sm">
+            Speaker identification
+          </Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="word-timestamps"
+            checked={options.enableWordTimeOffsets}
+            onCheckedChange={(checked) => updateOption('enableWordTimeOffsets', checked === true)}
+          />
+          <Label htmlFor="word-timestamps" className="cursor-pointer text-sm">
+            Word timestamps
+          </Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="enhanced-model"
+            checked={options.useEnhanced}
+            onCheckedChange={(checked) => updateOption('useEnhanced', checked === true)}
+          />
+          <Label htmlFor="enhanced-model" className="cursor-pointer text-sm">
+            Enhanced model
+          </Label>
         </div>
       </div>
     </div>
