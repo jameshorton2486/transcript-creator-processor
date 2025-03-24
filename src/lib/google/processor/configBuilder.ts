@@ -58,7 +58,7 @@ export const buildRequestConfig = (options: TranscriptionOptions): Transcription
     config.speechContexts = [
       {
         phrases: customTerms,
-        boost: 15, // Increased from 10 to 15 for better recognition
+        boost: 15, // Now this property is valid with our updated type
       },
     ];
   }

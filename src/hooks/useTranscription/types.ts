@@ -16,7 +16,7 @@ export interface UseTranscriptionProps {
   customTerms: string[];
   handleFileSelected: (file: File) => void;
   transcribeAudioFile: () => Promise<void>;
-  setOptions: (options: TranscriptionOptions) => void;
+  setOptions: (options: Partial<TranscriptionOptions>) => void;
   setApiKey: (apiKey: string) => void;
   setError: (error: string | null) => void;
   setCustomTerms: (terms: string[]) => void;

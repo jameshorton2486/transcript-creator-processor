@@ -8,6 +8,7 @@ export const DEFAULT_TRANSCRIPTION_OPTIONS = {
   formatNames: true,
   removeHesitations: true,
   enableWordTimeOffsets: true,  // Always enable this for better results
+  useEnhanced: true,  // Add this property
 };
 
 // Transcription service options
@@ -35,22 +36,22 @@ export const PUNCTUATION_RULES = [
 
 // Typescript interface for transcription options
 export interface TranscriptionOptions {
-  punctuate?: boolean;
-  diarize?: boolean;
-  paragraphs?: boolean;
-  formatParagraphs?: boolean;
-  formatNames?: boolean;
-  removeHesitations?: boolean;
+  punctuate: boolean;
+  diarize: boolean;
+  paragraphs: boolean;
+  formatParagraphs: boolean;
+  formatNames: boolean;
+  removeHesitations: boolean;
+  enableWordTimeOffsets: boolean;
+  useEnhanced: boolean;  // Add this required property
   customTerms?: string[];
   languageCode?: string;
   encoding?: string;
   sampleRateHertz?: number;
   enableAutomaticPunctuation?: boolean;
   model?: string;
-  useEnhanced?: boolean;
   enableSpeakerDiarization?: boolean;
   minSpeakerCount?: number;
   maxSpeakerCount?: number;
-  enableWordTimeOffsets?: boolean;
   enableWordConfidence?: boolean;
 }

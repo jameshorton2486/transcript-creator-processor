@@ -28,6 +28,7 @@ export interface TranscriptionConfig extends TranscriptionOptions {
   };
   speechContexts?: Array<{
     phrases: string[];
+    boost?: number;  // Add this optional property
   }>;
 }
 
