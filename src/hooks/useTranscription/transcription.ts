@@ -94,7 +94,7 @@ export const performTranscription = async (
       
       console.log("Using speech config:", speechConfig);
       
-      // Helper function to normalize progress
+      // Progress tracking helper
       const normalizeProgress = (progress: number) => {
         // Ensure progress is between 0 and 100
         const normalized = Math.min(Math.max(Math.round(progress), 0), 100);
@@ -114,8 +114,14 @@ export const performTranscription = async (
       
       console.log("Transcription response received:", response);
       
+      // Reset progress to avoid lingering incomplete progress
+      onProgressUpdate(100);
+      
       // Enhanced validation of the transcript
       const transcriptText = validateTranscript(response);
+      
+      // Set loading to false before calling onSuccess to ensure UI is ready
+      onLoadingUpdate(false);
       
       console.log("Final transcript validation successful:", { 
         length: transcriptText?.length, 
@@ -123,7 +129,14 @@ export const performTranscription = async (
         hasTranscript: Boolean(transcriptText)
       });
       
+      // Make sure we have a valid transcript string
+      if (!transcriptText || typeof transcriptText !== 'string') {
+        throw new Error("No valid transcript text was generated from the audio");
+      }
+      
+      // Send the transcript data to the caller
       onSuccess(transcriptText, response);
+      
       toast({
         title: "Transcription complete",
         description: "The audio has been successfully transcribed.",
@@ -171,7 +184,7 @@ export const performTranscription = async (
   } finally {
     onLoadingUpdate(false);
     onBatchProcessingUpdate(false);
-    onProgressUpdate(0);
+    onProgressUpdate(0); // Reset progress when done
     console.log("Transcription process completed (success or error)");
   }
 };

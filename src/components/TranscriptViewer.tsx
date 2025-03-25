@@ -20,21 +20,11 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   // Enhanced formatted transcript with better speaker label highlighting
   const formattedText = useMemo(() => formatTranscript(text || ''), [text]);
 
-  // Improved debugging logs with type information
-  console.log("TranscriptViewer received text:", { 
-    length: text?.length, 
-    sample: text?.substring(0, 100), 
-    hasText: Boolean(text),
-    activeTab,
-    type: typeof text,
-    textValue: text
-  });
-
-  // More permissive rendering condition - only check if completely undefined
-  const shouldRender = text !== undefined;
+  // More permissive rendering condition - only check if completely undefined or empty
+  const hasText = text && text.trim().length > 0;
   
-  // If text is undefined, show empty state
-  if (!shouldRender) {
+  // If text is empty/undefined, show empty state
+  if (!hasText) {
     return (
       <Card className="h-full">
         <CardContent className="p-6 flex items-center justify-center h-full">
@@ -49,7 +39,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   return (
     <Card className="h-full flex flex-col">
       <ViewerToolbar 
-        text={text || ''}
+        text={text}
         formattedText={formattedText}
         fileName={fileName}
         activeTab={activeTab}
@@ -63,7 +53,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
         </TabsContent>
         
         <TabsContent value="raw" className="m-0 h-full block" forceMount={true} hidden={activeTab !== "raw"}>
-          <RawTranscriptView transcript={text || ''} textAreaRef={textAreaRef} />
+          <RawTranscriptView transcript={text} textAreaRef={textAreaRef} />
         </TabsContent>
       </CardContent>
     </Card>

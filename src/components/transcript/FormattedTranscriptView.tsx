@@ -8,41 +8,10 @@ interface FormattedTranscriptViewProps {
 export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = ({ formattedText }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Add enhanced console log to verify formatted text is received in detail
-  console.log("FormattedTranscriptView received:", { 
-    length: formattedText?.length, 
-    sample: formattedText?.substring(0, 100),
-    hasContent: Boolean(formattedText),
-    isString: typeof formattedText === 'string',
-    lineCount: formattedText?.split('\n')?.length,
-    formattedTextValue: formattedText // Log the actual value
-  });
-  
-  // Scroll to top when content changes and check CSS visibility
+  // Scroll to top when content changes
   useEffect(() => {
-    if (containerRef.current) {
+    if (containerRef.current && formattedText) {
       containerRef.current.scrollTop = 0;
-      
-      // Check if content is visible - add debug information to console
-      const containerStyle = window.getComputedStyle(containerRef.current);
-      console.log("FormattedView container style:", {
-        color: containerStyle.color,
-        backgroundColor: containerStyle.backgroundColor,
-        visibility: containerStyle.visibility,
-        display: containerStyle.display,
-        opacity: containerStyle.opacity,
-        height: containerStyle.height,
-        width: containerStyle.width,
-        overflow: containerStyle.overflow
-      });
-      
-      // Additional debug to confirm the container has the formatted text
-      console.log("FormattedView container:", {
-        childCount: containerRef.current.querySelectorAll('p, div').length,
-        visible: containerRef.current.offsetWidth > 0 && containerRef.current.offsetHeight > 0,
-        height: containerRef.current.offsetHeight,
-        contentHeight: containerRef.current.scrollHeight
-      });
     }
   }, [formattedText]);
   

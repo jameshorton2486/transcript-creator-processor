@@ -29,7 +29,7 @@ export const TranscribeButton = ({
       {isLoading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          {isBatchProcessing 
+          {isBatchProcessing && normalizedProgress > 0 && normalizedProgress < 100 
             ? `Processing audio (${normalizedProgress}%)`
             : "Processing audio..."}
         </>
