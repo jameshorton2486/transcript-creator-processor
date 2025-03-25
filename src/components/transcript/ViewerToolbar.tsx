@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clipboard, Download, Check, FileText } from "lucide-react";
 import { Packer } from "docx";
 import { saveAs } from 'file-saver';
-import { createWordDocument } from './docxGenerator';
+import { createWordDocument } from './docx';
 
 interface ViewerToolbarProps {
   text: string;
