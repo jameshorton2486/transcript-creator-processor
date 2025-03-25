@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Clipboard, Download, Check, FileText } from "lucide-react";
 import { Document, Packer } from "docx";
 import { saveAs } from 'file-saver';
-import { createWordDocument } from '../docxGenerator';
+import { createWordDocument } from '../docx';
 import { toast } from "@/components/ui/use-toast";
 
 interface DownloadOptionsProps {
