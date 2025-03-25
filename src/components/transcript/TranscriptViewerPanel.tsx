@@ -28,6 +28,15 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>("view");
   
+  // Add console log to debug transcript data flow
+  console.log("TranscriptViewerPanel received:", {
+    originalLength: originalTranscript?.length,
+    processedLength: processedTranscript?.length,
+    aiReviewedLength: aiReviewedTranscript?.length,
+    currentLength: currentTranscript?.length,
+    hasTranscript: Boolean(currentTranscript)
+  });
+  
   return (
     <Card className="h-full overflow-hidden shadow-md border-slate-200">
       <CardHeader className="px-4 py-3 border-b bg-white">

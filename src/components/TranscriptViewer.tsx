@@ -20,6 +20,9 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   // Enhanced formatted transcript with better speaker label highlighting
   const formattedText = useMemo(() => formatTranscript(text), [text]);
 
+  // Add console log to debug transcript text
+  console.log("TranscriptViewer received text:", { length: text?.length, sample: text?.substring(0, 100), hasText: Boolean(text) });
+
   if (!text) {
     return (
       <Card className="h-full">

@@ -37,7 +37,22 @@ export const TranscribeTab = ({
 }: TranscribeTabProps) => {
   const { toast } = useToast();
   
+  // Add console log to debug transcript values in the main tab
+  console.log("TranscribeTab state:", {
+    originalLength: originalTranscript?.length,
+    processedLength: processedTranscript?.length, 
+    aiReviewedLength: aiReviewedTranscript?.length,
+    fileName,
+    hasJsonData: Boolean(jsonData)
+  });
+  
   const handleTranscriptCreated = (transcript: string, jsonData: any, file?: File) => {
+    console.log("Transcript created:", { 
+      transcriptLength: transcript?.length, 
+      hasJsonData: Boolean(jsonData),
+      fileProvided: Boolean(file)
+    });
+    
     setOriginalTranscript(transcript);
     setJsonData(jsonData);
     if (file) {
@@ -47,10 +62,12 @@ export const TranscribeTab = ({
   };
   
   const handleTranscriptProcessed = (processedText: string) => {
+    console.log("Transcript processed:", { processedLength: processedText?.length });
     setProcessedTranscript(processedText);
   };
   
   const handleAiReviewCompleted = (reviewedText: string) => {
+    console.log("AI review completed:", { reviewedLength: reviewedText?.length });
     setAiReviewedTranscript(reviewedText);
     toast({
       title: "AI Review Complete",
@@ -59,6 +76,7 @@ export const TranscribeTab = ({
   };
 
   const clearWorkspace = () => {
+    console.log("Clearing workspace");
     setOriginalTranscript("");
     setProcessedTranscript("");
     setAiReviewedTranscript("");
@@ -72,6 +90,10 @@ export const TranscribeTab = ({
   };
 
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
+  console.log("Current transcript to display:", { 
+    currentLength: currentTranscript?.length,
+    source: aiReviewedTranscript ? "AI Reviewed" : (processedTranscript ? "Processed" : "Original")
+  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">

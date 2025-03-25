@@ -117,6 +117,12 @@ export const performTranscription = async (
       // Enhanced validation of the transcript
       const transcriptText = validateTranscript(response);
       
+      console.log("Final transcript validation successful:", { 
+        length: transcriptText?.length, 
+        sample: transcriptText?.substring(0, 100),
+        hasTranscript: Boolean(transcriptText)
+      });
+      
       onSuccess(transcriptText, response);
       toast({
         title: "Transcription complete",
@@ -125,7 +131,7 @@ export const performTranscription = async (
       
       // Log successful completion
       console.log("Transcription completed successfully");
-      console.log(`Transcript length: ${transcriptText.length} characters`);
+      console.log(`Transcript length: ${transcriptText?.length} characters`);
     } catch (error: any) {
       console.error("Transcription error:", error);
       

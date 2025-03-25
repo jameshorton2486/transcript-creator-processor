@@ -1,13 +1,29 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface FormattedTranscriptViewProps {
   formattedText: string;
 }
 
 export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = ({ formattedText }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Add console log to verify formatted text is received
+  console.log("FormattedTranscriptView received:", { 
+    length: formattedText?.length, 
+    sample: formattedText?.substring(0, 100),
+    hasContent: Boolean(formattedText)
+  });
+  
+  // Scroll to top when content changes
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, [formattedText]);
+  
   return (
-    <div className="prose max-w-none p-6 h-full bg-white overflow-auto">
+    <div ref={containerRef} className="prose max-w-none p-6 h-full bg-white overflow-auto">
       <div className="mx-auto max-w-4xl shadow-sm rounded-sm border border-slate-100 p-8 bg-white">
         {/* Document styling */}
         <div className="font-serif leading-relaxed text-slate-800">
