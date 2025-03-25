@@ -81,19 +81,6 @@ export const performTranscription = async (
         ? { ...options, encoding: 'AUTO' }
         : options;
       
-      // This makes sure the options passed to Google API are properly structured
-      // to include diarization (speaker identification) settings
-      const speechConfig = {
-        enableAutomaticPunctuation: transcriptionOptions.punctuate,
-        enableSpeakerDiarization: transcriptionOptions.diarize,
-        enableWordTimeOffsets: transcriptionOptions.diarize || transcriptionOptions.enableWordTimeOffsets,
-        diarizationSpeakerCount: 2, // Default to 2 speakers, can be adjusted
-        model: 'latest_long',
-        languageCode: 'en-US'
-      };
-      
-      console.log("Using speech config:", speechConfig);
-      
       // Progress tracking helper
       const normalizeProgress = (progress: number) => {
         // Ensure progress is between 0 and 100
@@ -107,21 +94,18 @@ export const performTranscription = async (
           file, 
           apiKey, 
           transcriptionOptions, 
-          isLargeFile ? normalizeProgress : undefined,
+          normalizeProgress, // Always use progress tracking
           customTerms
         )
       );
       
       console.log("Transcription response received:", response);
       
-      // Reset progress to avoid lingering incomplete progress
+      // Reset progress to complete state
       onProgressUpdate(100);
       
       // Enhanced validation of the transcript
       const transcriptText = validateTranscript(response);
-      
-      // Set loading to false before calling onSuccess to ensure UI is ready
-      onLoadingUpdate(false);
       
       console.log("Final transcript validation successful:", { 
         length: transcriptText?.length, 
@@ -182,6 +166,7 @@ export const performTranscription = async (
   try {
     await attemptTranscription();
   } finally {
+    // Only update loading state AFTER transcription is complete
     onLoadingUpdate(false);
     onBatchProcessingUpdate(false);
     onProgressUpdate(0); // Reset progress when done

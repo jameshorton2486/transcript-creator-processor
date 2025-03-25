@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { ViewerToolbar } from './transcript/ViewerToolbar';
@@ -22,6 +22,16 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
 
   // More permissive rendering condition - only check if completely undefined or empty
   const hasText = text && text.trim().length > 0;
+  
+  // Log when we receive new transcript content
+  useEffect(() => {
+    console.log("TranscriptViewer received text:", {
+      textLength: text?.length,
+      hasText: Boolean(hasText),
+      formattedTextLength: formattedText?.length,
+      textSample: text?.substring(0, 100)
+    });
+  }, [text, formattedText, hasText]);
   
   // If text is empty/undefined, show empty state
   if (!hasText) {

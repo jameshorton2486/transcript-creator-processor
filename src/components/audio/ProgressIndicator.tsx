@@ -8,6 +8,7 @@ interface ProgressIndicatorProps {
 }
 
 export const ProgressIndicator = ({ progress, isVisible, label }: ProgressIndicatorProps) => {
+  // Don't show if not visible or progress is not valid
   if (!isVisible || progress <= 0) return null;
   
   // Ensure progress is capped between 0 and 100

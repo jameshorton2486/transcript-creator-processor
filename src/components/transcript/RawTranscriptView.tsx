@@ -19,6 +19,8 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
       
       // Optionally scroll to top when new content is loaded
       textarea.scrollTop = 0;
+      
+      console.log("RawTranscriptView updated with transcript length:", transcript.length);
     }
   }, [transcript, actualRef]);
   
