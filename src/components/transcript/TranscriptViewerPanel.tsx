@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useState } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { ViewerToolbar } from "@/components/transcript/ViewerToolbar";
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -27,7 +26,6 @@ export const TranscriptViewerPanel = ({
   currentTranscript,
 }: TranscriptViewerPanelProps) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState<string>("formatted");
   
   // Define mock entities based on the jsonData
   const mockEntities = jsonData?.entities || {
@@ -79,61 +77,28 @@ export const TranscriptViewerPanel = ({
             <div className="h-[calc(100%-3rem)] overflow-hidden">
               {originalTranscript && (
                 <TabsContent value="original" className="h-full m-0">
-                  <div className="flex flex-col h-full">
-                    <ViewerToolbar 
-                      text={originalTranscript} 
-                      formattedText={originalTranscript} 
-                      fileName={`${fileName}_original`}
-                      activeTab={activeViewTab}
-                      setActiveTab={setActiveViewTab} 
-                    />
-                    <div className="flex-grow overflow-auto">
-                      <TranscriptViewer 
-                        text={originalTranscript} 
-                        fileName="original_transcript" 
-                      />
-                    </div>
-                  </div>
+                  <TranscriptViewer 
+                    text={originalTranscript} 
+                    fileName={`${fileName}_original`} 
+                  />
                 </TabsContent>
               )}
               
               {processedTranscript && (
                 <TabsContent value="processed" className="h-full m-0">
-                  <div className="flex flex-col h-full">
-                    <ViewerToolbar 
-                      text={processedTranscript} 
-                      formattedText={processedTranscript} 
-                      fileName={`${fileName}_processed`}
-                      activeTab={activeViewTab}
-                      setActiveTab={setActiveViewTab} 
-                    />
-                    <div className="flex-grow overflow-auto">
-                      <TranscriptViewer 
-                        text={processedTranscript} 
-                        fileName="processed_transcript" 
-                      />
-                    </div>
-                  </div>
+                  <TranscriptViewer 
+                    text={processedTranscript} 
+                    fileName={`${fileName}_processed`} 
+                  />
                 </TabsContent>
               )}
               
               {aiReviewedTranscript && (
                 <TabsContent value="ai-reviewed" className="h-full m-0">
-                  <div className="flex flex-col h-full">
-                    <ViewerToolbar 
-                      text={aiReviewedTranscript} 
-                      formattedText={aiReviewedTranscript} 
-                      fileName={`${fileName}_ai_reviewed`}
-                      activeTab={activeViewTab}
-                      setActiveTab={setActiveViewTab} 
-                    />
-                    <div className="flex-grow overflow-auto">
-                      <TranscriptViewer 
-                        text={aiReviewedTranscript} 
-                        fileName="ai_reviewed_transcript" 
-                      />
-                    </div>
-                  </div>
+                  <TranscriptViewer 
+                    text={aiReviewedTranscript} 
+                    fileName={`${fileName}_ai_reviewed`} 
+                  />
                 </TabsContent>
               )}
               

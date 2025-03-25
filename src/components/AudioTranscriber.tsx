@@ -83,6 +83,9 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setOptions(newOptions as any);
   };
 
+  // Normalize progress value to ensure it's between 0-100
+  const normalizedProgress = Math.min(Math.max(Math.round(progress), 0), 100);
+
   return (
     <Card className="bg-white">
       <CardHeader className="pb-2">
@@ -122,9 +125,9 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         {/* Show only one progress indicator with proper label */}
         {isLoading && isBatchProcessing && (
           <ProgressIndicator 
-            progress={progress} 
+            progress={normalizedProgress} 
             isVisible={true}
-            label="Transcribing audio"
+            label={`Transcribing audio (${normalizedProgress}%)`}
           />
         )}
         
@@ -140,7 +143,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           isDisabled={!file || isLoading || !apiKey}
           isLoading={isLoading}
           isBatchProcessing={isBatchProcessing}
-          progress={progress}
+          progress={normalizedProgress}
         />
       </CardContent>
       

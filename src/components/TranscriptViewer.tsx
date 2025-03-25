@@ -41,7 +41,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
         setActiveTab={setActiveTab}
       />
       
-      <CardContent className="p-0 flex-1 overflow-auto">
+      <CardContent className="p-0 flex-1 overflow-auto relative">
         <TabsContent value="formatted" className="m-0 h-full">
           <FormattedTranscriptView formattedText={formattedText} />
         </TabsContent>
