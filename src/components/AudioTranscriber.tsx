@@ -1,17 +1,14 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { TranscriberCard } from "@/components/audio/TranscriberCard";
 import { FileSelector } from "@/components/audio/FileSelector";
 import { TranscriptionOptionsSelector } from "@/components/audio/TranscriptionOptions";
 import { ApiKeyInput } from "@/components/audio/ApiKeyInput";
 import { ErrorDisplay } from "@/components/audio/ErrorDisplay";
-import { LargeFileAlert } from "@/components/audio/LargeFileAlert";
-import { TranscribeButton } from "@/components/audio/TranscribeButton";
 import { CustomTerminologySection } from "@/components/audio/CustomTerminologySection";
-import { MemoryWarningAlert } from "@/components/audio/MemoryWarningAlert";
-import { TranscriberFooter } from "@/components/audio/TranscriberFooter";
+import { TranscribeButton } from "@/components/audio/TranscribeButton";
+import { FileWarnings } from "@/components/audio/FileWarnings";
 import { useTranscription } from "@/hooks/useTranscription";
-import { useState, useEffect } from "react";
 import { estimateMemoryRequirements } from "@/lib/google/audio/fileChunker";
 import { MAX_CHUNK_DURATION_SECONDS } from "@/lib/audio/chunkProcessor";
 import { TranscriptionOptions } from "@/lib/config";
@@ -83,58 +80,45 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
   };
 
   return (
-    <Card className="bg-white">
-      <CardHeader className="pb-2">
-        <CardTitle>Audio Transcription</CardTitle>
-        <CardDescription>Upload an audio file to create a transcript</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <ApiKeyInput 
-          apiKey={apiKey} 
-          onApiKeyChange={setApiKey} 
-        />
+    <TranscriberCard>
+      <ApiKeyInput 
+        apiKey={apiKey} 
+        onApiKeyChange={setApiKey} 
+      />
 
-        <FileSelector 
-          onFileSelected={handleFileSelected}
-          isLoading={isLoading}
-        />
-        
-        <MemoryWarningAlert warningMessage={memoryWarning} />
-        
-        {durationWarning && (
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
-            <p>{durationWarning}</p>
-          </div>
-        )}
-        
-        <CustomTerminologySection 
-          customTerms={customTerms}
-          setCustomTerms={setCustomTerms}
-        />
-        
-        <LargeFileAlert 
-          isVisible={!!file && file.size > MEMORY_EFFICIENT_THRESHOLD && !isLoading} 
-          fileSizeMB={fileSizeMB}
-        />
-        
-        <ErrorDisplay error={error} />
-        
-        <TranscriptionOptionsSelector 
-          options={options}
-          onOptionsChange={handleOptionsChange}
-        />
-        
-        <TranscribeButton 
-          onClick={transcribeAudioFile}
-          isDisabled={!file || isLoading || !apiKey}
-          isLoading={isLoading}
-          isBatchProcessing={isBatchProcessing}
-          progress={progress}
-        />
-      </CardContent>
+      <FileSelector 
+        onFileSelected={handleFileSelected}
+        isLoading={isLoading}
+      />
       
-      <TranscriberFooter />
-    </Card>
+      <FileWarnings
+        memoryWarning={memoryWarning}
+        durationWarning={durationWarning}
+        file={file}
+        isLoading={isLoading}
+        fileSizeMB={fileSizeMB}
+        memoryThreshold={MEMORY_EFFICIENT_THRESHOLD}
+      />
+      
+      <CustomTerminologySection 
+        customTerms={customTerms}
+        setCustomTerms={setCustomTerms}
+      />
+      
+      <ErrorDisplay error={error} />
+      
+      <TranscriptionOptionsSelector 
+        options={options}
+        onOptionsChange={handleOptionsChange}
+      />
+      
+      <TranscribeButton 
+        onClick={transcribeAudioFile}
+        isDisabled={!file || isLoading || !apiKey}
+        isLoading={isLoading}
+        isBatchProcessing={isBatchProcessing}
+        progress={progress}
+      />
+    </TranscriberCard>
   );
 };
