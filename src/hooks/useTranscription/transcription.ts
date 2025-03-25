@@ -43,8 +43,8 @@ export const performTranscription = async (
   onErrorUpdate(null);
   onProgressUpdate(0);
   
-  console.log(`Transcription started for: ${file.name}`);
-  console.log(`File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`[TRANSCRIPTION] Started for: ${file.name}`);
+  console.log(`[TRANSCRIPTION] File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
   
   let autoRetryAttempted = false;
   
@@ -66,7 +66,7 @@ export const performTranscription = async (
         onBatchProcessingUpdate(true);
       }
       
-      console.log(`Starting transcription for file: ${file.name} (${file.type})`);
+      console.log(`[TRANSCRIPTION] Starting transcription process for file: ${file.name} (${file.type})`);
       
       // If retrying with auto-detect, modify the options
       const transcriptionOptions = retryWithAutoDetect 
@@ -90,18 +90,19 @@ export const performTranscription = async (
         )
       );
       
-      console.log("Raw transcription response received");
+      console.log("[TRANSCRIPTION] Raw transcription response received");
       
       // Reset progress to complete state
       onProgressUpdate(100);
       
       // Enhanced validation of the transcript
+      console.log("[TRANSCRIPTION] Validating transcript");
       const transcriptText = validateTranscript(response);
       
-      console.log("Transcript validated:", { 
-        length: transcriptText?.length, 
-        sample: transcriptText?.substring(0, 100),
+      console.log("[TRANSCRIPTION] Transcript validation complete:", { 
         hasTranscript: Boolean(transcriptText),
+        length: transcriptText?.length || 0, 
+        sample: transcriptText ? transcriptText.substring(0, 100) + "..." : "none",
       });
       
       // Make sure we have a valid transcript string
@@ -113,7 +114,7 @@ export const performTranscription = async (
       const fileName = file.name.split('.')[0] || "transcript";
       
       // DIRECTLY CREATE AND DOWNLOAD THE WORD DOCUMENT
-      console.log("Initiating Word document creation and download");
+      console.log("[TRANSCRIPTION] Creating and downloading Word document");
       
       try {
         await downloadWordDocumentDirect(transcriptText, fileName);
@@ -122,9 +123,9 @@ export const performTranscription = async (
         // This allows the transcript to be available in the UI if needed
         onSuccess(transcriptText, response);
         
-        console.log("Transcription and Word document creation complete");
+        console.log("[TRANSCRIPTION] Transcription and Word document creation complete");
       } catch (docError) {
-        console.error("Error creating Word document:", docError);
+        console.error("[TRANSCRIPTION] Error creating Word document:", docError);
         toast({
           title: "Document Creation Error",
           description: "Could not create Word document. Please try again.",
@@ -135,7 +136,7 @@ export const performTranscription = async (
         onSuccess(transcriptText, response);
       }
     } catch (error: any) {
-      console.error("Transcription error:", error);
+      console.error("[TRANSCRIPTION] Error:", error);
       
       // Detect encoding error and auto-retry
       if (!autoRetryAttempted && 
@@ -143,7 +144,7 @@ export const performTranscription = async (
           (error.message.includes("Encoding in RecognitionConfig") || 
            error.message.includes("encoding mismatch"))) {
         
-        console.log("Encoding issue detected, automatically retrying with auto-detection");
+        console.log("[TRANSCRIPTION] Encoding issue detected, automatically retrying with auto-detection");
         toast({
           title: "Retrying transcription",
           description: "Encoding issue detected. Automatically retrying with auto-detection.",
@@ -155,7 +156,7 @@ export const performTranscription = async (
       
       // Enhanced error logging with context
       const errorContext = createErrorContext(file, options, customTerms, error);
-      console.error("Detailed error context:", errorContext);
+      console.error("[TRANSCRIPTION] Detailed error context:", errorContext);
       
       const errorMessage = formatErrorMessage(error);
       
@@ -174,6 +175,6 @@ export const performTranscription = async (
     onLoadingUpdate(false);
     onBatchProcessingUpdate(false);
     onProgressUpdate(0); // Reset progress when done
-    console.log("Transcription process completed (success or error)");
+    console.log("[TRANSCRIPTION] Process completed (success or error)");
   }
 };

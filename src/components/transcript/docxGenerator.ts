@@ -5,14 +5,16 @@ import { Document, Paragraph, TextRun, Header, Footer, PageNumber, AlignmentType
  * Creates a Word document from the transcript text with improved reliability
  */
 export function createWordDocument(transcriptText: string, fileName: string = "Transcript"): Document {
-  console.log("Creating Word document:", {
-    textLength: transcriptText?.length,
+  console.log("[DOCX] Creating Word document:", {
+    textLength: transcriptText?.length || 0,
     fileName,
-    textSample: transcriptText?.substring(0, 100),
+    textSample: transcriptText ? transcriptText.substring(0, 100) + "..." : "none",
   });
   
   // Ensure we have valid text
-  const safeText = transcriptText || "No transcript content available.";
+  const safeText = transcriptText && transcriptText.trim().length > 0 
+    ? transcriptText 
+    : "No transcript content available.";
   
   // Create a new document with proper formatting
   const doc = new Document({
@@ -81,28 +83,6 @@ export function createWordDocument(transcriptText: string, fileName: string = "T
               right: 1440, // 1 inch
               bottom: 1440, // 1 inch
               left: 1440, // 1 inch
-            },
-            borders: {
-              pageBorderTop: {
-                style: BorderStyle.SINGLE,
-                size: 1,
-                color: "F0F0F0",
-              },
-              pageBorderRight: {
-                style: BorderStyle.SINGLE,
-                size: 1,
-                color: "F0F0F0",
-              },
-              pageBorderBottom: {
-                style: BorderStyle.SINGLE,
-                size: 1,
-                color: "F0F0F0",
-              },
-              pageBorderLeft: {
-                style: BorderStyle.SINGLE,
-                size: 1,
-                color: "F0F0F0",
-              },
             },
           },
         },
@@ -229,7 +209,7 @@ export function createWordDocument(transcriptText: string, fileName: string = "T
     ],
   });
   
-  console.log("Word document created successfully");
+  console.log("[DOCX] Word document created successfully");
   return doc;
 }
 
