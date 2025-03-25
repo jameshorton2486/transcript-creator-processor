@@ -123,11 +123,11 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
         />
         
         {/* Show only one progress indicator with proper label */}
-        {isLoading && isBatchProcessing && (
+        {isLoading && (
           <ProgressIndicator 
             progress={normalizedProgress} 
             isVisible={true}
-            label={`Transcribing audio (${normalizedProgress}%)`}
+            label={`Transcribing audio${isBatchProcessing ? ' in batches' : ''}`}
           />
         )}
         

@@ -4,9 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TranscriptViewer } from "@/components/TranscriptViewer";
 import { EntityDisplay } from "@/components/EntityDisplay";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Clipboard, Download, Check } from "lucide-react";
 import { useState } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { Document, Packer } from "docx";
+import { saveAs } from 'file-saver';
+import { createWordDocument } from './docxGenerator';
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -26,6 +29,50 @@ export const TranscriptViewerPanel = ({
   currentTranscript,
 }: TranscriptViewerPanelProps) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  
+  // Reset copied state after 2 seconds
+  useState(() => {
+    let timer: NodeJS.Timeout;
+    if (copied) {
+      timer = setTimeout(() => setCopied(false), 2000);
+    }
+    return () => clearTimeout(timer);
+  }, [copied]);
+  
+  // Function to copy transcript text to clipboard
+  const copyToClipboard = () => {
+    if (currentTranscript) {
+      navigator.clipboard.writeText(currentTranscript)
+        .then(() => setCopied(true))
+        .catch(err => console.error('Failed to copy: ', err));
+    }
+  };
+
+  // Function to download transcript as a text file
+  const downloadTranscript = () => {
+    if (currentTranscript) {
+      const element = document.createElement("a");
+      const file = new Blob([currentTranscript], {type: 'text/plain'});
+      element.href = URL.createObjectURL(file);
+      element.download = `${fileName}.txt`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+  };
+
+  // Function to download transcript as a Word document
+  const downloadWordDocument = () => {
+    if (currentTranscript) {
+      const doc = createWordDocument(currentTranscript);
+      
+      // Generate and save the file
+      Packer.toBlob(doc).then(blob => {
+        saveAs(blob, `${fileName}.docx`);
+      });
+    }
+  };
   
   // Define mock entities based on the jsonData
   const mockEntities = jsonData?.entities || {
@@ -54,6 +101,43 @@ export const TranscriptViewerPanel = ({
   return (
     <Card className="h-full">
       <CardContent className="p-0 h-full flex flex-col">
+        {currentTranscript && (
+          <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
+            <h3 className="text-sm font-medium">Transcript Options</h3>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={copyToClipboard}
+                className="flex items-center gap-1"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={downloadTranscript}
+                className="flex items-center gap-1"
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={downloadWordDocument}
+                className="flex items-center gap-1"
+              >
+                <FileText className="h-4 w-4" />
+                Word
+              </Button>
+            </div>
+          </div>
+        )}
+        
         <div className="flex-grow overflow-hidden">
           <Tabs defaultValue={defaultTab} className="w-full h-full">
             <TabsList className="px-6 pt-6 pb-2">
