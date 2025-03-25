@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clipboard, Download, Check, FileText } from "lucide-react";
-import { Document, Packer } from "docx";
+import { Packer } from "docx";
 import { saveAs } from 'file-saver';
 import { createWordDocument } from './docxGenerator';
 
@@ -56,7 +56,7 @@ export const ViewerToolbar = ({
 
   // Function to download transcript as a Word document
   const downloadWordDocument = () => {
-    const doc = createWordDocument(formattedText);
+    const doc = createWordDocument(formattedText, fileName);
     
     // Generate and save the file
     Packer.toBlob(doc).then(blob => {
