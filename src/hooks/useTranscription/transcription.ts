@@ -5,9 +5,7 @@ import { transcribeAudio, testApiKey } from "@/lib/google";
 import { formatErrorMessage, createErrorContext } from "./errorHandling";
 import { validateTranscript } from "./transcriptValidation";
 import { safePromise } from "./promiseUtils";
-import { Document, Packer } from "docx";
-import { saveAs } from 'file-saver';
-import { createWordDocument } from "@/components/transcript/docxGenerator";
+import { downloadWordDocumentDirect } from "@/components/transcript/controls/DownloadOptions";
 
 export const performTranscription = async (
   file: File | null,
@@ -91,7 +89,7 @@ export const performTranscription = async (
         )
       );
       
-      console.log("Raw transcription response received:", response);
+      console.log("Raw transcription response received");
       
       // Reset progress to complete state
       onProgressUpdate(100);
@@ -99,11 +97,10 @@ export const performTranscription = async (
       // Enhanced validation of the transcript
       const transcriptText = validateTranscript(response);
       
-      console.log("Validated transcript text:", { 
+      console.log("Transcript validated:", { 
         length: transcriptText?.length, 
         sample: transcriptText?.substring(0, 100),
         hasTranscript: Boolean(transcriptText),
-        type: typeof transcriptText
       });
       
       // Make sure we have a valid transcript string
@@ -114,48 +111,33 @@ export const performTranscription = async (
       // Create a filename based on the original file
       const fileName = file.name.split('.')[0] || "transcript";
       
-      // DIRECT WORD DOCUMENT CREATION - This is the key simplification
-      console.log("Creating Word document with transcript", {
-        transcriptLength: transcriptText.length,
-        fileName: fileName
-      });
+      // DIRECTLY CREATE AND DOWNLOAD THE WORD DOCUMENT
+      console.log("Initiating Word document creation and download");
       
       try {
-        // Create the Word document using the existing utility
-        const doc = createWordDocument(transcriptText, fileName);
+        await downloadWordDocumentDirect(transcriptText, fileName);
         
-        // Generate and save/open the file
-        console.log("Converting Word document to blob for download");
-        Packer.toBlob(doc).then(blob => {
-          console.log("Word document blob created, initiating download");
-          saveAs(blob, `${fileName}.docx`);
-          
-          // Notify the user
-          toast({
-            title: "Transcription complete",
-            description: "Word document has been created and opened for your review.",
-          });
-          
-          // Still call onSuccess to maintain compatibility with existing code
-          onSuccess(transcriptText, response);
+        // Notify the user
+        toast({
+          title: "Transcription complete",
+          description: "Word document has been created and downloaded for your review.",
         });
-      } catch (wordError) {
-        console.error("Error creating Word document:", wordError);
+        
+        // Still call onSuccess to maintain compatibility with existing code
+        onSuccess(transcriptText, response);
+      } catch (docError) {
+        console.error("Error creating Word document:", docError);
         toast({
           title: "Document Creation Error",
-          description: "Could not create Word document. Downloading transcript as text instead.",
+          description: "Could not create Word document. Please try again.",
           variant: "destructive",
         });
         
-        // Fallback to text download
-        const blob = new Blob([transcriptText], { type: 'text/plain' });
-        saveAs(blob, `${fileName}.txt`);
-        
-        // Still call onSuccess to maintain compatibility
+        // Still call onSuccess so the transcript is available in the UI
         onSuccess(transcriptText, response);
       }
       
-      console.log("Transcription processing complete, document creation initiated");
+      console.log("Transcription processing complete");
     } catch (error: any) {
       console.error("Transcription error:", error);
       

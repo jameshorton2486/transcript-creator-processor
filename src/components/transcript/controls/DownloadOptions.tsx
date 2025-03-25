@@ -10,9 +10,15 @@ interface DownloadOptionsProps {
   currentTranscript: string;
   fileName: string;
   jsonData?: any;
+  autoDownloadWord?: boolean;
 }
 
-export const DownloadOptions = ({ currentTranscript, fileName, jsonData }: DownloadOptionsProps) => {
+export const DownloadOptions = ({ 
+  currentTranscript, 
+  fileName, 
+  jsonData,
+  autoDownloadWord = false
+}: DownloadOptionsProps) => {
   const [copied, setCopied] = useState(false);
   
   // Reset copied state after 2 seconds
@@ -23,6 +29,13 @@ export const DownloadOptions = ({ currentTranscript, fileName, jsonData }: Downl
     }
     return () => clearTimeout(timer);
   }, [copied]);
+  
+  // Auto-download Word document when requested
+  useEffect(() => {
+    if (autoDownloadWord && currentTranscript) {
+      downloadWordDocument();
+    }
+  }, [autoDownloadWord, currentTranscript]);
   
   // Function to copy transcript text to clipboard
   const copyToClipboard = () => {
@@ -49,9 +62,10 @@ export const DownloadOptions = ({ currentTranscript, fileName, jsonData }: Downl
   // Function to download transcript as a Word document
   const downloadWordDocument = () => {
     if (currentTranscript) {
-      console.log("Creating Word document from DownloadOptions", {
+      console.log("Creating Word document:", {
         transcriptLength: currentTranscript.length,
-        fileName
+        fileName,
+        transcriptSample: currentTranscript.substring(0, 100)
       });
       
       const doc = createWordDocument(currentTranscript, fileName);
@@ -118,4 +132,25 @@ export const DownloadOptions = ({ currentTranscript, fileName, jsonData }: Downl
       )}
     </div>
   );
+};
+
+// Export these functions for direct use in transcription.ts
+export const downloadWordDocumentDirect = (transcriptText: string, fileName: string) => {
+  if (transcriptText) {
+    console.log("Directly creating Word document:", {
+      transcriptLength: transcriptText.length,
+      fileName,
+      transcriptSample: transcriptText.substring(0, 100)
+    });
+    
+    const doc = createWordDocument(transcriptText, fileName);
+    
+    // Generate and save the file
+    return Packer.toBlob(doc).then(blob => {
+      console.log("Word document blob created, initiating download");
+      saveAs(blob, `${fileName}.docx`);
+      return true;
+    });
+  }
+  return Promise.resolve(false);
 };
