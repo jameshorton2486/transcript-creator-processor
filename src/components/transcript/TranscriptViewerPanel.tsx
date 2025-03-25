@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TranscriptViewer } from "@/components/TranscriptViewer";
 import { EntityDisplay } from "@/components/EntityDisplay";
 import { Button } from "@/components/ui/button";
-import { FileText, Clipboard, Download, Check } from "lucide-react";
+import { FileText, Clipboard, Download, Check, FileAudio } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Document, Packer } from "docx";
@@ -73,6 +73,15 @@ export const TranscriptViewerPanel = ({
       });
     }
   };
+
+  // Function to download JSON data
+  const downloadJsonData = () => {
+    if (jsonData) {
+      const jsonString = JSON.stringify(jsonData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      saveAs(blob, `${fileName}_data.json`);
+    }
+  };
   
   // Define mock entities based on the jsonData
   const mockEntities = jsonData?.entities || {
@@ -122,7 +131,7 @@ export const TranscriptViewerPanel = ({
                 className="flex items-center gap-1"
               >
                 <Download className="h-4 w-4" />
-                Download
+                Text
               </Button>
               
               <Button 
@@ -134,6 +143,18 @@ export const TranscriptViewerPanel = ({
                 <FileText className="h-4 w-4" />
                 Word
               </Button>
+
+              {jsonData && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={downloadJsonData}
+                  className="flex items-center gap-1"
+                >
+                  <FileText className="h-4 w-4" />
+                  JSON
+                </Button>
+              )}
             </div>
           </div>
         )}

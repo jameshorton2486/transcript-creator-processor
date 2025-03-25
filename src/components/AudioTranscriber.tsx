@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { FileSelector } from "@/components/audio/FileSelector";
 import { TranscriptionOptionsSelector } from "@/components/audio/TranscriptionOptions";
 import { ApiKeyInput } from "@/components/audio/ApiKeyInput";
-import { ProgressIndicator } from "@/components/audio/ProgressIndicator";
 import { ErrorDisplay } from "@/components/audio/ErrorDisplay";
 import { LargeFileAlert } from "@/components/audio/LargeFileAlert";
 import { TranscribeButton } from "@/components/audio/TranscribeButton";
@@ -83,9 +82,6 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     setOptions(newOptions as any);
   };
 
-  // Normalize progress value to ensure it's between 0-100
-  const normalizedProgress = Math.min(Math.max(Math.round(progress), 0), 100);
-
   return (
     <Card className="bg-white">
       <CardHeader className="pb-2">
@@ -122,15 +118,6 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           fileSizeMB={fileSizeMB}
         />
         
-        {/* Show only one progress indicator with proper label */}
-        {isLoading && (
-          <ProgressIndicator 
-            progress={normalizedProgress} 
-            isVisible={true}
-            label={`Transcribing audio${isBatchProcessing ? ' in batches' : ''}`}
-          />
-        )}
-        
         <ErrorDisplay error={error} />
         
         <TranscriptionOptionsSelector 
@@ -143,7 +130,7 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           isDisabled={!file || isLoading || !apiKey}
           isLoading={isLoading}
           isBatchProcessing={isBatchProcessing}
-          progress={normalizedProgress}
+          progress={progress}
         />
       </CardContent>
       

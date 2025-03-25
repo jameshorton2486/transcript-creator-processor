@@ -10,9 +10,10 @@ import { formatTranscript } from './transcript/transcriptFormatter';
 interface TranscriptViewerProps {
   text: string;
   fileName?: string;
+  jsonData?: any;
 }
 
-export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptViewerProps) => {
+export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: TranscriptViewerProps) => {
   const [activeTab, setActiveTab] = useState<string>("formatted");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -39,6 +40,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript" }: TranscriptVi
         fileName={fileName}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        jsonData={jsonData}
       />
       
       <CardContent className="p-0 flex-1 overflow-auto relative">

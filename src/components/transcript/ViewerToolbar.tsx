@@ -13,6 +13,7 @@ interface ViewerToolbarProps {
   fileName: string;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  jsonData?: any;
 }
 
 export const ViewerToolbar = ({ 
@@ -20,7 +21,8 @@ export const ViewerToolbar = ({
   formattedText, 
   fileName, 
   activeTab, 
-  setActiveTab 
+  setActiveTab,
+  jsonData
 }: ViewerToolbarProps) => {
   const [copied, setCopied] = useState(false);
   
@@ -62,6 +64,15 @@ export const ViewerToolbar = ({
     });
   };
 
+  // Function to download JSON data
+  const downloadJsonData = () => {
+    if (jsonData) {
+      const jsonString = JSON.stringify(jsonData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      saveAs(blob, `${fileName}_data.json`);
+    }
+  };
+
   return (
     <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -89,7 +100,7 @@ export const ViewerToolbar = ({
           className="flex items-center gap-1"
         >
           <Download className="h-4 w-4" />
-          Download
+          Text
         </Button>
         
         <Button 
@@ -101,6 +112,18 @@ export const ViewerToolbar = ({
           <FileText className="h-4 w-4" />
           Word
         </Button>
+
+        {jsonData && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={downloadJsonData}
+            className="flex items-center gap-1"
+          >
+            <FileText className="h-4 w-4" />
+            JSON
+          </Button>
+        )}
       </div>
     </div>
   );
