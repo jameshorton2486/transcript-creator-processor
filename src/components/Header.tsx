@@ -1,8 +1,28 @@
 
 import { FileText, Mic, Wand2, Settings } from "lucide-react";
 import { APP_INFO } from "@/lib/config";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export const Header = () => {
+  const navigate = useNavigate();
+
+  // Handler for the "Process and format legal text" button
+  const handleProcessFormat = () => {
+    // Set the active tab to "transcribe" in the main page
+    navigate("/?tab=transcribe");
+    // Select the process tab in the transcript viewer if possible
+    const processTab = document.querySelector('[data-value="process"]');
+    if (processTab) {
+      (processTab as HTMLElement).click();
+    }
+  };
+
+  // Handler for the "Configure processing options" button
+  const handleConfigureOptions = () => {
+    navigate("/?tab=train");
+  };
+
   return (
     <header className="bg-slate-800 text-white py-6 px-4">
       <div className="container mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -12,18 +32,30 @@ export const Header = () => {
           <span className="text-xs bg-slate-700 px-2 py-1 rounded-full">v{APP_INFO.version}</span>
         </div>
         <div className="text-sm flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            className="flex items-center gap-2 text-white hover:bg-slate-700"
+            onClick={() => navigate("/")}
+          >
             <FileText className="h-4 w-4" />
             <span>Transcribe audio files</span>
-          </div>
-          <div className="flex items-center gap-2">
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="flex items-center gap-2 text-white hover:bg-slate-700"
+            onClick={handleProcessFormat}
+          >
             <Wand2 className="h-4 w-4" />
             <span>Process and format legal text</span>
-          </div>
-          <div className="flex items-center gap-2">
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="flex items-center gap-2 text-white hover:bg-slate-700"
+            onClick={handleConfigureOptions}
+          >
             <Settings className="h-4 w-4" />
             <span>Configure processing options</span>
-          </div>
+          </Button>
         </div>
       </div>
     </header>

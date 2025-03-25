@@ -1,11 +1,15 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { AITrainingCenter } from "@/components/training/AITrainingCenter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TranscribeTab } from "@/components/tabs/TranscribeTab";
+import { useSearchParams } from "react-router-dom";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  
   const [originalTranscript, setOriginalTranscript] = useState<string>("");
   const [processedTranscript, setProcessedTranscript] = useState<string>("");
   const [aiReviewedTranscript, setAiReviewedTranscript] = useState<string>("");
@@ -13,7 +17,16 @@ const Index = () => {
   const [fileName, setFileName] = useState<string>("transcript");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isReviewing, setIsReviewing] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>("transcribe");
+  const [activeTab, setActiveTab] = useState<string>(tabParam === "train" ? "train" : "transcribe");
+  
+  // Update active tab when URL parameter changes
+  useEffect(() => {
+    if (tabParam === "train") {
+      setActiveTab("train");
+    } else if (tabParam === "transcribe") {
+      setActiveTab("transcribe");
+    }
+  }, [tabParam]);
   
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
