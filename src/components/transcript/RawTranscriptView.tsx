@@ -17,7 +17,8 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
     hasContent: Boolean(transcript),
     isString: typeof transcript === 'string',
     firstChar: transcript?.[0],
-    lastChar: transcript?.[transcript?.length - 1]
+    lastChar: transcript?.[transcript?.length - 1],
+    transcriptValue: transcript // Log the actual value
   });
   
   // Ensure textarea adjusts to content when it changes
@@ -29,6 +30,19 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
       
       // Optionally scroll to top when new content is loaded
       textarea.scrollTop = 0;
+      
+      // Check if content is visible - add debug information to console
+      const computedStyle = window.getComputedStyle(textarea);
+      console.log("Textarea styles:", {
+        color: computedStyle.color,
+        backgroundColor: computedStyle.backgroundColor,
+        visibility: computedStyle.visibility,
+        display: computedStyle.display,
+        opacity: computedStyle.opacity,
+        height: computedStyle.height,
+        width: computedStyle.width,
+        overflow: computedStyle.overflow
+      });
       
       // Additional debug to confirm the textarea received the text
       console.log("Textarea received text:", { 
@@ -44,10 +58,15 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
   return (
     <textarea
       ref={actualRef}
-      className="w-full h-full p-6 text-sm font-mono border-0 focus:outline-none focus:ring-0 resize-none"
+      className="w-full h-full p-6 text-sm font-mono border-0 focus:outline-none focus:ring-0 resize-none bg-white text-slate-800"
       value={safeTranscript}
       readOnly
       aria-label="Raw transcript text"
+      style={{
+        minHeight: '200px', // Ensure a minimum height
+        color: 'black', // Force text to be black for visibility
+        opacity: 1 // Ensure full visibility
+      }}
     />
   );
 };

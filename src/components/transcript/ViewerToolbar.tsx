@@ -35,9 +35,23 @@ export const ViewerToolbar = ({
     return () => clearTimeout(timer);
   }, [copied]);
 
+  // Log toolbar visibility and props
+  React.useEffect(() => {
+    console.log("ViewerToolbar rendered:", {
+      hasText: Boolean(text),
+      textLength: text?.length,
+      hasFormattedText: Boolean(formattedText),
+      formattedTextLength: formattedText?.length,
+      activeTab
+    });
+  }, [text, formattedText, activeTab]);
+
   // Function to copy transcript text to clipboard
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(activeTab === "raw" ? text : formattedText)
+    const contentToCopy = activeTab === "raw" ? text : formattedText;
+    console.log("Copying to clipboard:", { contentLength: contentToCopy?.length });
+    
+    navigator.clipboard.writeText(contentToCopy || '')
       .then(() => setCopied(true))
       .catch(err => console.error('Failed to copy: ', err));
   };
@@ -46,7 +60,7 @@ export const ViewerToolbar = ({
   const downloadTranscript = () => {
     const element = document.createElement("a");
     const fileToDownload = activeTab === "raw" ? text : formattedText;
-    const file = new Blob([fileToDownload], {type: 'text/plain'});
+    const file = new Blob([fileToDownload || ''], {type: 'text/plain'});
     element.href = URL.createObjectURL(file);
     element.download = `${fileName}.txt`;
     document.body.appendChild(element);
@@ -56,7 +70,7 @@ export const ViewerToolbar = ({
 
   // Function to download transcript as a Word document
   const downloadWordDocument = () => {
-    const doc = createWordDocument(formattedText, fileName);
+    const doc = createWordDocument(formattedText || '', fileName);
     
     // Generate and save the file
     Packer.toBlob(doc).then(blob => {
@@ -76,9 +90,13 @@ export const ViewerToolbar = ({
   return (
     <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="formatted">Formatted</TabsTrigger>
-          <TabsTrigger value="raw">Raw Text</TabsTrigger>
+        <TabsList className="bg-slate-100 shadow-sm">
+          <TabsTrigger value="formatted" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Formatted
+          </TabsTrigger>
+          <TabsTrigger value="raw" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Raw Text
+          </TabsTrigger>
         </TabsList>
       </Tabs>
       

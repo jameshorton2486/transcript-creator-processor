@@ -18,17 +18,23 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   
   // Enhanced formatted transcript with better speaker label highlighting
-  const formattedText = useMemo(() => formatTranscript(text), [text]);
+  const formattedText = useMemo(() => formatTranscript(text || ''), [text]);
 
-  // Add console log to debug transcript text and tab switching
+  // Improved debugging logs with type information
   console.log("TranscriptViewer received text:", { 
     length: text?.length, 
     sample: text?.substring(0, 100), 
     hasText: Boolean(text),
-    activeTab
+    activeTab,
+    type: typeof text,
+    textValue: text
   });
 
-  if (!text) {
+  // More permissive rendering condition - only check if completely undefined
+  const shouldRender = text !== undefined;
+  
+  // If text is undefined, show empty state
+  if (!shouldRender) {
     return (
       <Card className="h-full">
         <CardContent className="p-6 flex items-center justify-center h-full">
@@ -43,7 +49,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   return (
     <Card className="h-full flex flex-col">
       <ViewerToolbar 
-        text={text}
+        text={text || ''}
         formattedText={formattedText}
         fileName={fileName}
         activeTab={activeTab}
@@ -52,12 +58,12 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
       />
       
       <CardContent className="p-0 flex-1 overflow-auto relative">
-        <TabsContent value="formatted" className="m-0 h-full">
+        <TabsContent value="formatted" className="m-0 h-full block" forceMount={true} hidden={activeTab !== "formatted"}>
           <FormattedTranscriptView formattedText={formattedText} />
         </TabsContent>
         
-        <TabsContent value="raw" className="m-0 h-full">
-          <RawTranscriptView transcript={text} textAreaRef={textAreaRef} />
+        <TabsContent value="raw" className="m-0 h-full block" forceMount={true} hidden={activeTab !== "raw"}>
+          <RawTranscriptView transcript={text || ''} textAreaRef={textAreaRef} />
         </TabsContent>
       </CardContent>
     </Card>

@@ -6,7 +6,6 @@ import { FormattedTranscriptView } from "@/components/transcript/FormattedTransc
 import { RawTranscriptView } from "@/components/transcript/RawTranscriptView";
 import { WordPreviewDrawer } from "@/components/transcript/controls/WordPreviewDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { FileText, Edit, FileType2 } from "lucide-react";
 
 interface TranscriptViewerPanelProps {
@@ -35,13 +34,18 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
     aiReviewedLength: aiReviewedTranscript?.length,
     currentLength: currentTranscript?.length,
     hasTranscript: Boolean(currentTranscript),
-    activeTab
+    activeTab,
+    currentTranscriptSample: currentTranscript?.substring(0, 100),
+    currentTranscriptType: typeof currentTranscript
   });
   
   // Effect to detect tab changes
   useEffect(() => {
     console.log("Active tab changed to:", activeTab);
   }, [activeTab]);
+  
+  // Less strict rendering condition - only check if completely undefined
+  const hasTranscript = currentTranscript !== undefined;
   
   return (
     <Card className="h-full overflow-hidden shadow-md border-slate-200">
@@ -52,9 +56,9 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
             Transcript Preview
           </CardTitle>
           <div className="flex items-center gap-2">
-            {currentTranscript && (
+            {hasTranscript && (
               <WordPreviewDrawer 
-                currentTranscript={currentTranscript} 
+                currentTranscript={currentTranscript || ''} 
                 fileName={fileName} 
               />
             )}
@@ -62,8 +66,9 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
         </div>
       </CardHeader>
       
+      {/* Always render the toolbar, but it will handle its own visibility */}
       <TranscriptToolbar 
-        currentTranscript={currentTranscript}
+        currentTranscript={currentTranscript || ''}
         fileName={fileName}
         jsonData={jsonData}
       />
@@ -88,9 +93,10 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
         </div>
         
         <div className="flex-1 overflow-auto relative">
-          <TabsContent value="view" className="h-full m-0 p-0 data-[state=active]:overflow-auto">
-            {currentTranscript ? (
-              <FormattedTranscriptView formattedText={currentTranscript} />
+          <TabsContent value="view" className="h-full m-0 p-0 block" forceMount={true} hidden={activeTab !== "view"}>
+            {/* Less strict rendering condition */}
+            {hasTranscript ? (
+              <FormattedTranscriptView formattedText={currentTranscript || ''} />
             ) : (
               <div className="flex h-full items-center justify-center text-center p-6 text-slate-500 bg-slate-50/50">
                 <div className="bg-white p-8 rounded-lg border border-slate-100 shadow-sm max-w-md">
@@ -104,8 +110,9 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
             )}
           </TabsContent>
           
-          <TabsContent value="process" className="h-full m-0 p-0 data-[state=active]:overflow-auto">
-            {originalTranscript ? (
+          <TabsContent value="process" className="h-full m-0 p-0 block" forceMount={true} hidden={activeTab !== "process"}>
+            {/* Less strict rendering condition */}
+            {originalTranscript !== undefined ? (
               <div className="p-6 h-full bg-slate-50/50">
                 <div className="mb-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
                   <h3 className="text-lg font-medium mb-3 text-slate-700 flex items-center">
@@ -113,7 +120,7 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
                     Original Transcript
                   </h3>
                   <div className="border rounded-md shadow-sm">
-                    <RawTranscriptView transcript={originalTranscript} />
+                    <RawTranscriptView transcript={originalTranscript || ''} />
                   </div>
                 </div>
                 
