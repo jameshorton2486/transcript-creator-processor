@@ -49,7 +49,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
         </TabsContent>
         
         <TabsContent value="raw" className="m-0 h-full">
-          <RawTranscriptView text={text} textAreaRef={textAreaRef} />
+          <RawTranscriptView transcript={text} textAreaRef={textAreaRef} />
         </TabsContent>
       </CardContent>
     </Card>
