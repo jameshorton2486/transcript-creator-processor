@@ -17,8 +17,17 @@ export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = (
       isEmpty: formattedText === '',
       isUndefined: formattedText === undefined,
       isNull: formattedText === null,
-      hasNonWhitespace: formattedText?.trim()?.length > 0
+      hasNonWhitespace: formattedText?.trim()?.length > 0,
+      asciiCodes: formattedText?.substring(0, 20)?.split('').map(c => c.charCodeAt(0))
     });
+    
+    // Check if there might be invisible characters
+    if (formattedText && formattedText.length > 0 && formattedText.trim().length === 0) {
+      console.warn("FormattedText contains only whitespace characters!");
+      // Log the character codes to see what's in there
+      const charCodes = formattedText.split('').map(c => c.charCodeAt(0));
+      console.warn("Character codes in formattedText:", charCodes);
+    }
     
     if (containerRef.current && formattedText) {
       containerRef.current.scrollTop = 0;
@@ -42,6 +51,8 @@ export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = (
             <div>undefined: {String(formattedText === undefined)}</div>
             <div>null: {String(formattedText === null)}</div>
             <div>empty string: {String(formattedText === '')}</div>
+            <div>length before trim: {formattedText?.length || 0}</div>
+            <div>length after trim: {formattedText?.trim()?.length || 0}</div>
           </div>
         </div>
       </div>

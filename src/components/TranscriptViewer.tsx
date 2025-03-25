@@ -23,6 +23,21 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   // More permissive rendering condition - only check if completely undefined or empty
   const hasText = text && text.trim().length > 0;
   
+  // Add debug logging when component mounts and updates
+  useEffect(() => {
+    console.log("TranscriptViewer mounted/updated with text:", {
+      hasText: Boolean(text?.trim()),
+      length: text?.length,
+      textIsDefined: text !== undefined,
+      textType: typeof text,
+      isEmpty: text === '',
+      isNull: text === null,
+      trimmedLength: text?.trim()?.length,
+      formattedTextLength: formattedText?.length,
+      firstChars: text?.substring(0, 50)?.replace(/\n/g, "\\n")
+    });
+  }, [text, formattedText]);
+  
   // Enhanced debug logging when we receive new transcript content
   useEffect(() => {
     console.log("TranscriptViewer received text:", {

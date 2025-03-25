@@ -20,6 +20,7 @@ export const validateTranscript = (response: any): string => {
       firstResultHasAlternatives: response.results?.[0]?.alternatives?.length > 0,
       responseType: typeof response,
       responseKeys: Object.keys(response),
+      responseSample: JSON.stringify(response).substring(0, 200)
     });
     
     // Check for API errors in the response
@@ -37,7 +38,9 @@ export const validateTranscript = (response: any): string => {
       isEmpty: transcriptText === '',
       isUndefined: transcriptText === undefined,
       isNull: transcriptText === null,
-      hasNonWhitespace: transcriptText?.trim()?.length > 0
+      hasNonWhitespace: transcriptText?.trim()?.length > 0,
+      firstChars: transcriptText?.substring(0, 20)?.replace(/\n/g, "\\n"),
+      asciiCodes: transcriptText?.substring(0, 20)?.split('').map(c => c.charCodeAt(0))
     });
     
     if (!transcriptText || 
@@ -57,6 +60,32 @@ export const validateTranscript = (response: any): string => {
       }
       
       throw new Error("Failed to extract transcript from the API response.");
+    }
+    
+    // Additional check for empty transcript
+    if (transcriptText.trim().length === 0) {
+      console.warn("Transcript validation: Extracted transcript is empty or whitespace only!");
+      console.log("Raw transcript text (first 100 chars):", transcriptText.substring(0, 100));
+      
+      // Try to extract text directly if possible
+      if (typeof response === 'string' && response.trim().length > 0) {
+        console.log("Using raw response as transcript instead");
+        return response;
+      }
+      
+      if (response.results && Array.isArray(response.results)) {
+        // Try a different approach to extract text
+        const altTranscript = response.results
+          .filter((result: any) => result.alternatives && result.alternatives.length > 0)
+          .map((result: any) => result.alternatives[0].transcript)
+          .join(' ');
+        
+        if (altTranscript.trim().length > 0) {
+          console.log("Using alternative extraction method, found transcript:", 
+                     altTranscript.substring(0, 100));
+          return altTranscript;
+        }
+      }
     }
     
     // Log success details

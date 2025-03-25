@@ -7,6 +7,7 @@ import { RawTranscriptView } from "@/components/transcript/RawTranscriptView";
 import { WordPreviewDrawer } from "@/components/transcript/controls/WordPreviewDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Edit, FileType2 } from "lucide-react";
+import { TranscriptViewer } from "@/components/TranscriptViewer"; // Added import
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -36,8 +37,20 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
     hasTranscript: Boolean(currentTranscript),
     activeTab,
     currentTranscriptSample: currentTranscript?.substring(0, 100),
-    currentTranscriptType: typeof currentTranscript
+    currentTranscriptType: typeof currentTranscript,
+    originalFirstChars: originalTranscript?.substring(0, 20)?.replace(/\n/g, "\\n"),
+    processedFirstChars: processedTranscript?.substring(0, 20)?.replace(/\n/g, "\\n"),
+    currentFirstChars: currentTranscript?.substring(0, 20)?.replace(/\n/g, "\\n")
   });
+  
+  // Verify if currentTranscript is being properly passed to child components
+  useEffect(() => {
+    console.log("TranscriptViewerPanel checking currentTranscript:", {
+      hasContent: Boolean(currentTranscript?.trim()),
+      length: currentTranscript?.length,
+      sample: currentTranscript?.substring(0, 50)
+    });
+  }, [currentTranscript]);
   
   // Effect to detect tab changes
   useEffect(() => {
@@ -94,9 +107,21 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
         
         <div className="flex-1 overflow-auto relative">
           <TabsContent value="view" className="h-full m-0 p-0 block" forceMount={true} hidden={activeTab !== "view"}>
-            {/* Less strict rendering condition */}
+            {/* IMPORTANT: Debug output to check what's being passed to the viewer */}
+            <div className="hidden">
+              Debug transcript: Length={currentTranscript?.length || 0}, 
+              Empty={String(currentTranscript === "")}, 
+              Undefined={String(currentTranscript === undefined)},
+              First chars: {currentTranscript?.substring(0, 20)}
+            </div>
+            
+            {/* Use TranscriptViewer for the view tab */}
             {hasTranscript ? (
-              <FormattedTranscriptView formattedText={currentTranscript || ''} />
+              <TranscriptViewer 
+                text={currentTranscript || ''} 
+                fileName={fileName}
+                jsonData={jsonData}
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-center p-6 text-slate-500 bg-slate-50/50">
                 <div className="bg-white p-8 rounded-lg border border-slate-100 shadow-sm max-w-md">

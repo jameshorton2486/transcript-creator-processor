@@ -21,7 +21,7 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
       textarea.scrollTop = 0;
       
       // Enhanced logging with more information about the transcript
-      console.log("RawTranscriptView updated with transcript:", {
+      console.log("RawTranscriptView received transcript:", {
         length: transcript?.length,
         sample: transcript?.substring(0, 100),
         type: typeof transcript,
@@ -29,8 +29,17 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
         isUndefined: transcript === undefined,
         isNull: transcript === null,
         hasNonWhitespace: transcript?.trim()?.length > 0,
-        firstChars: transcript?.substring(0, 20)?.replace(/\n/g, "\\n")
+        firstChars: transcript?.substring(0, 20)?.replace(/\n/g, "\\n"),
+        asciiCodes: transcript?.substring(0, 20)?.split('').map(c => c.charCodeAt(0))
       });
+      
+      // Check if there might be invisible characters
+      if (transcript && transcript.length > 0 && transcript.trim().length === 0) {
+        console.warn("Transcript contains only whitespace characters!");
+        // Log the character codes to see what's in there
+        const charCodes = transcript.split('').map(c => c.charCodeAt(0));
+        console.warn("Character codes in transcript:", charCodes);
+      }
     }
   }, [transcript, actualRef]);
   

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
@@ -37,6 +36,14 @@ export const TranscribeTab = ({
 }: TranscribeTabProps) => {
   const { toast } = useToast();
   
+  // FOR DEBUGGING: Add a test transcript to check if display components work
+  useEffect(() => {
+    // Uncomment to test with a hardcoded transcript
+    // const testTranscript = "Speaker 1: This is a test transcript.\n\nSpeaker 2: Testing the display component.\n\nSpeaker 1: If you can see this, the display is working correctly.";
+    // setOriginalTranscript(testTranscript);
+    // console.log("DEBUG: Set test transcript:", testTranscript);
+  }, []);
+  
   // Add console log to debug transcript values in the main tab
   console.log("TranscribeTab state:", {
     originalLength: originalTranscript?.length, 
@@ -57,6 +64,16 @@ export const TranscribeTab = ({
       hasJsonData: Boolean(jsonData),
       jsonDataKeys: jsonData ? Object.keys(jsonData) : [],
       fileProvided: Boolean(file)
+    });
+    
+    // Add a special debug log to track if transcript is valid before setting state
+    console.log("DEBUG - Transcript before setting state:", {
+      isValid: Boolean(transcript && typeof transcript === 'string'),
+      isEmpty: transcript === '',
+      isUndefined: transcript === undefined,
+      isNull: transcript === null,
+      length: transcript?.length,
+      firstChars: transcript?.substring(0, 50)?.replace(/\n/g, "\\n")
     });
     
     setOriginalTranscript(transcript);
