@@ -8,8 +8,18 @@ interface FormattedTranscriptViewProps {
 export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = ({ formattedText }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Scroll to top when content changes
+  // Enhanced debugging for FormattedTranscriptView
   useEffect(() => {
+    console.log("FormattedTranscriptView received text:", {
+      length: formattedText?.length,
+      sample: formattedText?.substring(0, 100),
+      type: typeof formattedText,
+      isEmpty: formattedText === '',
+      isUndefined: formattedText === undefined,
+      isNull: formattedText === null,
+      hasNonWhitespace: formattedText?.trim()?.length > 0
+    });
+    
     if (containerRef.current && formattedText) {
       containerRef.current.scrollTop = 0;
     }
@@ -18,7 +28,7 @@ export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = (
   // Make sure we always have a string, even if formattedText is undefined or null
   const safeText = formattedText || '';
   
-  // If there's no content, show a placeholder with high visibility
+  // If there's no content, show a placeholder with high visibility and debugging info
   if (!safeText.trim()) {
     return (
       <div ref={containerRef} className="prose max-w-none p-6 h-full bg-white overflow-auto">
@@ -26,6 +36,13 @@ export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = (
           <p className="text-red-600 text-center font-medium">
             No formatted transcript content available to display
           </p>
+          <div className="mt-4 p-4 bg-slate-50 border rounded text-xs font-mono text-slate-700">
+            <div><strong>Debug:</strong> Empty formatted text received</div>
+            <div>Type: {typeof formattedText}</div>
+            <div>undefined: {String(formattedText === undefined)}</div>
+            <div>null: {String(formattedText === null)}</div>
+            <div>empty string: {String(formattedText === '')}</div>
+          </div>
         </div>
       </div>
     );

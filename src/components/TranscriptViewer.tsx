@@ -23,7 +23,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   // More permissive rendering condition - only check if completely undefined or empty
   const hasText = text && text.trim().length > 0;
   
-  // Log when we receive new transcript content
+  // Enhanced debug logging when we receive new transcript content
   useEffect(() => {
     console.log("TranscriptViewer received text:", {
       textLength: text?.length,
@@ -34,6 +34,9 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
       isTextEmpty: text === '',
       isTextUndefined: text === undefined,
       isTextNull: text === null,
+      textTrimLength: text?.trim()?.length,
+      rawTextFirstChars: text?.substring(0, 20)?.replace(/\n/g, "\\n"),
+      formattedTextFirstChars: formattedText?.substring(0, 20)?.replace(/\n/g, "\\n")
     });
   }, [text, formattedText, hasText]);
   
@@ -44,7 +47,15 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
       <Card className="h-full">
         <CardContent className="p-6 flex items-center justify-center h-full">
           <div className="text-center text-slate-500">
-            No transcript available
+            <div>No transcript available</div>
+            <div className="mt-4 p-4 bg-slate-50 border rounded text-xs font-mono text-slate-700">
+              <div><strong>Debug:</strong> Empty text received</div>
+              <div>Type: {typeof text}</div>
+              <div>undefined: {String(text === undefined)}</div>
+              <div>null: {String(text === null)}</div>
+              <div>empty string: {String(text === '')}</div>
+              <div>trimmed length: {text?.trim()?.length || 0}</div>
+            </div>
           </div>
         </CardContent>
       </Card>
