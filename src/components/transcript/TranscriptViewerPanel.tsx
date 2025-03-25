@@ -5,7 +5,7 @@ import { TranscriptViewer } from "@/components/TranscriptViewer";
 import { EntityDisplay } from "@/components/EntityDisplay";
 import { Button } from "@/components/ui/button";
 import { FileText, Clipboard, Download, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Document, Packer } from "docx";
 import { saveAs } from 'file-saver';
@@ -32,7 +32,7 @@ export const TranscriptViewerPanel = ({
   const [copied, setCopied] = useState(false);
   
   // Reset copied state after 2 seconds
-  useState(() => {
+  useEffect(() => {
     let timer: NodeJS.Timeout;
     if (copied) {
       timer = setTimeout(() => setCopied(false), 2000);
