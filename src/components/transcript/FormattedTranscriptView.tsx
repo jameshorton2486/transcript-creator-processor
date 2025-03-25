@@ -7,15 +7,15 @@ interface FormattedTranscriptViewProps {
 
 export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = ({ formattedText }) => {
   return (
-    <div className="prose max-w-none p-6 h-full bg-white">
-      <div className="mx-auto max-w-4xl">
+    <div className="prose max-w-none p-6 h-full bg-white overflow-auto">
+      <div className="mx-auto max-w-4xl shadow-sm rounded-sm border border-slate-100 p-8 bg-white">
         {/* Document styling */}
-        <div className="font-serif leading-relaxed">
+        <div className="font-serif leading-relaxed text-slate-800">
           {formattedText.split('\n').map((line, i) => {
             // Apply special styling to speaker labels
             if (/^(Speaker \d+:|[A-Z][A-Z\s']+:)/.test(line)) {
               return (
-                <div key={i} className="mt-4 font-semibold">
+                <div key={i} className="mt-4 font-semibold text-slate-900">
                   {line}
                 </div>
               );
@@ -23,7 +23,7 @@ export const FormattedTranscriptView: React.FC<FormattedTranscriptViewProps> = (
             // Apply special styling to Q&A format
             else if (/^(Q|A):/.test(line)) {
               return (
-                <div key={i} className="mt-3 font-semibold">
+                <div key={i} className="mt-3 font-semibold text-slate-900">
                   {line}
                 </div>
               );

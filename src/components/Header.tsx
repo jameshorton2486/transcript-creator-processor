@@ -24,14 +24,16 @@ export const Header = () => {
   };
 
   return (
-    <header className="bg-slate-800 text-white py-6 px-4">
+    <header className="bg-slate-800 text-white py-5 px-4 shadow-md">
       <div className="container mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div className="flex items-center gap-2">
-          <Mic className="h-6 w-6" />
+          <div className="bg-indigo-600 p-1.5 rounded-md">
+            <Mic className="h-5 w-5" />
+          </div>
           <h1 className="text-xl font-bold">{APP_INFO.name}</h1>
           <span className="text-xs bg-slate-700 px-2 py-1 rounded-full">v{APP_INFO.version}</span>
         </div>
-        <div className="text-sm flex flex-wrap items-center gap-4">
+        <div className="text-sm flex flex-wrap items-center gap-3">
           <Button 
             variant="ghost" 
             className="flex items-center gap-2 text-white hover:bg-slate-700"

@@ -7,7 +7,7 @@ import { RawTranscriptView } from "@/components/transcript/RawTranscriptView";
 import { WordPreviewDrawer } from "@/components/transcript/controls/WordPreviewDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Edit } from "lucide-react";
+import { FileText, Edit, FileType2 } from "lucide-react";
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -29,10 +29,13 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
   const [activeTab, setActiveTab] = useState<string>("view");
   
   return (
-    <Card className="h-full overflow-hidden shadow-md">
-      <CardHeader className="px-4 py-2 border-b">
+    <Card className="h-full overflow-hidden shadow-md border-slate-200">
+      <CardHeader className="px-4 py-3 border-b bg-white">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Transcript Preview</CardTitle>
+          <CardTitle className="text-lg flex items-center text-slate-800">
+            <FileType2 className="h-5 w-5 mr-2 text-slate-600" />
+            Transcript Preview
+          </CardTitle>
           <div className="flex items-center gap-2">
             {currentTranscript && (
               <WordPreviewDrawer 
@@ -74,11 +77,11 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
             {currentTranscript ? (
               <FormattedTranscriptView formattedText={currentTranscript} />
             ) : (
-              <div className="flex h-full items-center justify-center text-center p-6 text-slate-500">
-                <div>
+              <div className="flex h-full items-center justify-center text-center p-6 text-slate-500 bg-slate-50/50">
+                <div className="bg-white p-8 rounded-lg border border-slate-100 shadow-sm max-w-md">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-slate-400" />
-                  <h3 className="text-lg font-medium mb-2">No transcript available</h3>
-                  <p className="max-w-md">
+                  <h3 className="text-lg font-medium mb-2 text-slate-700">No transcript available</h3>
+                  <p className="text-slate-600">
                     Upload an audio file or use the transcription tools to create a transcript.
                   </p>
                 </div>
@@ -88,33 +91,43 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
           
           <TabsContent value="process" className="h-full m-0 p-0 data-[state=active]:overflow-auto">
             {originalTranscript ? (
-              <div className="p-6 h-full">
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium mb-2">Original Transcript</h3>
-                  <RawTranscriptView transcript={originalTranscript} />
+              <div className="p-6 h-full bg-slate-50/50">
+                <div className="mb-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                  <h3 className="text-lg font-medium mb-3 text-slate-700 flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-slate-500" />
+                    Original Transcript
+                  </h3>
+                  <div className="border rounded-md shadow-sm">
+                    <RawTranscriptView transcript={originalTranscript} />
+                  </div>
                 </div>
                 
                 {processedTranscript && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-medium mb-2">Processed Transcript</h3>
-                    <RawTranscriptView transcript={processedTranscript} />
+                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                    <h3 className="text-lg font-medium mb-3 text-slate-700 flex items-center">
+                      <Edit className="h-5 w-5 mr-2 text-slate-500" />
+                      Processed Transcript
+                    </h3>
+                    <div className="border rounded-md shadow-sm">
+                      <RawTranscriptView transcript={processedTranscript} />
+                    </div>
                   </div>
                 )}
                 
                 {!processedTranscript && (
-                  <div className="mt-6 p-4 border rounded-md bg-slate-50">
-                    <p className="text-center text-slate-600">
+                  <div className="mt-6 p-6 border rounded-md bg-white text-center shadow-sm">
+                    <p className="text-slate-600">
                       Use the processing tools in the left panel to format and improve this transcript.
                     </p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-center p-6 text-slate-500">
-                <div>
+              <div className="flex h-full items-center justify-center text-center p-6 text-slate-500 bg-slate-50/50">
+                <div className="bg-white p-8 rounded-lg border border-slate-100 shadow-sm max-w-md">
                   <Edit className="h-12 w-12 mx-auto mb-4 text-slate-400" />
-                  <h3 className="text-lg font-medium mb-2">No transcript to process</h3>
-                  <p className="max-w-md">
+                  <h3 className="text-lg font-medium mb-2 text-slate-700">No transcript to process</h3>
+                  <p className="text-slate-600">
                     Create a transcript first, then use this tab to process and format it.
                   </p>
                 </div>
