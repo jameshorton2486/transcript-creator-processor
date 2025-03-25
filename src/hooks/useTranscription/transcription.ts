@@ -94,13 +94,20 @@ export const performTranscription = async (
       
       console.log("Using speech config:", speechConfig);
       
+      // Helper function to normalize progress
+      const normalizeProgress = (progress: number) => {
+        // Ensure progress is between 0 and 100
+        const normalized = Math.min(Math.max(Math.round(progress), 0), 100);
+        onProgressUpdate(normalized);
+      };
+      
       // Use safePromise to handle potential promise errors
       const response = await safePromise(
         transcribeAudio(
           file, 
           apiKey, 
           transcriptionOptions, 
-          isLargeFile ? (progress) => onProgressUpdate(progress) : undefined,
+          isLargeFile ? normalizeProgress : undefined,
           customTerms
         )
       );

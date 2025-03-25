@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { useState } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { ViewerToolbar } from "@/components/transcript/ViewerToolbar";
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -26,6 +27,7 @@ export const TranscriptViewerPanel = ({
   currentTranscript,
 }: TranscriptViewerPanelProps) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activeViewTab, setActiveViewTab] = useState<string>("formatted");
   
   // Define mock entities based on the jsonData
   const mockEntities = jsonData?.entities || {
@@ -53,10 +55,10 @@ export const TranscriptViewerPanel = ({
 
   return (
     <Card className="h-full">
-      <CardContent className="p-6 h-full">
-        <div className="flex justify-between items-center mb-4">
-          <Tabs defaultValue={defaultTab} className="w-full">
-            <TabsList>
+      <CardContent className="p-0 h-full flex flex-col">
+        <div className="flex-grow overflow-hidden">
+          <Tabs defaultValue={defaultTab} className="w-full h-full">
+            <TabsList className="px-6 pt-6 pb-2">
               {originalTranscript && (
                 <TabsTrigger value="original">Original Transcript</TabsTrigger>
               )}
@@ -74,58 +76,107 @@ export const TranscriptViewerPanel = ({
               )}
             </TabsList>
             
-            <div className="h-[calc(100%-3rem)] overflow-hidden mt-4">
+            <div className="h-[calc(100%-3rem)] overflow-hidden">
               {originalTranscript && (
                 <TabsContent value="original" className="h-full m-0">
-                  <TranscriptViewer 
-                    text={originalTranscript} 
-                    fileName="original_transcript" 
-                  />
+                  <div className="flex flex-col h-full">
+                    <ViewerToolbar 
+                      text={originalTranscript} 
+                      formattedText={originalTranscript} 
+                      fileName={`${fileName}_original`}
+                      activeTab={activeViewTab}
+                      setActiveTab={setActiveViewTab} 
+                    />
+                    <div className="flex-grow overflow-auto">
+                      <TranscriptViewer 
+                        text={originalTranscript} 
+                        fileName="original_transcript" 
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
               )}
               
               {processedTranscript && (
                 <TabsContent value="processed" className="h-full m-0">
-                  <TranscriptViewer 
-                    text={processedTranscript} 
-                    fileName="processed_transcript" 
-                  />
+                  <div className="flex flex-col h-full">
+                    <ViewerToolbar 
+                      text={processedTranscript} 
+                      formattedText={processedTranscript} 
+                      fileName={`${fileName}_processed`}
+                      activeTab={activeViewTab}
+                      setActiveTab={setActiveViewTab} 
+                    />
+                    <div className="flex-grow overflow-auto">
+                      <TranscriptViewer 
+                        text={processedTranscript} 
+                        fileName="processed_transcript" 
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
               )}
               
               {aiReviewedTranscript && (
                 <TabsContent value="ai-reviewed" className="h-full m-0">
-                  <TranscriptViewer 
-                    text={aiReviewedTranscript} 
-                    fileName="ai_reviewed_transcript" 
-                  />
+                  <div className="flex flex-col h-full">
+                    <ViewerToolbar 
+                      text={aiReviewedTranscript} 
+                      formattedText={aiReviewedTranscript} 
+                      fileName={`${fileName}_ai_reviewed`}
+                      activeTab={activeViewTab}
+                      setActiveTab={setActiveViewTab} 
+                    />
+                    <div className="flex-grow overflow-auto">
+                      <TranscriptViewer 
+                        text={aiReviewedTranscript} 
+                        fileName="ai_reviewed_transcript" 
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
               )}
               
               {jsonData && (
                 <TabsContent value="json" className="h-full m-0">
-                  <TranscriptViewer 
-                    text={JSON.stringify(jsonData, null, 2)} 
-                    fileName="transcript_data.json" 
-                  />
+                  <div className="flex flex-col h-full">
+                    <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
+                      <h3 className="text-sm font-medium">JSON Data</h3>
+                    </div>
+                    <div className="flex-grow overflow-auto">
+                      <TranscriptViewer 
+                        text={JSON.stringify(jsonData, null, 2)} 
+                        fileName="transcript_data.json" 
+                      />
+                    </div>
+                  </div>
                 </TabsContent>
               )}
               
               {currentTranscript && (
                 <TabsContent value="entities" className="h-full m-0">
-                  <EntityDisplay entities={mockEntities} />
+                  <div className="flex flex-col h-full">
+                    <div className="p-3 bg-slate-50 border-b">
+                      <h3 className="text-sm font-medium">Extracted Entities</h3>
+                    </div>
+                    <div className="flex-grow overflow-auto p-4">
+                      <EntityDisplay entities={mockEntities} />
+                    </div>
+                  </div>
                 </TabsContent>
               )}
             </div>
           </Tabs>
-          
-          {currentTranscript && (
+        </div>
+        
+        {currentTranscript && (
+          <div className="p-4 border-t flex justify-end">
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <DrawerTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="flex items-center gap-1 ml-2"
+                  className="flex items-center gap-1"
                 >
                   <FileText className="h-4 w-4" />
                   Word Preview
@@ -153,8 +204,8 @@ export const TranscriptViewerPanel = ({
                 </div>
               </DrawerContent>
             </Drawer>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

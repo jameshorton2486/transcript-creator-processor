@@ -119,10 +119,14 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
           fileSizeMB={fileSizeMB}
         />
         
-        <ProgressIndicator 
-          progress={progress} 
-          isVisible={isLoading && isBatchProcessing}
-        />
+        {/* Show only one progress indicator with proper label */}
+        {isLoading && isBatchProcessing && (
+          <ProgressIndicator 
+            progress={progress} 
+            isVisible={true}
+            label="Transcribing audio"
+          />
+        )}
         
         <ErrorDisplay error={error} />
         
@@ -144,4 +148,3 @@ export const AudioTranscriber = ({ onTranscriptCreated }: AudioTranscriberProps)
     </Card>
   );
 };
-
