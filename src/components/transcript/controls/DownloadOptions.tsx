@@ -5,6 +5,7 @@ import { Clipboard, Download, Check, FileText } from "lucide-react";
 import { Document, Packer } from "docx";
 import { saveAs } from 'file-saver';
 import { createWordDocument } from '../docxGenerator';
+import { toast } from "@/components/ui/use-toast";
 
 interface DownloadOptionsProps {
   currentTranscript: string;
@@ -33,6 +34,7 @@ export const DownloadOptions = ({
   // Auto-download Word document when requested
   useEffect(() => {
     if (autoDownloadWord && currentTranscript) {
+      console.log("Auto-downloading Word document triggered");
       downloadWordDocument();
     }
   }, [autoDownloadWord, currentTranscript]);
@@ -41,7 +43,13 @@ export const DownloadOptions = ({
   const copyToClipboard = () => {
     if (currentTranscript) {
       navigator.clipboard.writeText(currentTranscript)
-        .then(() => setCopied(true))
+        .then(() => {
+          setCopied(true);
+          toast({
+            title: "Copied to clipboard",
+            description: "Transcript text has been copied to your clipboard.",
+          });
+        })
         .catch(err => console.error('Failed to copy: ', err));
     }
   };
@@ -49,6 +57,11 @@ export const DownloadOptions = ({
   // Function to download transcript as a text file
   const downloadTranscript = () => {
     if (currentTranscript) {
+      console.log("Downloading transcript as text file:", {
+        transcriptLength: currentTranscript.length,
+        fileName: `${fileName}.txt`
+      });
+      
       const element = document.createElement("a");
       const file = new Blob([currentTranscript], {type: 'text/plain'});
       element.href = URL.createObjectURL(file);
@@ -56,24 +69,58 @@ export const DownloadOptions = ({
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
+      
+      toast({
+        title: "Text File Downloaded",
+        description: `Transcript saved as ${fileName}.txt`,
+      });
     }
   };
 
   // Function to download transcript as a Word document
   const downloadWordDocument = () => {
-    if (currentTranscript) {
-      console.log("Creating Word document:", {
-        transcriptLength: currentTranscript.length,
-        fileName,
-        transcriptSample: currentTranscript.substring(0, 100)
+    if (!currentTranscript || currentTranscript.trim().length === 0) {
+      console.error("Cannot create Word document: transcript is empty");
+      toast({
+        title: "Error",
+        description: "Cannot create Word document: transcript is empty",
+        variant: "destructive"
       });
-      
+      return;
+    }
+    
+    console.log("Creating Word document:", {
+      transcriptLength: currentTranscript.length,
+      fileName,
+      transcriptSample: currentTranscript.substring(0, 100)
+    });
+    
+    try {
       const doc = createWordDocument(currentTranscript, fileName);
       
       // Generate and save the file
       Packer.toBlob(doc).then(blob => {
         console.log("Word document blob created, downloading");
         saveAs(blob, `${fileName}.docx`);
+        
+        toast({
+          title: "Word Document Ready",
+          description: `Transcript saved as ${fileName}.docx`,
+        });
+      }).catch(error => {
+        console.error("Error creating Word document blob:", error);
+        toast({
+          title: "Document Creation Error",
+          description: "Failed to create Word document. Please try again.",
+          variant: "destructive"
+        });
+      });
+    } catch (error) {
+      console.error("Error generating Word document:", error);
+      toast({
+        title: "Document Creation Error",
+        description: "Failed to generate Word document. Please try again.",
+        variant: "destructive"
       });
     }
   };
@@ -81,9 +128,15 @@ export const DownloadOptions = ({
   // Function to download JSON data
   const downloadJsonData = () => {
     if (jsonData) {
+      console.log("Downloading JSON data");
       const jsonString = JSON.stringify(jsonData, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       saveAs(blob, `${fileName}_data.json`);
+      
+      toast({
+        title: "JSON Data Downloaded",
+        description: `Raw data saved as ${fileName}_data.json`,
+      });
     }
   };
   
@@ -135,22 +188,49 @@ export const DownloadOptions = ({
 };
 
 // Export these functions for direct use in transcription.ts
-export const downloadWordDocumentDirect = (transcriptText: string, fileName: string) => {
-  if (transcriptText) {
-    console.log("Directly creating Word document:", {
-      transcriptLength: transcriptText.length,
-      fileName,
-      transcriptSample: transcriptText.substring(0, 100)
-    });
-    
+export const downloadWordDocumentDirect = (transcriptText: string, fileName: string): Promise<boolean> => {
+  if (!transcriptText || transcriptText.trim().length === 0) {
+    console.error("Cannot create Word document: transcript is empty");
+    return Promise.resolve(false);
+  }
+  
+  console.log("Directly creating Word document:", {
+    transcriptLength: transcriptText.length,
+    fileName,
+    transcriptSample: transcriptText.substring(0, 100)
+  });
+  
+  try {
     const doc = createWordDocument(transcriptText, fileName);
     
     // Generate and save the file
     return Packer.toBlob(doc).then(blob => {
       console.log("Word document blob created, initiating download");
       saveAs(blob, `${fileName}.docx`);
+      
+      // Show toast notification
+      toast({
+        title: "Transcription Complete",
+        description: "Word document has been created and downloaded for your review.",
+      });
+      
       return true;
+    }).catch(error => {
+      console.error("Error creating Word document blob:", error);
+      toast({
+        title: "Document Creation Error",
+        description: "Failed to create Word document. Please try again.",
+        variant: "destructive"
+      });
+      return false;
     });
+  } catch (error) {
+    console.error("Error generating Word document:", error);
+    toast({
+      title: "Document Creation Error",
+      description: "Failed to generate Word document. Please try again.",
+      variant: "destructive"
+    });
+    return Promise.resolve(false);
   }
-  return Promise.resolve(false);
 };

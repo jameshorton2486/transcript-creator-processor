@@ -79,6 +79,7 @@ export const performTranscription = async (
         onProgressUpdate(normalized);
       };
       
+      // Use the transcription service
       const response = await safePromise(
         transcribeAudio(
           file, 
@@ -104,7 +105,7 @@ export const performTranscription = async (
       });
       
       // Make sure we have a valid transcript string
-      if (!transcriptText || typeof transcriptText !== 'string') {
+      if (!transcriptText || typeof transcriptText !== 'string' || transcriptText.trim().length === 0) {
         throw new Error("No valid transcript text was generated from the audio");
       }
       
@@ -117,14 +118,11 @@ export const performTranscription = async (
       try {
         await downloadWordDocumentDirect(transcriptText, fileName);
         
-        // Notify the user
-        toast({
-          title: "Transcription complete",
-          description: "Word document has been created and downloaded for your review.",
-        });
-        
         // Still call onSuccess to maintain compatibility with existing code
+        // This allows the transcript to be available in the UI if needed
         onSuccess(transcriptText, response);
+        
+        console.log("Transcription and Word document creation complete");
       } catch (docError) {
         console.error("Error creating Word document:", docError);
         toast({
@@ -136,8 +134,6 @@ export const performTranscription = async (
         // Still call onSuccess so the transcript is available in the UI
         onSuccess(transcriptText, response);
       }
-      
-      console.log("Transcription processing complete");
     } catch (error: any) {
       console.error("Transcription error:", error);
       
