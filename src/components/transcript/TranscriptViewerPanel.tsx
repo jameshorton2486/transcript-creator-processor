@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TranscriptToolbar } from "@/components/transcript/controls/TranscriptToolbar";
 import { FormattedTranscriptView } from "@/components/transcript/FormattedTranscriptView";
@@ -28,14 +28,20 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>("view");
   
-  // Add console log to debug transcript data flow
+  // Add enhanced console log to debug transcript data flow
   console.log("TranscriptViewerPanel received:", {
     originalLength: originalTranscript?.length,
     processedLength: processedTranscript?.length,
     aiReviewedLength: aiReviewedTranscript?.length,
     currentLength: currentTranscript?.length,
-    hasTranscript: Boolean(currentTranscript)
+    hasTranscript: Boolean(currentTranscript),
+    activeTab
   });
+  
+  // Effect to detect tab changes
+  useEffect(() => {
+    console.log("Active tab changed to:", activeTab);
+  }, [activeTab]);
   
   return (
     <Card className="h-full overflow-hidden shadow-md border-slate-200">
@@ -81,7 +87,7 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
           </TabsList>
         </div>
         
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
           <TabsContent value="view" className="h-full m-0 p-0 data-[state=active]:overflow-auto">
             {currentTranscript ? (
               <FormattedTranscriptView formattedText={currentTranscript} />
