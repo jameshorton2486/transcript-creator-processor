@@ -39,17 +39,23 @@ export const TranscribeTab = ({
   
   // Add console log to debug transcript values in the main tab
   console.log("TranscribeTab state:", {
-    originalLength: originalTranscript?.length,
+    originalLength: originalTranscript?.length, 
+    originalType: typeof originalTranscript,
+    originalSample: originalTranscript?.substring(0, 100),
     processedLength: processedTranscript?.length, 
     aiReviewedLength: aiReviewedTranscript?.length,
     fileName,
-    hasJsonData: Boolean(jsonData)
+    hasJsonData: Boolean(jsonData),
+    jsonDataKeys: jsonData ? Object.keys(jsonData) : []
   });
   
   const handleTranscriptCreated = (transcript: string, jsonData: any, file?: File) => {
     console.log("Transcript created:", { 
       transcriptLength: transcript?.length, 
+      transcriptSample: transcript?.substring(0, 100),
+      transcriptType: typeof transcript,
       hasJsonData: Boolean(jsonData),
+      jsonDataKeys: jsonData ? Object.keys(jsonData) : [],
       fileProvided: Boolean(file)
     });
     
@@ -59,10 +65,21 @@ export const TranscribeTab = ({
       setAudioFile(file);
       setFileName(file.name.split('.')[0]);
     }
+    
+    // Debug check after setting state
+    setTimeout(() => {
+      console.log("After setting transcript:", {
+        originalTranscriptSet: Boolean(originalTranscript),
+        originalLength: originalTranscript?.length
+      });
+    }, 100);
   };
   
   const handleTranscriptProcessed = (processedText: string) => {
-    console.log("Transcript processed:", { processedLength: processedText?.length });
+    console.log("Transcript processed:", { 
+      processedLength: processedText?.length,
+      processedSample: processedText?.substring(0, 100)
+    });
     setProcessedTranscript(processedText);
   };
   
@@ -92,6 +109,7 @@ export const TranscribeTab = ({
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
   console.log("Current transcript to display:", { 
     currentLength: currentTranscript?.length,
+    currentSample: currentTranscript?.substring(0, 100),
     source: aiReviewedTranscript ? "AI Reviewed" : (processedTranscript ? "Processed" : "Original")
   });
 

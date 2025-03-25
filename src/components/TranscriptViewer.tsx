@@ -29,12 +29,17 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
       textLength: text?.length,
       hasText: Boolean(hasText),
       formattedTextLength: formattedText?.length,
-      textSample: text?.substring(0, 100)
+      textSample: text?.substring(0, 100),
+      textType: typeof text,
+      isTextEmpty: text === '',
+      isTextUndefined: text === undefined,
+      isTextNull: text === null,
     });
   }, [text, formattedText, hasText]);
   
   // If text is empty/undefined, show empty state
   if (!hasText) {
+    console.log("TranscriptViewer showing empty state because hasText=false");
     return (
       <Card className="h-full">
         <CardContent className="p-6 flex items-center justify-center h-full">
@@ -46,6 +51,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
     );
   }
 
+  console.log("TranscriptViewer rendering with text content");
   return (
     <Card className="h-full flex flex-col">
       <ViewerToolbar 

@@ -99,7 +99,7 @@ export const performTranscription = async (
         )
       );
       
-      console.log("Transcription response received:", response);
+      console.log("Raw transcription response received:", response);
       
       // Reset progress to complete state
       onProgressUpdate(100);
@@ -107,10 +107,11 @@ export const performTranscription = async (
       // Enhanced validation of the transcript
       const transcriptText = validateTranscript(response);
       
-      console.log("Final transcript validation successful:", { 
+      console.log("Validated transcript text:", { 
         length: transcriptText?.length, 
         sample: transcriptText?.substring(0, 100),
-        hasTranscript: Boolean(transcriptText)
+        hasTranscript: Boolean(transcriptText),
+        type: typeof transcriptText
       });
       
       // Make sure we have a valid transcript string
@@ -119,6 +120,11 @@ export const performTranscription = async (
       }
       
       // Send the transcript data to the caller
+      console.log("Calling onSuccess with transcript data", {
+        transcriptLength: transcriptText.length,
+        hasJsonData: Boolean(response)
+      });
+      
       onSuccess(transcriptText, response);
       
       toast({

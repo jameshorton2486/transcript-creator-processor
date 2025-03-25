@@ -18,6 +18,11 @@ export const validateTranscript = (response: any): string => {
     
     // Extract the transcript text
     const transcriptText = extractTranscriptText(response);
+    console.log("extractTranscriptText returned:", {
+      text: transcriptText?.substring(0, 100),
+      length: transcriptText?.length,
+      type: typeof transcriptText
+    });
     
     if (!transcriptText || 
         transcriptText === "No transcript available" || 

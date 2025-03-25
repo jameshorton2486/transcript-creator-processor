@@ -12,7 +12,7 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
   
   // Ensure textarea adjusts to content when it changes
   useEffect(() => {
-    if (actualRef.current && transcript) {
+    if (actualRef.current) {
       // Force a re-render of the textarea to ensure it displays the content correctly
       const textarea = actualRef.current;
       textarea.style.height = 'auto';
@@ -20,7 +20,14 @@ export const RawTranscriptView: React.FC<RawTranscriptViewProps> = ({ transcript
       // Optionally scroll to top when new content is loaded
       textarea.scrollTop = 0;
       
-      console.log("RawTranscriptView updated with transcript length:", transcript.length);
+      console.log("RawTranscriptView updated with transcript:", {
+        length: transcript?.length,
+        sample: transcript?.substring(0, 100),
+        type: typeof transcript,
+        isEmpty: transcript === '',
+        isUndefined: transcript === undefined,
+        isNull: transcript === null
+      });
     }
   }, [transcript, actualRef]);
   
