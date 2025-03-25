@@ -49,10 +49,16 @@ export const DownloadOptions = ({ currentTranscript, fileName, jsonData }: Downl
   // Function to download transcript as a Word document
   const downloadWordDocument = () => {
     if (currentTranscript) {
-      const doc = createWordDocument(currentTranscript);
+      console.log("Creating Word document from DownloadOptions", {
+        transcriptLength: currentTranscript.length,
+        fileName
+      });
+      
+      const doc = createWordDocument(currentTranscript, fileName);
       
       // Generate and save the file
       Packer.toBlob(doc).then(blob => {
+        console.log("Word document blob created, downloading");
         saveAs(blob, `${fileName}.docx`);
       });
     }

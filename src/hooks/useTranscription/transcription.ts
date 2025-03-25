@@ -5,6 +5,9 @@ import { transcribeAudio, testApiKey } from "@/lib/google";
 import { formatErrorMessage, createErrorContext } from "./errorHandling";
 import { validateTranscript } from "./transcriptValidation";
 import { safePromise } from "./promiseUtils";
+import { Document, Packer } from "docx";
+import { saveAs } from 'file-saver';
+import { createWordDocument } from "@/components/transcript/docxGenerator";
 
 export const performTranscription = async (
   file: File | null,
@@ -42,13 +45,9 @@ export const performTranscription = async (
   onErrorUpdate(null);
   onProgressUpdate(0);
   
-  // Log transcription start with detailed info
   console.log(`Transcription started for: ${file.name}`);
   console.log(`File details: ${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`Transcription options:`, options);
-  console.log(`Custom terms: ${customTerms.length} terms provided`);
   
-  // Auto-retry logic for encoding issues
   let autoRetryAttempted = false;
   
   const attemptTranscription = async (retryWithAutoDetect = false) => {
@@ -67,14 +66,9 @@ export const performTranscription = async (
           description: "Your file will be processed in batches. This may take several minutes.",
         });
         onBatchProcessingUpdate(true);
-        console.log(`Large file (${(file.size / 1024 / 1024).toFixed(2)} MB) - using batch processing`);
       }
       
       console.log(`Starting transcription for file: ${file.name} (${file.type})`);
-      
-      if (customTerms.length > 0) {
-        console.log(`Using ${customTerms.length} custom terms for speech adaptation`);
-      }
       
       // If retrying with auto-detect, modify the options
       const transcriptionOptions = retryWithAutoDetect 
@@ -83,18 +77,16 @@ export const performTranscription = async (
       
       // Progress tracking helper
       const normalizeProgress = (progress: number) => {
-        // Ensure progress is between 0 and 100
         const normalized = Math.min(Math.max(Math.round(progress), 0), 100);
         onProgressUpdate(normalized);
       };
       
-      // Use safePromise to handle potential promise errors
       const response = await safePromise(
         transcribeAudio(
           file, 
           apiKey, 
           transcriptionOptions, 
-          normalizeProgress, // Always use progress tracking
+          normalizeProgress,
           customTerms
         )
       );
@@ -119,22 +111,51 @@ export const performTranscription = async (
         throw new Error("No valid transcript text was generated from the audio");
       }
       
-      // Send the transcript data to the caller
-      console.log("Calling onSuccess with transcript data", {
+      // Create a filename based on the original file
+      const fileName = file.name.split('.')[0] || "transcript";
+      
+      // DIRECT WORD DOCUMENT CREATION - This is the key simplification
+      console.log("Creating Word document with transcript", {
         transcriptLength: transcriptText.length,
-        hasJsonData: Boolean(response)
+        fileName: fileName
       });
       
-      onSuccess(transcriptText, response);
+      try {
+        // Create the Word document using the existing utility
+        const doc = createWordDocument(transcriptText, fileName);
+        
+        // Generate and save/open the file
+        console.log("Converting Word document to blob for download");
+        Packer.toBlob(doc).then(blob => {
+          console.log("Word document blob created, initiating download");
+          saveAs(blob, `${fileName}.docx`);
+          
+          // Notify the user
+          toast({
+            title: "Transcription complete",
+            description: "Word document has been created and opened for your review.",
+          });
+          
+          // Still call onSuccess to maintain compatibility with existing code
+          onSuccess(transcriptText, response);
+        });
+      } catch (wordError) {
+        console.error("Error creating Word document:", wordError);
+        toast({
+          title: "Document Creation Error",
+          description: "Could not create Word document. Downloading transcript as text instead.",
+          variant: "destructive",
+        });
+        
+        // Fallback to text download
+        const blob = new Blob([transcriptText], { type: 'text/plain' });
+        saveAs(blob, `${fileName}.txt`);
+        
+        // Still call onSuccess to maintain compatibility
+        onSuccess(transcriptText, response);
+      }
       
-      toast({
-        title: "Transcription complete",
-        description: "The audio has been successfully transcribed.",
-      });
-      
-      // Log successful completion
-      console.log("Transcription completed successfully");
-      console.log(`Transcript length: ${transcriptText?.length} characters`);
+      console.log("Transcription processing complete, document creation initiated");
     } catch (error: any) {
       console.error("Transcription error:", error);
       
@@ -172,7 +193,6 @@ export const performTranscription = async (
   try {
     await attemptTranscription();
   } finally {
-    // Only update loading state AFTER transcription is complete
     onLoadingUpdate(false);
     onBatchProcessingUpdate(false);
     onProgressUpdate(0); // Reset progress when done

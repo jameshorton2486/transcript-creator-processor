@@ -1,7 +1,7 @@
 
 import { extractTranscriptText } from "@/lib/google";
 
-// Validates transcript response with enhanced debugging
+// Validates transcript response with enhanced debugging and simpler validation
 export const validateTranscript = (response: any): string => {
   try {
     // First check if the response is valid
@@ -14,10 +14,6 @@ export const validateTranscript = (response: any): string => {
     console.log("Validating transcript response:", {
       hasResults: Boolean(response.results),
       resultCount: response.results?.length,
-      hasTranscripts: Boolean(response.results?.transcripts),
-      hasChannels: Boolean(response.results?.channels),
-      isArray: Array.isArray(response.results),
-      firstResultHasAlternatives: response.results?.[0]?.alternatives?.length > 0,
       responseType: typeof response,
       responseKeys: Object.keys(response),
       responseSample: JSON.stringify(response).substring(0, 200)
@@ -29,70 +25,63 @@ export const validateTranscript = (response: any): string => {
       throw new Error(`API error: ${response.error.message || "Unknown API error"}`);
     }
     
-    // Extract the transcript text with enhanced logging
-    const transcriptText = extractTranscriptText(response);
-    console.log("extractTranscriptText returned:", {
-      text: transcriptText?.substring(0, 100),
-      length: transcriptText?.length,
-      type: typeof transcriptText,
-      isEmpty: transcriptText === '',
-      isUndefined: transcriptText === undefined,
-      isNull: transcriptText === null,
-      hasNonWhitespace: transcriptText?.trim()?.length > 0,
-      firstChars: transcriptText?.substring(0, 20)?.replace(/\n/g, "\\n"),
-      asciiCodes: transcriptText?.substring(0, 20)?.split('').map(c => c.charCodeAt(0))
-    });
+    // SIMPLIFIED APPROACH: Try multiple extraction methods to ensure we get text
+    let transcriptText = '';
     
-    if (!transcriptText || 
-        transcriptText === "No transcript available" || 
-        transcriptText === "Error extracting transcript") {
-      console.error("Failed to extract transcript from response:", response);
-      
-      // Check for empty results which might indicate audio decoding issues
-      if (!response.results || response.results.length === 0) {
-        throw new Error("No transcription results. This could be due to silent audio or an unsupported format.");
-      }
-      
-      if (response.results && Array.isArray(response.results) && 
-          response.results.length > 0 && 
-          (!response.results[0].alternatives || response.results[0].alternatives.length === 0)) {
-        throw new Error("Google could not recognize any speech in this audio file.");
-      }
-      
-      throw new Error("Failed to extract transcript from the API response.");
+    // Method 1: Use the standard extractor
+    try {
+      transcriptText = extractTranscriptText(response);
+      console.log("Standard extraction method result:", {
+        length: transcriptText?.length,
+        sample: transcriptText?.substring(0, 100)
+      });
+    } catch (extractError) {
+      console.warn("Standard transcript extraction failed:", extractError);
     }
     
-    // Additional check for empty transcript
-    if (transcriptText.trim().length === 0) {
-      console.warn("Transcript validation: Extracted transcript is empty or whitespace only!");
-      console.log("Raw transcript text (first 100 chars):", transcriptText.substring(0, 100));
-      
-      // Try to extract text directly if possible
-      if (typeof response === 'string' && response.trim().length > 0) {
-        console.log("Using raw response as transcript instead");
-        return response;
-      }
-      
+    // Method 2: If standard extraction failed or returned empty, try direct access
+    if (!transcriptText || transcriptText.trim().length === 0) {
       if (response.results && Array.isArray(response.results)) {
-        // Try a different approach to extract text
-        const altTranscript = response.results
+        // Try to extract from alternatives
+        transcriptText = response.results
           .filter((result: any) => result.alternatives && result.alternatives.length > 0)
           .map((result: any) => result.alternatives[0].transcript)
           .join(' ');
         
-        if (altTranscript.trim().length > 0) {
-          console.log("Using alternative extraction method, found transcript:", 
-                     altTranscript.substring(0, 100));
-          return altTranscript;
-        }
+        console.log("Alternative extraction method result:", {
+          length: transcriptText?.length,
+          sample: transcriptText?.substring(0, 100)
+        });
       }
     }
     
-    // Log success details
-    console.log("Transcript validation successful:", {
-      transcriptLength: transcriptText.length,
-      firstFewWords: transcriptText.split(' ').slice(0, 5).join(' '),
-      hasContent: transcriptText.trim().length > 0
+    // Method 3: If the response itself is a string, use it directly
+    if ((!transcriptText || transcriptText.trim().length === 0) && typeof response === 'string') {
+      transcriptText = response;
+      console.log("Using raw response as transcript:", {
+        length: transcriptText?.length,
+        sample: transcriptText?.substring(0, 100)
+      });
+    }
+    
+    // Final check - if we still don't have text, this is an error
+    if (!transcriptText || transcriptText.trim().length === 0) {
+      console.error("Failed to extract any transcript text from response");
+      
+      // If we have results but no transcript, it might be a format issue
+      if (response.results && response.results.length > 0) {
+        console.error("Response has results but no extractable transcript:", 
+                    JSON.stringify(response.results).substring(0, 300));
+      }
+      
+      // Return a meaningful message instead of empty string
+      return "No transcript content could be extracted from the API response.";
+    }
+    
+    console.log("Successfully extracted transcript:", {
+      length: transcriptText.length,
+      wordCount: transcriptText.split(' ').length,
+      sample: transcriptText.substring(0, 200)
     });
     
     return transcriptText;
