@@ -113,17 +113,16 @@ export const performTranscription = async (
       // Create a filename based on the original file
       const fileName = file.name.split('.')[0] || "transcript";
       
-      // DIRECTLY CREATE AND DOWNLOAD THE WORD DOCUMENT
+      // IMPORTANT: Call onSuccess BEFORE trying to download the document
+      // This ensures the transcript data is updated in the app even if document creation fails
+      onSuccess(transcriptText, response);
+      
+      // Now try to create and download the Word document
       console.log("[TRANSCRIPTION] Creating and downloading Word document");
       
       try {
         await downloadWordDocumentDirect(transcriptText, fileName);
-        
-        // Still call onSuccess to maintain compatibility with existing code
-        // This allows the transcript to be available in the UI if needed
-        onSuccess(transcriptText, response);
-        
-        console.log("[TRANSCRIPTION] Transcription and Word document creation complete");
+        console.log("[TRANSCRIPTION] Word document creation complete");
       } catch (docError) {
         console.error("[TRANSCRIPTION] Error creating Word document:", docError);
         toast({
@@ -131,9 +130,6 @@ export const performTranscription = async (
           description: "Could not create Word document. Please try again.",
           variant: "destructive",
         });
-        
-        // Still call onSuccess so the transcript is available in the UI
-        onSuccess(transcriptText, response);
       }
     } catch (error: any) {
       console.error("[TRANSCRIPTION] Error:", error);

@@ -1,178 +1,97 @@
 
-import { Document, Paragraph, TextRun, Header, Footer, PageNumber, AlignmentType, HeadingLevel } from 'docx';
-import { documentStyles, pageMargins } from './styles';
-import { isSpeakerLabel, isQAFormat } from './formatters';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, SectionType } from 'docx';
 
 /**
- * Creates a paragraph with the appropriate styling based on the line content
+ * Formats raw transcript text for Word document to improve readability
  */
-function createParagraphFromLine(line: string): Paragraph {
-  // Apply special styling to speaker labels and Q&A format
-  if (isSpeakerLabel(line)) {
-    return new Paragraph({
-      style: "Speaker",
-      children: [
-        new TextRun({
-          text: line || " ",
-          bold: true,
-        }),
-      ],
-      spacing: {
-        before: 400,
-      },
-    });
-  } 
-  else if (isQAFormat(line)) {
-    return new Paragraph({
-      style: "Speaker",
-      children: [
-        new TextRun({
-          text: line || " ",
-          bold: true,
-        }),
-      ],
-      spacing: {
-        before: 300,
-      },
-    });
-  } 
-  // Regular text
-  else {
-    return new Paragraph({
-      style: "Normal",
-      children: [
-        new TextRun({
-          text: line || " ", // Ensure at least a space for empty lines
-        }),
-      ],
-      spacing: {
-        before: 100,
-      },
-      indent: {
-        left: line.trim() ? 720 : 0, // Indent text paragraphs (not empty lines)
-      },
-    });
-  }
-}
+export const formatTranscriptForWord = (text: string): string => {
+  // Replace multiple consecutive newlines with just two
+  let formatted = text.replace(/\n{3,}/g, '\n\n');
+  
+  // Add proper spacing around speaker labels for better document formatting
+  formatted = formatted.replace(/^(Speaker \d+:|[A-Z][A-Z\s']+:)(.+)/gm, '$1\n$2');
+  
+  // Ensure proper spacing between paragraphs
+  formatted = formatted.replace(/\n{2,}/g, '\n\n');
+  
+  return formatted;
+};
 
 /**
- * Creates a Header for the document
+ * Creates a Word document from transcript text
  */
-function createHeader(fileName: string): Header {
-  return new Header({
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        children: [
-          new TextRun({
-            text: fileName,
-            size: 18, // 9pt
-            font: "Times New Roman",
-            color: "888888",
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
-/**
- * Creates a Footer with page numbers
- */
-function createFooter(): Footer {
-  return new Footer({
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({
-            text: "Page ",
-            size: 18, // 9pt
-            font: "Times New Roman",
-            color: "888888",
-          }),
-          new TextRun({
-            children: [PageNumber.CURRENT],
-            size: 18, // 9pt
-            font: "Times New Roman",
-            color: "888888",
-          }),
-          new TextRun({
-            text: " of ",
-            size: 18, // 9pt
-            font: "Times New Roman",
-            color: "888888",
-          }),
-          new TextRun({
-            children: [PageNumber.TOTAL_PAGES],
-            size: 18, // 9pt
-            font: "Times New Roman",
-            color: "888888",
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
-/**
- * Creates a Word document from the transcript text with improved reliability
- */
-export function createWordDocument(transcriptText: string, fileName: string = "Transcript"): Document {
-  console.log("[DOCX] Creating Word document:", {
-    textLength: transcriptText?.length || 0,
-    fileName,
-    textSample: transcriptText ? transcriptText.substring(0, 100) + "..." : "none",
-  });
+export const createWordDocument = (transcriptText: string, documentTitle: string): Document => {
+  // Format the transcript for better readability in Word
+  const formattedText = formatTranscriptForWord(transcriptText);
   
-  // Ensure we have valid text
-  const safeText = transcriptText && transcriptText.trim().length > 0 
-    ? transcriptText 
-    : "No transcript content available.";
-  
-  // Process all lines in the transcript
-  const paragraphs = safeText.split('\n').map(line => createParagraphFromLine(line));
-  
-  // Create a title paragraph
-  const titleParagraph = new Paragraph({
-    heading: HeadingLevel.HEADING_1,
-    children: [
-      new TextRun({
-        text: fileName || "Transcript",
-        bold: true,
-        size: 32, // 16pt
-      }),
-    ],
-    spacing: {
-      after: 400, // 20pt after
-    },
-    alignment: AlignmentType.CENTER,
-  });
-  
-  // Create a new document with proper formatting
+  // Create document with proper metadata
   const doc = new Document({
-    styles: documentStyles,
-    sections: [
-      {
-        properties: {
-          page: {
-            margin: pageMargins,
-          },
-        },
-        headers: {
-          default: createHeader(fileName),
-        },
-        footers: {
-          default: createFooter(),
-        },
-        children: [
-          titleParagraph,
-          ...paragraphs
-        ],
+    title: documentTitle || 'Transcript',
+    description: 'Automatically generated transcript document',
+    sections: [{
+      properties: {
+        type: SectionType.CONTINUOUS
       },
-    ],
+      children: [
+        // Document title
+        new Paragraph({
+          text: documentTitle || 'Audio Transcript',
+          heading: HeadingLevel.HEADING_1,
+          alignment: AlignmentType.CENTER,
+          spacing: {
+            after: 400
+          }
+        }),
+        
+        // Timestamp header
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `Generated on: ${new Date().toLocaleString()}`,
+              italics: true,
+              size: 20
+            })
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: {
+            after: 800
+          }
+        }),
+        
+        // Process each line of the transcript
+        ...formattedText.split('\n').map(line => {
+          // Check if this is a speaker label or header
+          if (/^(Speaker \d+:|[A-Z][A-Z\s']+:)/.test(line)) {
+            return new Paragraph({
+              text: line,
+              spacing: { before: 400, after: 200 },
+              bold: true
+            });
+          } 
+          // Check if it's a Q&A format
+          else if (/^(Q|A):/.test(line)) {
+            return new Paragraph({
+              text: line,
+              spacing: { before: 240, after: 120 },
+              bold: true
+            });
+          }
+          // Regular paragraph
+          else if (line.trim()) {
+            return new Paragraph({
+              text: line,
+              spacing: { before: 120, after: 120 },
+              indent: { left: 720 } // Indent regular paragraphs
+            });
+          } 
+          // Empty lines
+          else {
+            return new Paragraph({ text: '' });
+          }
+        })
+      ]
+    }]
   });
   
-  console.log("[DOCX] Word document created successfully");
   return doc;
-}
+};
