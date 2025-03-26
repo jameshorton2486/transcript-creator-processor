@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
@@ -37,7 +36,6 @@ export const TranscribeTab = ({
   setIsReviewing,
 }: TranscribeTabProps) => {
   
-  // Test function to set a sample transcript for debugging
   const loadSampleTranscript = () => {
     const sampleTranscript = `Speaker 1: This is a sample transcript for testing the display components.
 
@@ -53,13 +51,11 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
       hasContent: Boolean(sampleTranscript && sampleTranscript.trim().length > 0)
     });
     
-    // Directly set both original and processed transcripts to ensure display
     setOriginalTranscript(sampleTranscript);
     setProcessedTranscript(sampleTranscript);
     setFileName("sample-transcript");
   };
   
-  // Debug logging to track state changes
   useEffect(() => {
     console.log("TranscribeTab transcript state updated:", {
       originalLength: originalTranscript?.length, 
@@ -141,7 +137,6 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
     setFileName("transcript");
   };
 
-  // Ensure we always have a valid current transcript
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript || "";
   console.log("Current transcript to display:", { 
     currentLength: currentTranscript?.length,
