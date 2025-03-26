@@ -5,6 +5,8 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Sect
  * Formats raw transcript text for Word document to improve readability
  */
 export const formatTranscriptForWord = (text: string): string => {
+  if (!text) return "No transcript content available.";
+  
   // Replace multiple consecutive newlines with just two
   let formatted = text.replace(/\n{3,}/g, '\n\n');
   
@@ -63,29 +65,25 @@ export const createWordDocument = (transcriptText: string, documentTitle: string
           // Check if this is a speaker label or header
           if (/^(Speaker \d+:|[A-Z][A-Z\s']+:)/.test(line)) {
             return new Paragraph({
-              text: line,
-              spacing: { before: 400, after: 200 },
-              // Use TextRun instead of bold property
               children: [
                 new TextRun({
                   text: line,
                   bold: true
                 })
-              ]
+              ],
+              spacing: { before: 400, after: 200 }
             });
           } 
           // Check if it's a Q&A format
           else if (/^(Q|A):/.test(line)) {
             return new Paragraph({
-              text: line,
-              spacing: { before: 240, after: 120 },
-              // Use TextRun instead of bold property
               children: [
                 new TextRun({
                   text: line,
                   bold: true
                 })
-              ]
+              ],
+              spacing: { before: 240, after: 120 }
             });
           }
           // Regular paragraph

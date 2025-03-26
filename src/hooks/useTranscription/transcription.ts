@@ -119,11 +119,12 @@ export const performTranscription = async (
       // This ensures the transcript data is updated in the app even if document creation fails
       onSuccess(transcriptText, response);
       
-      // Create Word document
-      const doc = createWordDocument(transcriptText, fileName);
-      
-      // Generate and download Word document
+      // Create and download Word document immediately
       try {
+        console.log("[TRANSCRIPTION] Creating Word document for direct download");
+        const doc = createWordDocument(transcriptText, fileName);
+        
+        // Generate and download Word document
         await Packer.toBlob(doc).then(blob => {
           saveAs(blob, `${fileName}.docx`);
           console.log("[TRANSCRIPTION] Word document downloaded successfully");

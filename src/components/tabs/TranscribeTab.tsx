@@ -109,6 +109,11 @@ export const TranscribeTab = ({
     }
     
     const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
+    console.log("Downloading transcript:", {
+      transcriptLength: currentTranscript.length,
+      transcriptSample: currentTranscript.substring(0, 100)
+    });
+    
     const doc = createWordDocument(currentTranscript, fileName);
     
     Packer.toBlob(doc).then(blob => {
