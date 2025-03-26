@@ -92,7 +92,11 @@ export const performTranscription = async (
         )
       );
       
-      console.log("[TRANSCRIPTION] Raw transcription response received");
+      console.log("[TRANSCRIPTION] Raw transcription response received:", {
+        responseType: typeof response,
+        hasResults: Boolean(response?.results),
+        responseSample: JSON.stringify(response).substring(0, 200) + "..."
+      });
       
       // Reset progress to complete state
       onProgressUpdate(100);
@@ -103,20 +107,29 @@ export const performTranscription = async (
       
       console.log("[TRANSCRIPTION] Transcript validation complete:", { 
         hasTranscript: Boolean(transcriptText),
+        transcriptType: typeof transcriptText,
         length: transcriptText?.length || 0, 
         sample: transcriptText ? transcriptText.substring(0, 100) + "..." : "none",
       });
       
-      // Make sure we have a valid transcript string
-      if (!transcriptText || typeof transcriptText !== 'string' || transcriptText.trim().length === 0) {
-        throw new Error("No valid transcript text was generated from the audio");
+      // Use a fallback message if we don't get valid transcript text
+      if (!transcriptText || typeof transcriptText !== 'string') {
+        console.error("[TRANSCRIPTION] Invalid transcript text received");
+        throw new Error("Failed to generate a valid transcript from the audio");
       }
       
       // Create a filename based on the original file
       const fileName = file.name.split('.')[0] || "transcript";
       
-      // IMPORTANT: Call onSuccess BEFORE trying to download the document
-      // This ensures the transcript data is updated in the app even if document creation fails
+      // IMPORTANT: Call onSuccess with the transcript text
+      // This ensures the transcript data is updated in the app
+      console.log("[TRANSCRIPTION] Calling onSuccess with transcript:", {
+        transcriptTextType: typeof transcriptText,
+        transcriptTextLength: transcriptText.length,
+        sample: transcriptText.substring(0, 100)
+      });
+      
+      // Make sure we're calling onSuccess with a valid string transcript
       onSuccess(transcriptText, response);
       
       // Create and download Word document immediately

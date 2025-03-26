@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TranscriptToolbar } from "@/components/transcript/controls/TranscriptToolbar";
@@ -7,7 +6,7 @@ import { RawTranscriptView } from "@/components/transcript/RawTranscriptView";
 import { WordPreviewDrawer } from "@/components/transcript/controls/WordPreviewDrawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Edit, FileType2 } from "lucide-react";
-import { TranscriptViewer } from "@/components/TranscriptViewer"; // Added import
+import { TranscriptViewer } from "@/components/TranscriptViewer";
 
 interface TranscriptViewerPanelProps {
   originalTranscript: string;
@@ -28,37 +27,20 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<string>("view");
   
-  // Add enhanced console log to debug transcript data flow
-  console.log("TranscriptViewerPanel received:", {
-    originalLength: originalTranscript?.length,
-    processedLength: processedTranscript?.length,
-    aiReviewedLength: aiReviewedTranscript?.length,
-    currentLength: currentTranscript?.length,
-    hasTranscript: Boolean(currentTranscript),
-    activeTab,
-    currentTranscriptSample: currentTranscript?.substring(0, 100),
-    currentTranscriptType: typeof currentTranscript,
-    originalFirstChars: originalTranscript?.substring(0, 20)?.replace(/\n/g, "\\n"),
-    processedFirstChars: processedTranscript?.substring(0, 20)?.replace(/\n/g, "\\n"),
-    currentFirstChars: currentTranscript?.substring(0, 20)?.replace(/\n/g, "\\n")
-  });
-  
-  // Verify if currentTranscript is being properly passed to child components
   useEffect(() => {
-    console.log("TranscriptViewerPanel checking currentTranscript:", {
-      hasContent: Boolean(currentTranscript?.trim()),
-      length: currentTranscript?.length,
-      sample: currentTranscript?.substring(0, 50)
+    console.log("TranscriptViewerPanel received currentTranscript:", {
+      currentType: typeof currentTranscript,
+      currentLength: currentTranscript?.length,
+      isEmpty: currentTranscript === '',
+      isUndefined: currentTranscript === undefined,
+      isNull: currentTranscript === null,
+      trimmedLength: currentTranscript?.trim()?.length,
+      firstChars: currentTranscript?.substring(0, 50)?.replace(/\n/g, "\\n"),
+      isValidForViewer: Boolean(currentTranscript) && typeof currentTranscript === 'string'
     });
   }, [currentTranscript]);
   
-  // Effect to detect tab changes
-  useEffect(() => {
-    console.log("Active tab changed to:", activeTab);
-  }, [activeTab]);
-  
-  // Less strict rendering condition - only check if completely undefined
-  const hasTranscript = currentTranscript !== undefined;
+  const hasTranscript = currentTranscript !== undefined && currentTranscript !== null;
   
   return (
     <Card className="h-full overflow-hidden shadow-md border-slate-200">
@@ -79,7 +61,6 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
         </div>
       </CardHeader>
       
-      {/* Always render the toolbar, but it will handle its own visibility */}
       <TranscriptToolbar 
         currentTranscript={currentTranscript || ''}
         fileName={fileName}
@@ -107,18 +88,9 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
         
         <div className="flex-1 overflow-auto relative">
           <TabsContent value="view" className="h-full m-0 p-0 block" forceMount={true} hidden={activeTab !== "view"}>
-            {/* IMPORTANT: Debug output to check what's being passed to the viewer */}
-            <div className="hidden">
-              Debug transcript: Length={currentTranscript?.length || 0}, 
-              Empty={String(currentTranscript === "")}, 
-              Undefined={String(currentTranscript === undefined)},
-              First chars: {currentTranscript?.substring(0, 20)}
-            </div>
-            
-            {/* Use TranscriptViewer for the view tab */}
             {hasTranscript ? (
               <TranscriptViewer 
-                text={currentTranscript || ''} 
+                text={currentTranscript} 
                 fileName={fileName}
                 jsonData={jsonData}
               />
@@ -136,7 +108,6 @@ export const TranscriptViewerPanel: React.FC<TranscriptViewerPanelProps> = ({
           </TabsContent>
           
           <TabsContent value="process" className="h-full m-0 p-0 block" forceMount={true} hidden={activeTab !== "process"}>
-            {/* Less strict rendering condition */}
             {originalTranscript !== undefined ? (
               <div className="p-6 h-full bg-slate-50/50">
                 <div className="mb-6 bg-white p-5 rounded-lg border border-slate-200 shadow-sm">

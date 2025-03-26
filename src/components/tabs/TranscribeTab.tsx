@@ -42,7 +42,29 @@ export const TranscribeTab = ({
 }: TranscribeTabProps) => {
   const { toast } = useToast();
   
-  console.log("TranscribeTab state:", {
+  // Test function to set a sample transcript for debugging
+  const loadSampleTranscript = () => {
+    const sampleTranscript = `Speaker 1: This is a sample transcript for testing the display components.
+
+Speaker 2: We're checking if the issue is with the transcript data flow or the display components.
+
+Speaker 1: If this text appears correctly, then we know the display components work.`;
+    
+    console.log("Setting sample transcript for testing:", {
+      length: sampleTranscript.length,
+      sample: sampleTranscript.substring(0, 100)
+    });
+    
+    setOriginalTranscript(sampleTranscript);
+    setFileName("sample-transcript");
+    
+    toast({
+      title: "Sample Transcript Loaded",
+      description: "A test transcript has been loaded for debugging.",
+    });
+  };
+  
+  console.log("TranscribeTab rendering with state:", {
     originalLength: originalTranscript?.length, 
     originalType: typeof originalTranscript,
     originalSample: originalTranscript?.substring(0, 100),
@@ -50,7 +72,6 @@ export const TranscribeTab = ({
     aiReviewedLength: aiReviewedTranscript?.length,
     fileName,
     hasJsonData: Boolean(jsonData),
-    jsonDataKeys: jsonData ? Object.keys(jsonData) : []
   });
   
   const handleTranscriptCreated = (transcript: string, jsonData: any, file?: File) => {
@@ -59,18 +80,7 @@ export const TranscribeTab = ({
       transcriptSample: transcript?.substring(0, 100),
       transcriptType: typeof transcript,
       hasJsonData: Boolean(jsonData),
-      jsonDataKeys: jsonData ? Object.keys(jsonData) : [],
       fileProvided: Boolean(file)
-    });
-    
-    // Add a special debug log to track if transcript is valid before setting state
-    console.log("DEBUG - Transcript before setting state:", {
-      isValid: Boolean(transcript && typeof transcript === 'string'),
-      isEmpty: transcript === '',
-      isUndefined: transcript === undefined,
-      isNull: transcript === null,
-      length: transcript?.length,
-      firstChars: transcript?.substring(0, 50)?.replace(/\n/g, "\\n")
     });
     
     setOriginalTranscript(transcript);
@@ -149,7 +159,8 @@ export const TranscribeTab = ({
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
   console.log("Current transcript to display:", { 
     currentLength: currentTranscript?.length,
-    currentSample: currentTranscript?.substring(0, 100),
+    currentType: typeof currentTranscript,
+    isEmpty: currentTranscript === '',
     source: aiReviewedTranscript ? "AI Reviewed" : (processedTranscript ? "Processed" : "Original")
   });
 
@@ -167,7 +178,7 @@ export const TranscribeTab = ({
           setIsReviewing={setIsReviewing}
         />
         
-        {originalTranscript && (
+        {originalTranscript ? (
           <div className="flex flex-col gap-2 p-4 border rounded-lg bg-white shadow-sm">
             <h3 className="text-sm font-medium">Download Options</h3>
             <p className="text-xs text-gray-500 mb-2">
@@ -180,6 +191,20 @@ export const TranscribeTab = ({
             >
               <Download className="h-4 w-4" />
               Download Word Document
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-white shadow-sm">
+            <h3 className="text-sm font-medium">Debugging Tools</h3>
+            <p className="text-xs text-gray-500 mb-2">
+              If you're having trouble with transcripts not displaying, you can load a sample transcript.
+            </p>
+            <Button 
+              onClick={loadSampleTranscript}
+              className="w-full"
+              variant="outline"
+            >
+              Load Sample Transcript
             </Button>
           </div>
         )}

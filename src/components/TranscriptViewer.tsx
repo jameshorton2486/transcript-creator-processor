@@ -20,40 +20,23 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
   // Enhanced formatted transcript with better speaker label highlighting
   const formattedText = useMemo(() => formatTranscript(text || ''), [text]);
 
-  // More permissive rendering condition - only check if completely undefined or empty
-  const hasText = text && text.trim().length > 0;
-  
-  // Add debug logging when component mounts and updates
+  // Detailed debug logging for TranscriptViewer props
   useEffect(() => {
-    console.log("TranscriptViewer mounted/updated with text:", {
-      hasText: Boolean(text?.trim()),
-      length: text?.length,
-      textIsDefined: text !== undefined,
-      textType: typeof text,
+    console.log("TranscriptViewer received text prop:", {
+      received: text !== undefined, 
+      type: typeof text,
       isEmpty: text === '',
       isNull: text === null,
+      length: text?.length,
       trimmedLength: text?.trim()?.length,
-      formattedTextLength: formattedText?.length,
-      firstChars: text?.substring(0, 50)?.replace(/\n/g, "\\n")
+      firstChars: text?.substring(0, 50)?.replace(/\n/g, "\\n"),
+      formattedTextGenerated: Boolean(formattedText),
+      formattedLength: formattedText?.length
     });
   }, [text, formattedText]);
   
-  // Enhanced debug logging when we receive new transcript content
-  useEffect(() => {
-    console.log("TranscriptViewer received text:", {
-      textLength: text?.length,
-      hasText: Boolean(hasText),
-      formattedTextLength: formattedText?.length,
-      textSample: text?.substring(0, 100),
-      textType: typeof text,
-      isTextEmpty: text === '',
-      isTextUndefined: text === undefined,
-      isTextNull: text === null,
-      textTrimLength: text?.trim()?.length,
-      rawTextFirstChars: text?.substring(0, 20)?.replace(/\n/g, "\\n"),
-      formattedTextFirstChars: formattedText?.substring(0, 20)?.replace(/\n/g, "\\n")
-    });
-  }, [text, formattedText, hasText]);
+  // Much less strict rendering condition - as long as text isn't null or undefined
+  const hasText = text !== undefined && text !== null;
   
   // If text is empty/undefined, show empty state
   if (!hasText) {
@@ -77,6 +60,7 @@ export const TranscriptViewer = ({ text, fileName = "transcript", jsonData }: Tr
     );
   }
 
+  // Even if text is an empty string, we'll still show the viewer
   console.log("TranscriptViewer rendering with text content");
   return (
     <Card className="h-full flex flex-col">

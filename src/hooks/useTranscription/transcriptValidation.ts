@@ -1,18 +1,19 @@
 
 import { extractTranscriptText } from "@/lib/google";
 
-// Simplified transcript validation with reliable fallbacks
+// More permissive transcript validation with better fallbacks
 export const validateTranscript = (response: any): string => {
   try {
     // Initial logging of what we received
     console.log("[TRANSCRIPT VALIDATION] Starting validation of transcript:", {
       responseType: typeof response,
       hasResults: Boolean(response?.results),
-      responseSample: response ? JSON.stringify(response).substring(0, 100) + "..." : "null"
+      isString: typeof response === 'string',
+      responseSample: response ? (typeof response === 'string' ? response.substring(0, 100) : JSON.stringify(response).substring(0, 100)) + "..." : "null"
     });
     
-    // CASE 1: Direct string handling
-    if (typeof response === 'string' && response.trim().length > 0) {
+    // CASE 1: Direct string handling - most permissive case
+    if (typeof response === 'string') {
       console.log("[TRANSCRIPT VALIDATION] Using direct string response:", {
         length: response.length,
         sample: response.substring(0, 100) + "..."
@@ -30,7 +31,7 @@ export const validateTranscript = (response: any): string => {
     try {
       const extractedText = extractTranscriptText(response);
       
-      if (extractedText && extractedText.trim().length > 0) {
+      if (extractedText) {
         console.log("[TRANSCRIPT VALIDATION] Successfully extracted text using standard method:", {
           length: extractedText.length,
           sample: extractedText.substring(0, 100) + "..."
@@ -50,7 +51,7 @@ export const validateTranscript = (response: any): string => {
         .map((result: any) => result.alternatives[0].transcript)
         .join(' ');
         
-      if (transcriptText && transcriptText.trim().length > 0) {
+      if (transcriptText) {
         console.log("[TRANSCRIPT VALIDATION] Extracted from results.alternatives:", {
           length: transcriptText.length,
           sample: transcriptText.substring(0, 100) + "..."
@@ -63,7 +64,7 @@ export const validateTranscript = (response: any): string => {
     if (response.results?.transcripts?.[0]?.transcript) {
       const transcriptText = response.results.transcripts[0].transcript;
       
-      if (transcriptText && transcriptText.trim().length > 0) {
+      if (transcriptText) {
         console.log("[TRANSCRIPT VALIDATION] Found transcript at results.transcripts[0].transcript:", {
           length: transcriptText.length,
           sample: transcriptText.substring(0, 100) + "..."
@@ -76,7 +77,7 @@ export const validateTranscript = (response: any): string => {
     if (response.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
       const transcriptText = response.results.channels[0].alternatives[0].transcript;
       
-      if (transcriptText && transcriptText.trim().length > 0) {
+      if (transcriptText) {
         console.log("[TRANSCRIPT VALIDATION] Found transcript in channels format:", {
           length: transcriptText.length,
           sample: transcriptText.substring(0, 100) + "..."
@@ -88,7 +89,7 @@ export const validateTranscript = (response: any): string => {
     // CASE 5: Recursive search for any text content
     if (typeof response === 'object') {
       const findTextContent = (obj: any, depth: number = 0): string => {
-        if (depth > 3) return ''; // Reduced max depth from 5 to 3 for performance
+        if (depth > 3) return ''; // Reduced max depth for performance
         
         for (const key in obj) {
           const value = obj[key];
@@ -101,7 +102,7 @@ export const validateTranscript = (response: any): string => {
             return value;
           } else if (typeof value === 'object' && value !== null) {
             const nestedText = findTextContent(value, depth + 1);
-            if (nestedText && nestedText.trim().length > 0) {
+            if (nestedText) {
               return nestedText;
             }
           }
@@ -110,15 +111,18 @@ export const validateTranscript = (response: any): string => {
       };
       
       const foundText = findTextContent(response);
-      if (foundText && foundText.trim().length > 0) {
+      if (foundText) {
         return foundText;
       }
     }
     
-    console.warn("[TRANSCRIPT VALIDATION] Failed to extract any transcript text");
-    return "No transcript content could be extracted. The audio may not contain recognizable speech.";
+    // CASE 6: Last resort fallback - return empty string instead of error message
+    // This is important - an empty string is easier to handle in the UI than an error message
+    console.warn("[TRANSCRIPT VALIDATION] Failed to extract any transcript text, returning empty string");
+    return "";
   } catch (error) {
     console.error("[TRANSCRIPT VALIDATION] Error in transcript validation:", error);
-    return "Error processing transcript. Please try again.";
+    // Return empty string instead of error message
+    return "";
   }
 };
