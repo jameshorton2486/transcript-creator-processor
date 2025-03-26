@@ -1,13 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
 import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { createWordDocument } from "@/components/transcript/docx";
-import { Packer } from "docx";
-import { saveAs } from "file-saver";
+import { TranscribeDownloadOptions } from "@/components/tabs/TranscribeDownloadOptions";
+import { TranscribeDebugTools } from "@/components/tabs/TranscribeDebugTools";
 
 interface TranscribeTabProps {
   originalTranscript: string;
@@ -40,7 +36,6 @@ export const TranscribeTab = ({
   isReviewing,
   setIsReviewing,
 }: TranscribeTabProps) => {
-  const { toast } = useToast();
   
   // Test function to set a sample transcript for debugging
   const loadSampleTranscript = () => {
@@ -57,11 +52,6 @@ Speaker 1: If this text appears correctly, then we know the display components w
     
     setOriginalTranscript(sampleTranscript);
     setFileName("sample-transcript");
-    
-    toast({
-      title: "Sample Transcript Loaded",
-      description: "A test transcript has been loaded for debugging.",
-    });
   };
   
   console.log("TranscribeTab rendering with state:", {
@@ -102,44 +92,6 @@ Speaker 1: If this text appears correctly, then we know the display components w
   const handleAiReviewCompleted = (reviewedText: string) => {
     console.log("AI review completed:", { reviewedLength: reviewedText?.length });
     setAiReviewedTranscript(reviewedText);
-    toast({
-      title: "AI Review Complete",
-      description: "The transcript has been reviewed and improved.",
-    });
-  };
-
-  const downloadWordDocument = () => {
-    if (!originalTranscript) {
-      toast({
-        title: "No transcript available",
-        description: "Please transcribe an audio file first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
-    console.log("Downloading transcript:", {
-      transcriptLength: currentTranscript.length,
-      transcriptSample: currentTranscript.substring(0, 100)
-    });
-    
-    const doc = createWordDocument(currentTranscript, fileName);
-    
-    Packer.toBlob(doc).then(blob => {
-      saveAs(blob, `${fileName}.docx`);
-      toast({
-        title: "Download Complete",
-        description: "Word document has been downloaded.",
-      });
-    }).catch(error => {
-      console.error("Error creating Word document:", error);
-      toast({
-        title: "Download Failed",
-        description: "Failed to create Word document. Please try again.",
-        variant: "destructive",
-      });
-    });
   };
 
   const clearWorkspace = () => {
@@ -150,10 +102,6 @@ Speaker 1: If this text appears correctly, then we know the display components w
     setJsonData(null);
     setAudioFile(null);
     setFileName("transcript");
-    toast({
-      title: "Workspace Cleared",
-      description: "All transcript data and files have been removed.",
-    });
   };
 
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
@@ -179,34 +127,13 @@ Speaker 1: If this text appears correctly, then we know the display components w
         />
         
         {originalTranscript ? (
-          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-white shadow-sm">
-            <h3 className="text-sm font-medium">Download Options</h3>
-            <p className="text-xs text-gray-500 mb-2">
-              Your transcript has been created and should have downloaded automatically.
-              If you need to download it again, click the button below.
-            </p>
-            <Button 
-              onClick={downloadWordDocument}
-              className="w-full flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download Word Document
-            </Button>
-          </div>
+          <TranscribeDownloadOptions
+            originalTranscript={originalTranscript}
+            currentTranscript={currentTranscript}
+            fileName={fileName}
+          />
         ) : (
-          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-white shadow-sm">
-            <h3 className="text-sm font-medium">Debugging Tools</h3>
-            <p className="text-xs text-gray-500 mb-2">
-              If you're having trouble with transcripts not displaying, you can load a sample transcript.
-            </p>
-            <Button 
-              onClick={loadSampleTranscript}
-              className="w-full"
-              variant="outline"
-            >
-              Load Sample Transcript
-            </Button>
-          </div>
+          <TranscribeDebugTools onLoadSample={loadSampleTranscript} />
         )}
       </div>
       
