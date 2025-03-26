@@ -21,7 +21,11 @@ export const TranscriptViewer = ({ text = "", fileName = "transcript", jsonData 
   // Enhanced formatted transcript with better speaker label highlighting
   const formattedText = useMemo(() => {
     try {
-      return formatTranscript(text || '');
+      if (!text || text.trim().length === 0) {
+        console.log("Cannot format empty text, returning empty string");
+        return '';
+      }
+      return formatTranscript(text);
     } catch (err) {
       console.error("Error formatting transcript:", err);
       return text || '';
