@@ -65,7 +65,13 @@ export const createWordDocument = (transcriptText: string, documentTitle: string
             return new Paragraph({
               text: line,
               spacing: { before: 400, after: 200 },
-              bold: true
+              // Use TextRun instead of bold property
+              children: [
+                new TextRun({
+                  text: line,
+                  bold: true
+                })
+              ]
             });
           } 
           // Check if it's a Q&A format
@@ -73,7 +79,13 @@ export const createWordDocument = (transcriptText: string, documentTitle: string
             return new Paragraph({
               text: line,
               spacing: { before: 240, after: 120 },
-              bold: true
+              // Use TextRun instead of bold property
+              children: [
+                new TextRun({
+                  text: line,
+                  bold: true
+                })
+              ]
             });
           }
           // Regular paragraph

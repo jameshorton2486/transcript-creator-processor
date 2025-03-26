@@ -5,7 +5,9 @@ import { transcribeAudio, testApiKey } from "@/lib/google";
 import { formatErrorMessage, createErrorContext } from "./errorHandling";
 import { validateTranscript } from "./transcriptValidation";
 import { safePromise } from "./promiseUtils";
-import { downloadWordDocumentDirect } from "@/components/transcript/controls/DownloadOptions";
+import { createWordDocument } from "@/components/transcript/docx";
+import { Packer } from "docx";
+import { saveAs } from "file-saver";
 
 export const performTranscription = async (
   file: File | null,
@@ -117,17 +119,25 @@ export const performTranscription = async (
       // This ensures the transcript data is updated in the app even if document creation fails
       onSuccess(transcriptText, response);
       
-      // Now try to create and download the Word document
-      console.log("[TRANSCRIPTION] Creating and downloading Word document");
+      // Create Word document
+      const doc = createWordDocument(transcriptText, fileName);
       
+      // Generate and download Word document
       try {
-        await downloadWordDocumentDirect(transcriptText, fileName);
-        console.log("[TRANSCRIPTION] Word document creation complete");
+        await Packer.toBlob(doc).then(blob => {
+          saveAs(blob, `${fileName}.docx`);
+          console.log("[TRANSCRIPTION] Word document downloaded successfully");
+          
+          toast({
+            title: "Transcription Complete",
+            description: "Word document has been downloaded. You can also view the transcript in the panel.",
+          });
+        });
       } catch (docError) {
         console.error("[TRANSCRIPTION] Error creating Word document:", docError);
         toast({
-          title: "Document Creation Error",
-          description: "Could not create Word document. Please try again.",
+          title: "Document Creation Warning",
+          description: "Transcription successful, but couldn't create Word document. You can still view and copy the text from the panel.",
           variant: "destructive",
         });
       }

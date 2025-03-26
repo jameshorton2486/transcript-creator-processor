@@ -1,7 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { createWordDocument } from "@/components/transcript/docx";
+import { Packer } from "docx";
+import { saveAs } from "file-saver";
 
 interface TranscribeTabProps {
   originalTranscript: string;
@@ -36,15 +42,6 @@ export const TranscribeTab = ({
 }: TranscribeTabProps) => {
   const { toast } = useToast();
   
-  // FOR DEBUGGING: Add a test transcript to check if display components work
-  useEffect(() => {
-    // Uncomment to test with a hardcoded transcript
-    // const testTranscript = "Speaker 1: This is a test transcript.\n\nSpeaker 2: Testing the display component.\n\nSpeaker 1: If you can see this, the display is working correctly.";
-    // setOriginalTranscript(testTranscript);
-    // console.log("DEBUG: Set test transcript:", testTranscript);
-  }, []);
-  
-  // Add console log to debug transcript values in the main tab
   console.log("TranscribeTab state:", {
     originalLength: originalTranscript?.length, 
     originalType: typeof originalTranscript,
@@ -82,14 +79,6 @@ export const TranscribeTab = ({
       setAudioFile(file);
       setFileName(file.name.split('.')[0]);
     }
-    
-    // Debug check after setting state
-    setTimeout(() => {
-      console.log("After setting transcript:", {
-        originalTranscriptSet: Boolean(originalTranscript),
-        originalLength: originalTranscript?.length
-      });
-    }, 100);
   };
   
   const handleTranscriptProcessed = (processedText: string) => {
@@ -106,6 +95,35 @@ export const TranscribeTab = ({
     toast({
       title: "AI Review Complete",
       description: "The transcript has been reviewed and improved.",
+    });
+  };
+
+  const downloadWordDocument = () => {
+    if (!originalTranscript) {
+      toast({
+        title: "No transcript available",
+        description: "Please transcribe an audio file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
+    const doc = createWordDocument(currentTranscript, fileName);
+    
+    Packer.toBlob(doc).then(blob => {
+      saveAs(blob, `${fileName}.docx`);
+      toast({
+        title: "Download Complete",
+        description: "Word document has been downloaded.",
+      });
+    }).catch(error => {
+      console.error("Error creating Word document:", error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to create Word document. Please try again.",
+        variant: "destructive",
+      });
     });
   };
 
@@ -143,6 +161,23 @@ export const TranscribeTab = ({
           isReviewing={isReviewing}
           setIsReviewing={setIsReviewing}
         />
+        
+        {originalTranscript && (
+          <div className="flex flex-col gap-2 p-4 border rounded-lg bg-white shadow-sm">
+            <h3 className="text-sm font-medium">Download Options</h3>
+            <p className="text-xs text-gray-500 mb-2">
+              Your transcript has been created and should have downloaded automatically.
+              If you need to download it again, click the button below.
+            </p>
+            <Button 
+              onClick={downloadWordDocument}
+              className="w-full flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Word Document
+            </Button>
+          </div>
+        )}
       </div>
       
       <div className="lg:col-span-7 h-[calc(100vh-12rem)]">
