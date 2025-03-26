@@ -17,10 +17,6 @@ export const isFeatureSupported = (featureName: string): boolean => {
   
   // Check specific APIs with proper feature detection
   switch (featureName) {
-    case 'xr':
-      return 'xr' in navigator;
-    case 'bluetooth':
-      return 'bluetooth' in navigator;
     default:
       // For other features, try permissions API
       if ('permissions' in navigator && navigator.permissions) {
@@ -77,3 +73,4 @@ export const SUPPORTED_FEATURE_POLICIES = [
   'web-share',
   'xr-spatial-tracking'
 ];
+
