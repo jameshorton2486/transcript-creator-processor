@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { FileText } from "lucide-react";
 
 interface TranscribeDebugToolsProps {
   onLoadSample: () => void;
@@ -10,6 +11,7 @@ export const TranscribeDebugTools = ({ onLoadSample }: TranscribeDebugToolsProps
   const { toast } = useToast();
   
   const handleLoadSample = () => {
+    console.log("Loading sample transcript from debug tools");
     onLoadSample();
     toast({
       title: "Sample Transcript Loaded",
@@ -25,9 +27,10 @@ export const TranscribeDebugTools = ({ onLoadSample }: TranscribeDebugToolsProps
       </p>
       <Button 
         onClick={handleLoadSample}
-        className="w-full"
+        className="w-full flex items-center gap-2"
         variant="outline"
       >
+        <FileText className="h-4 w-4" />
         Load Sample Transcript
       </Button>
     </div>

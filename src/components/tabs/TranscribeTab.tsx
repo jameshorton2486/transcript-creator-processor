@@ -43,16 +43,33 @@ export const TranscribeTab = ({
 
 Speaker 2: We're checking if the issue is with the transcript data flow or the display components.
 
-Speaker 1: If this text appears correctly, then we know the display components work.`;
+Speaker 1: If this text appears correctly, then we know the display components work.
+
+Speaker 2: Let's ensure this transcript has enough content to properly test the formatting and display capabilities.`;
     
     console.log("Setting sample transcript for testing:", {
       length: sampleTranscript.length,
-      sample: sampleTranscript.substring(0, 100)
+      sample: sampleTranscript.substring(0, 100),
+      hasContent: Boolean(sampleTranscript && sampleTranscript.trim().length > 0)
     });
     
+    // Directly set both original and processed transcripts to ensure display
     setOriginalTranscript(sampleTranscript);
+    setProcessedTranscript(sampleTranscript);
     setFileName("sample-transcript");
   };
+  
+  // Debug logging to track state changes
+  useEffect(() => {
+    console.log("TranscribeTab transcript state updated:", {
+      originalLength: originalTranscript?.length, 
+      originalType: typeof originalTranscript,
+      originalEmpty: originalTranscript === '',
+      processedLength: processedTranscript?.length, 
+      aiReviewedLength: aiReviewedTranscript?.length,
+      currentTranscriptLength: (aiReviewedTranscript || processedTranscript || originalTranscript)?.length
+    });
+  }, [originalTranscript, processedTranscript, aiReviewedTranscript]);
   
   console.log("TranscribeTab rendering with state:", {
     originalLength: originalTranscript?.length, 
@@ -73,6 +90,11 @@ Speaker 1: If this text appears correctly, then we know the display components w
       fileProvided: Boolean(file)
     });
     
+    if (!transcript || typeof transcript !== 'string') {
+      console.error("Invalid transcript received:", transcript);
+      return;
+    }
+    
     setOriginalTranscript(transcript);
     setJsonData(jsonData);
     if (file) {
@@ -86,11 +108,26 @@ Speaker 1: If this text appears correctly, then we know the display components w
       processedLength: processedText?.length,
       processedSample: processedText?.substring(0, 100)
     });
+    
+    if (!processedText || typeof processedText !== 'string') {
+      console.error("Invalid processed transcript received:", processedText);
+      return;
+    }
+    
     setProcessedTranscript(processedText);
   };
   
   const handleAiReviewCompleted = (reviewedText: string) => {
-    console.log("AI review completed:", { reviewedLength: reviewedText?.length });
+    console.log("AI review completed:", { 
+      reviewedLength: reviewedText?.length,
+      reviewedSample: reviewedText?.substring(0, 100)
+    });
+    
+    if (!reviewedText || typeof reviewedText !== 'string') {
+      console.error("Invalid AI-reviewed transcript received:", reviewedText);
+      return;
+    }
+    
     setAiReviewedTranscript(reviewedText);
   };
 
@@ -104,7 +141,8 @@ Speaker 1: If this text appears correctly, then we know the display components w
     setFileName("transcript");
   };
 
-  const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript;
+  // Ensure we always have a valid current transcript
+  const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript || "";
   console.log("Current transcript to display:", { 
     currentLength: currentTranscript?.length,
     currentType: typeof currentTranscript,

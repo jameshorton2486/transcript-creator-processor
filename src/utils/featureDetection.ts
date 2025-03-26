@@ -73,4 +73,3 @@ export const SUPPORTED_FEATURE_POLICIES = [
   'web-share',
   'xr-spatial-tracking'
 ];
-
