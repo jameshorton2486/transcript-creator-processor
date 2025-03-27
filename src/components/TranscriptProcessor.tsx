@@ -6,8 +6,8 @@ import { Loader2, Wand2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { PUNCTUATION_RULES } from "@/lib/config";
 import { ProcessingOptions } from "@/components/ProcessingOptions";
+import { processText } from "@/lib/nlp/textProcessor";
 
 interface TranscriptProcessorProps {
   transcript: string;
@@ -22,6 +22,7 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
     identifyParties: true,
     extractEntities: true,
     preserveFormatting: true,
+    cleanFillers: true, // Added new option for cleaning filler words
   });
   const { toast } = useToast();
 
@@ -37,37 +38,15 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
 
     setIsProcessing(true);
     try {
-      // In a real application, this would call OpenAI API
-      // For now, we'll simulate the processing with a timeout
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Sample processed text with corrections
-      let processedText = transcript;
-      
-      if (options.correctPunctuation) {
-        // Mock punctuation correction
-        processedText = processedText
-          .replace(/speaker 1/gi, "Speaker 1")
-          .replace(/speaker 2/gi, "Speaker 2")
-          .replace(/march 15, 2023/g, "March 15, 2023")
-          .replace(/april 30/g, "April 30");
-      }
-      
-      if (options.formatSpeakers) {
-        // Mock speaker formatting
-        processedText = processedText
-          .replace(/Speaker 1:/g, "THE COURT:")
-          .replace(/Speaker 2:/g, "PLAINTIFF'S COUNSEL:");
-      }
-      
-      if (options.identifyParties) {
-        // Mock party identification
-        processedText = processedText
-          .replace(/Smith v\. Jones/g, "Smith v. Jones (Case No. 2023-CV-12345)")
-          .replace(/section 3\.4/g, "Section 3.4")
-          .replace(/contract/g, "Contract");
-      }
+      // Process text using our NLP pipeline
+      const processedText = await processText(transcript, {
+        correctPunctuation: options.correctPunctuation,
+        formatSpeakers: options.formatSpeakers,
+        identifyParties: options.identifyParties,
+        extractEntities: options.extractEntities,
+        preserveFormatting: options.preserveFormatting,
+        cleanFillers: options.cleanFillers,
+      });
       
       onProcessed(processedText);
       
@@ -131,8 +110,19 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
           <Label htmlFor="identifyParties">Identify parties and legal terms</Label>
         </div>
         
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="cleanFillers" 
+            checked={options.cleanFillers}
+            onCheckedChange={(checked) => 
+              setOptions({...options, cleanFillers: checked === true})
+            }
+          />
+          <Label htmlFor="cleanFillers">Remove filler words (uh, um, like)</Label>
+        </div>
+        
         <div className="text-xs text-slate-500 mt-2">
-          <p>Using {PUNCTUATION_RULES.length} punctuation rules for transcript correction</p>
+          <p>Using natural language processing for transcript enhancement</p>
         </div>
         
         <Button 
