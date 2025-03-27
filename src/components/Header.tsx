@@ -4,6 +4,7 @@ import { APP_INFO } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { AuthenticatedUser } from "@/components/auth/AuthenticatedUser";
+import { AuthStatus } from "@/components/auth/AuthStatus";
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export const Header = () => {
           </div>
           <h1 className="text-xl font-bold">{APP_INFO.name}</h1>
           <span className="text-xs bg-slate-700 px-2 py-1 rounded-full">v{APP_INFO.version}</span>
+          <AuthStatus />
         </div>
         
         <div className="flex items-center justify-between w-full md:w-auto">
