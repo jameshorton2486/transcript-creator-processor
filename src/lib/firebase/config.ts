@@ -1,6 +1,6 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, MicrosoftAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 // Firebase configuration (user will need to replace with their own config)
 const firebaseConfig = {
@@ -18,6 +18,5 @@ const auth = getAuth(app);
 
 // Auth providers
 const googleProvider = new GoogleAuthProvider();
-const microsoftProvider = new MicrosoftAuthProvider();
 
-export { app, auth, googleProvider, microsoftProvider };
+export { app, auth, googleProvider };

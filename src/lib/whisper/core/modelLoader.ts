@@ -1,4 +1,3 @@
-
 import * as ort from 'onnxruntime-web';
 import { env, pipeline } from '@huggingface/transformers';
 
@@ -17,14 +16,7 @@ const setupEnvironment = async () => {
       env.allowLocalModels = true;
       
       // Newer versions of Transformers.js may have different APIs
-      // This is a safety check
-      if (typeof env.checkCache === 'function') {
-        try {
-          await env.checkCache();
-        } catch (e) {
-          console.warn('Cache checking not available in this version of Transformers.js');
-        }
-      }
+      // This is a safety check - removed the checkCache calls as they're not available
     }
   } catch (error) {
     console.error('Error setting up Transformers.js environment:', error);

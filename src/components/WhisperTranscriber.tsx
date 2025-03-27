@@ -112,9 +112,7 @@ export const WhisperTranscriber = ({ onTranscriptCreated }: WhisperTranscriberPr
         
         <FileSelector 
           onFileSelected={handleFileSelected}
-          accept="audio/*"
-          label="Select audio file"
-          disabled={isLoading}
+          isLoading={isLoading}
         />
         
         {file && (
