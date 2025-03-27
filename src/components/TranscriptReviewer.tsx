@@ -6,7 +6,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ReviewApiKeyInput } from "@/components/review/ApiKeyInput";
 import { ReviewOptions } from "@/components/review/ReviewOptions";
-import { applyMockReviewRules, applyMockExamples, applyStandardImprovements } from "@/utils/transcriptReviewUtils";
+import { reviewWithOpenAI, TrainingRule, TrainingExample } from "@/lib/nlp/openAIReviewService";
 
 interface TranscriptReviewerProps {
   transcript: string;
@@ -23,8 +23,8 @@ export const TranscriptReviewer = ({
 }: TranscriptReviewerProps) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [showApiInput, setShowApiInput] = useState<boolean>(false);
-  const [rules, setRules] = useState<any[]>([]);
-  const [examples, setExamples] = useState<any[]>([]);
+  const [rules, setRules] = useState<TrainingRule[]>([]);
+  const [examples, setExamples] = useState<TrainingExample[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,35 +61,13 @@ export const TranscriptReviewer = ({
 
     setIsLoading(true);
     try {
-      // In a real application, this would call OpenAI API
-      // For now, we'll simulate the AI review with a timeout and mock improvements
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Make the actual API call to OpenAI for review
+      toast({
+        title: "Processing transcript",
+        description: `Applying ${rules.length} rules and learning from ${examples.length} examples...`,
+      });
       
-      // Start with the original transcript
-      let reviewedText = transcript;
-      
-      // Apply custom rules
-      if (rules.length > 0) {
-        toast({
-          title: "Applying custom rules",
-          description: `Applying ${rules.length} custom rules to transcript...`,
-        });
-        
-        reviewedText = applyMockReviewRules(reviewedText, rules);
-      }
-      
-      // Apply learning from examples
-      if (examples.length > 0) {
-        toast({
-          title: "Applying learned patterns",
-          description: `Applying patterns from ${examples.length} training examples...`,
-        });
-        
-        reviewedText = applyMockExamples(reviewedText, examples);
-      }
-      
-      // Apply standard improvements
-      reviewedText = applyStandardImprovements(reviewedText);
+      const reviewedText = await reviewWithOpenAI(transcript, rules, examples, apiKey);
       
       onReviewComplete(reviewedText);
       
@@ -101,7 +79,9 @@ export const TranscriptReviewer = ({
       console.error("AI review error:", error);
       toast({
         title: "Review failed",
-        description: "There was an error reviewing your transcript with AI. Please try again.",
+        description: typeof error === 'object' && error !== null && 'message' in error
+          ? String(error.message)
+          : "There was an error reviewing your transcript with AI. Please try again.",
         variant: "destructive",
       });
     } finally {
