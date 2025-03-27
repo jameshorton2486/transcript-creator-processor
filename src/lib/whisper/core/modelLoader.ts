@@ -1,5 +1,5 @@
+
 import * as ort from 'onnxruntime-web';
-import { HfInference } from '@huggingface/inference';
 import { env, pipeline } from '@huggingface/transformers';
 
 interface ModelInfo {
@@ -16,9 +16,14 @@ const setupEnvironment = async () => {
       env.useBrowserCache = true;
       env.allowLocalModels = true;
       
-      // If the environment has a check cache method (newer versions)
+      // Newer versions of Transformers.js may have different APIs
+      // This is a safety check
       if (typeof env.checkCache === 'function') {
-        await env.checkCache();
+        try {
+          await env.checkCache();
+        } catch (e) {
+          console.warn('Cache checking not available in this version of Transformers.js');
+        }
       }
     }
   } catch (error) {

@@ -20,8 +20,12 @@ export const WhisperModelAdapterWrapper = ({
   // Check which models are available on this device
   useEffect(() => {
     const checkAvailableModels = async () => {
-      // You could filter models based on device capabilities here
-      setAvailableModels(AVAILABLE_MODELS);
+      // Filter models based on device capabilities
+      const availableModelsList = AVAILABLE_MODELS.filter(model => 
+        isModelAvailable(model.id)
+      );
+      
+      setAvailableModels(availableModelsList.length > 0 ? availableModelsList : AVAILABLE_MODELS);
     };
     
     checkAvailableModels();

@@ -1,8 +1,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { transcribeAudio } from "@/lib/whisper/transcriber";
-import { AVAILABLE_MODELS, getModelLoadingStatus } from "@/lib/whisper/core/modelLoader";
+import { transcribeAudio, AVAILABLE_MODELS } from "@/lib/whisper/transcriber";
+import { getModelLoadingStatus } from "@/lib/whisper/core/modelLoader";
 
 export const useWhisperTranscription = (
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void
@@ -103,60 +103,14 @@ export const useWhisperTranscription = (
         }
       };
       
-      // In a real implementation, use the actual transcription function
-      // For now, simulate the process
+      const result = await transcribeAudio(file, {
+        model: selectedModel.id,
+        language: 'en',
+        onProgress: handleProgress,
+        abortSignal: abortControllerRef.current.signal
+      });
       
-      // Simulate model loading
-      setModelLoading(true);
-      for (let i = 0; i <= 100; i += 10) {
-        setModelLoadProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Check if operation was aborted
-        if (abortControllerRef.current?.signal.aborted) {
-          throw new Error('Transcription cancelled');
-        }
-      }
-      setModelLoading(false);
-      
-      // Simulate transcription
-      for (let i = 0; i <= 100; i += 5) {
-        setProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Check if operation was aborted
-        if (abortControllerRef.current?.signal.aborted) {
-          throw new Error('Transcription cancelled');
-        }
-      }
-      
-      const transcriptText = `This is a simulated transcript using the ${selectedModel.name} model.\n\nThe transcript would contain the spoken content from the audio file "${file.name}".\n\nIn a real implementation, this would be the actual transcribed text from the Whisper model.`;
-      
-      const jsonData = {
-        segments: [
-          { 
-            id: 0, 
-            text: `This is a simulated transcript using the ${selectedModel.name} model.`, 
-            start: 0, 
-            end: 3.5
-          },
-          { 
-            id: 1, 
-            text: `The transcript would contain the spoken content from the audio file "${file.name}".`, 
-            start: 3.5, 
-            end: 7.2
-          },
-          { 
-            id: 2, 
-            text: "In a real implementation, this would be the actual transcribed text from the Whisper model.", 
-            start: 7.2, 
-            end: 12
-          }
-        ],
-        text: transcriptText
-      };
-      
-      onTranscriptCreated(transcriptText, jsonData, file);
+      onTranscriptCreated(result.text, result, file);
       
       toast({
         title: "Transcription complete",
