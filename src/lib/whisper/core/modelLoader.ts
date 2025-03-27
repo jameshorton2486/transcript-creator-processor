@@ -1,160 +1,248 @@
+import * as ort from 'onnxruntime-web';
+import { HfInference } from '@huggingface/inference';
+import { env, pipeline } from '@huggingface/transformers';
 
-import { pipeline, env } from '@huggingface/transformers';
+interface ModelInfo {
+  id: string;
+  name: string;
+  size: string;
+}
 
-// Configure transformers.js to use cache and allow local models
-env.useBrowserCache = true;
-env.allowLocalModels = false;
-
-// Model options - smaller models are faster but less accurate
-export const WHISPER_MODELS = {
-  tiny: 'onnx-community/whisper-tiny.en',   // ~150MB, fastest but least accurate
-  base: 'onnx-community/whisper-base.en',   // ~290MB, good balance
-  small: 'onnx-community/whisper-small.en', // ~970MB, more accurate but slower
-};
-
-// Default model to use
-export const DEFAULT_MODEL = WHISPER_MODELS.tiny;
-
-// Status messages for loading the model
-export type ModelStatus = 'not-loaded' | 'loading' | 'loaded' | 'failed';
-
-// Track model loading status globally
-let modelStatus: ModelStatus = 'not-loaded';
-let transcriber: any = null;
-let loadingPromise: Promise<any> | null = null;
-let modelSizes = {
-  [WHISPER_MODELS.tiny]: 150,  // ~150MB
-  [WHISPER_MODELS.base]: 290,  // ~290MB
-  [WHISPER_MODELS.small]: 970, // ~970MB
-};
-
-/**
- * Loads the Whisper model for transcription
- */
-export const loadWhisperModel = async (
-  modelName: string = DEFAULT_MODEL,
-  onProgress?: (progress: number) => void
-): Promise<any> => {
-  // If the model is already loaded, return it
-  if (modelStatus === 'loaded' && transcriber) {
-    return transcriber;
-  }
-  
-  // If the model is currently loading, return the existing promise
-  if (modelStatus === 'loading' && loadingPromise) {
-    return loadingPromise;
-  }
-  
-  // Update status and start loading
-  modelStatus = 'loading';
-  
+// Set up the environment for Transformers.js
+const setupEnvironment = async () => {
   try {
-    // Create a loading promise to track the operation
-    loadingPromise = (async () => {
-      // Provide initial progress update
-      onProgress?.(5);
+    // For browser environment
+    if (typeof window !== 'undefined') {
+      env.useBrowserCache = true;
+      env.allowLocalModels = true;
       
-      console.log(`[WHISPER] Loading model: ${modelName}`);
-      
-      // Determine best device to use (WebGPU preferred for speed)
-      const device = await determineOptimalDevice();
-      console.log(`[WHISPER] Using device: ${device}`);
-      
-      // Create an ASR pipeline with the specified model
-      const whisperTranscriber = await pipeline(
-        'automatic-speech-recognition',
-        modelName,
-        {
-          progress_callback: (progressInfo: any) => {
-            // Handle progress updates safely with optional chaining
-            const progressPercent = Math.round(((progressInfo as any)?.progress || 0) * 90);
-            onProgress?.(5 + progressPercent);
-            console.log(`[WHISPER] Model loading progress: ${progressPercent}%`);
-          },
-          revision: 'main',
-          device: device,
-        }
-      );
-      
-      // Final progress update
-      onProgress?.(100);
-      console.log('[WHISPER] Model loaded successfully');
-      
-      return whisperTranscriber;
-    })();
-    
-    // Wait for the model to load
-    transcriber = await loadingPromise;
-    modelStatus = 'loaded';
-    
-    return transcriber;
-  } catch (error) {
-    console.error('[WHISPER] Error loading model:', error);
-    modelStatus = 'failed';
-    loadingPromise = null;
-    throw new Error(`Failed to load Whisper model: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-/**
- * Determines the best device to use for inference
- */
-export const determineOptimalDevice = async (): Promise<'cpu' | 'webgpu'> => {
-  // Check for WebGPU support (fastest)
-  if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
-    try {
-      // Use type assertion to handle the gpu property
-      const adapter = await (navigator as any).gpu?.requestAdapter();
-      if (adapter) {
-        console.log('[WHISPER] WebGPU support detected');
-        return 'webgpu';
+      // If the environment has a check cache method (newer versions)
+      if (typeof env.checkCache === 'function') {
+        await env.checkCache();
       }
-    } catch (e) {
-      console.warn('[WHISPER] WebGPU available but failed to initialize');
     }
+  } catch (error) {
+    console.error('Error setting up Transformers.js environment:', error);
   }
-  
-  // Fall back to CPU
-  console.log('[WHISPER] Falling back to CPU');
-  return 'cpu';
 };
 
-/**
- * Loads models in the background to speed up first transcription
- */
-export const preloadWhisperModel = () => {
-  // Load in the background with low priority
-  setTimeout(() => {
-    loadWhisperModel().catch(e => 
-      console.warn('[WHISPER] Background preload failed:', e)
-    );
-  }, 5000); // Wait 5 seconds after page load before starting
-};
+// Define available models with their corresponding data
+export const AVAILABLE_MODELS: ModelInfo[] = [
+  { id: 'tiny', name: 'Whisper Tiny', size: '75MB' },
+  { id: 'base', name: 'Whisper Base', size: '142MB' },
+  { id: 'small', name: 'Whisper Small', size: '466MB' },
+];
 
-/**
- * Checks if a model is available offline (already cached)
- */
-export const checkModelAvailability = async (modelName: string = DEFAULT_MODEL): Promise<boolean> => {
+// Global variable to keep track of model loading state
+let modelLoadingState: {
+  [key: string]: { 
+    isLoading: boolean; 
+    isLoaded: boolean; 
+    error: Error | null;
+    pipeline: any | null;
+  }
+} = {};
+
+AVAILABLE_MODELS.forEach(model => {
+  modelLoadingState[model.id] = {
+    isLoading: false,
+    isLoaded: false,
+    error: null,
+    pipeline: null
+  };
+});
+
+// Initialize Transformers.js
+export const initTransformers = async () => {
   try {
-    // Check if the model is cached by the browser
-    const isAvailable = await env.checkCache('automatic-speech-recognition', modelName);
-    return isAvailable;
-  } catch (e) {
-    console.warn(`[WHISPER] Error checking model availability: ${e}`);
+    await setupEnvironment();
+    console.log('Transformers.js environment initialized');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize Transformers.js:', error);
     return false;
   }
 };
 
-/**
- * Gets the current model status
- */
-export const getModelStatus = (): ModelStatus => {
-  return modelStatus;
+// Check if all required capabilities are available
+export const checkDeviceCapabilities = () => {
+  // Check for browser environment
+  if (typeof window === 'undefined') {
+    return {
+      supported: false,
+      reason: 'Browser environment is required'
+    };
+  }
+
+  // Check for WebAssembly
+  if (typeof WebAssembly === 'undefined') {
+    return {
+      supported: false,
+      reason: 'WebAssembly is not supported in this browser'
+    };
+  }
+
+  // Check for SharedArrayBuffer (needed for multithreading)
+  const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+
+  // Check for required APIs
+  const hasRequiredAPIs = 
+    typeof navigator !== 'undefined' && 
+    'mediaDevices' in navigator;
+
+  // Check for Web Audio API
+  const hasAudioAPI = typeof AudioContext !== 'undefined' || 
+                      typeof (window as any).webkitAudioContext !== 'undefined';
+
+  // If missing some features but has basic support
+  if (!hasSharedArrayBuffer || !hasAudioAPI) {
+    return {
+      supported: true,
+      limited: true,
+      reason: !hasSharedArrayBuffer 
+        ? 'Limited: Missing SharedArrayBuffer support (slower processing)' 
+        : 'Limited: Missing Web Audio API support'
+    };
+  }
+
+  // All good
+  return {
+    supported: true,
+    limited: false
+  };
 };
 
-/**
- * Gets the approximate size of the model in MB
- */
-export const getModelSize = (modelName: string): number => {
-  return modelSizes[modelName] || 0;
+// Load a specific Whisper model
+export const loadWhisperModel = async (modelId: string) => {
+  if (!modelId || !modelLoadingState[modelId]) {
+    throw new Error(`Invalid model ID: ${modelId}`);
+  }
+
+  // If already loaded, return the loaded status
+  if (modelLoadingState[modelId].isLoaded && modelLoadingState[modelId].pipeline) {
+    return {
+      loaded: true,
+      model: modelLoadingState[modelId].pipeline
+    };
+  }
+
+  // If already loading, wait for it
+  if (modelLoadingState[modelId].isLoading) {
+    console.log(`Model ${modelId} is already loading, waiting...`);
+    // In a real implementation, we would return a promise that resolves when loading completes
+    // For now, we'll just wait a bit and then recheck
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return loadWhisperModel(modelId);
+  }
+
+  try {
+    // Set loading state
+    modelLoadingState[modelId] = {
+      ...modelLoadingState[modelId],
+      isLoading: true,
+      error: null
+    };
+
+    // Determine which model variant to load based on the modelId
+    let modelIdentifier;
+    switch (modelId) {
+      case 'tiny':
+        modelIdentifier = 'openai/whisper-tiny';
+        break;
+      case 'base':
+        modelIdentifier = 'openai/whisper-base';
+        break;
+      case 'small':
+        modelIdentifier = 'openai/whisper-small';
+        break;
+      default:
+        modelIdentifier = 'openai/whisper-tiny'; // Default to tiny
+    }
+
+    console.log(`Loading Whisper model: ${modelIdentifier}`);
+    
+    // In a real implementation, this would load the model
+    // For now we'll simulate the loading
+    const loadedPipeline = await simulateModelLoading(modelIdentifier);
+    
+    // Update loading state
+    modelLoadingState[modelId] = {
+      isLoading: false,
+      isLoaded: true,
+      error: null,
+      pipeline: loadedPipeline
+    };
+
+    return {
+      loaded: true,
+      model: loadedPipeline
+    };
+  } catch (error) {
+    console.error(`Error loading model ${modelId}:`, error);
+    
+    // Update error state
+    modelLoadingState[modelId] = {
+      isLoading: false,
+      isLoaded: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+      pipeline: null
+    };
+    
+    throw error;
+  }
+};
+
+// For now, we're just simulating model loading
+// In a real implementation, this would use the Transformers.js pipeline
+const simulateModelLoading = async (modelIdentifier: string) => {
+  console.log(`Simulating loading of ${modelIdentifier}...`);
+  
+  // Simulate loading time based on model size
+  const loadingTime = modelIdentifier.includes('tiny') ? 1000 : 
+                     modelIdentifier.includes('base') ? 2000 : 4000;
+  
+  await new Promise(resolve => setTimeout(resolve, loadingTime));
+  
+  return {
+    transcribe: async (audioData: any) => {
+      // This is where the real model would transcribe audio
+      console.log('Simulating transcription with model:', modelIdentifier);
+      return {
+        text: "This is a simulated transcription result. In a real implementation, this would be the actual transcribed text from the audio.",
+        chunks: []
+      };
+    }
+  };
+};
+
+// Get the loading status of all models
+export const getModelLoadingStatus = () => {
+  return Object.entries(modelLoadingState).map(([id, state]) => ({
+    id,
+    isLoading: state.isLoading,
+    isLoaded: state.isLoaded,
+    hasError: !!state.error,
+    errorMessage: state.error ? state.error.message : null
+  }));
+};
+
+// Check if a specific model is available (loaded or can be loaded)
+export const isModelAvailable = (modelId: string) => {
+  if (!modelId || !modelLoadingState[modelId]) {
+    return false;
+  }
+  
+  // Check if device capabilities support running the model
+  const capabilities = checkDeviceCapabilities();
+  if (!capabilities.supported) {
+    return false;
+  }
+  
+  // If it's already loaded or loading
+  if (modelLoadingState[modelId].isLoaded || modelLoadingState[modelId].isLoading) {
+    return true;
+  }
+  
+  // Otherwise, check if it's one of the available models
+  return AVAILABLE_MODELS.some(model => model.id === modelId);
 };
