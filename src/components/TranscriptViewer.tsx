@@ -65,15 +65,6 @@ export const TranscriptViewer = ({ text = "", fileName = "transcript", jsonData 
             <div className="text-sm max-w-md mx-auto">
               Upload an audio file or use the "Load Sample Transcript" button to create a transcript.
             </div>
-            <div className="mt-4 p-4 bg-slate-50 border rounded text-xs font-mono text-slate-700">
-              <div><strong>Debug:</strong> Empty text received</div>
-              <div>Type: {typeof text}</div>
-              <div>undefined: {String(text === undefined)}</div>
-              <div>null: {String(text === null)}</div>
-              <div>empty string: {String(text === '')}</div>
-              <div>length: {text?.length || 0}</div>
-              <div>trimmed length: {text?.trim()?.length || 0}</div>
-            </div>
           </div>
         </CardContent>
       </Card>

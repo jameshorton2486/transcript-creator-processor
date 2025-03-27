@@ -1,6 +1,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { 
+  transcribeAudio, 
+  getAvailableModels, 
+  WHISPER_MODELS,
+  WhisperTranscriptionOptions 
+} from '@/lib/whisper';
 
 // Define the model interface
 interface WhisperModel {
@@ -9,13 +15,11 @@ interface WhisperModel {
   size: string;
 }
 
-// Create a list of available models
-const WHISPER_MODELS: WhisperModel[] = [
+// Create a list of available models from the Whisper library
+const AVAILABLE_MODELS: WhisperModel[] = [
   { id: 'tiny', name: 'Tiny', size: '75MB' },
   { id: 'base', name: 'Base', size: '142MB' },
-  { id: 'small', name: 'Small', size: '466MB' },
-  { id: 'medium', name: 'Medium', size: '1.5GB' },
-  { id: 'large', name: 'Large', size: '3GB' }
+  { id: 'small', name: 'Small', size: '466MB' }
 ];
 
 export const useWhisperTranscription = (
@@ -27,43 +31,43 @@ export const useWhisperTranscription = (
   const [progress, setProgress] = useState(0);
   const [modelLoading, setModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<WhisperModel>(WHISPER_MODELS[0]);
+  const [selectedModel, setSelectedModel] = useState<WhisperModel>(AVAILABLE_MODELS[0]);
   const cancelRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
-  // Function to preload the Whisper model
-  const preloadWhisperModel = () => {
-    // This is a placeholder - implement actual model preloading 
-    setModelLoading(true);
-    const interval = setInterval(() => {
-      setModelLoadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setModelLoading(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
-    
-    return () => clearInterval(interval);
-  };
-
+  // Function to handle file selection
   const handleFileSelected = useCallback((selectedFile: File) => {
+    // Check if file type is supported
+    const isAudioFile = selectedFile.type.includes('audio/') || 
+                       selectedFile.name.toLowerCase().endsWith('.mp3') || 
+                       selectedFile.name.toLowerCase().endsWith('.wav');
+    
+    if (!isAudioFile) {
+      setError("Unsupported file type. Please select an MP3 or WAV audio file.");
+      toast({
+        title: "Unsupported file type",
+        description: "Please select an MP3 or WAV audio file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // File is valid, update state
     setFile(selectedFile);
     setError(null);
     setProgress(0);
     
     // Log file selection for debugging
     console.log(`Selected file: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
-  }, []);
+  }, [toast]);
 
+  // Function to select a Whisper model
   const selectModel = useCallback((model: WhisperModel) => {
     setSelectedModel(model);
-    // Optionally pre-load the model
-    preloadWhisperModel();
+    console.log(`Selected Whisper model: ${model.name} (${model.size})`);
   }, []);
 
+  // Function to cancel an in-progress transcription
   const cancelTranscription = useCallback(() => {
     if (cancelRef.current) {
       cancelRef.current.abort();
@@ -77,12 +81,13 @@ export const useWhisperTranscription = (
     });
   }, [toast]);
 
+  // Function to transcribe the selected audio file
   const transcribeAudioFile = useCallback(async () => {
     if (!file) {
-      setError("No file selected. Please select an audio or video file first.");
+      setError("No file selected. Please select an audio file first.");
       toast({
         title: "No file selected",
-        description: "Please select an audio or video file first.",
+        description: "Please select an audio file first.",
         variant: "destructive",
       });
       return;
@@ -91,67 +96,44 @@ export const useWhisperTranscription = (
     setIsLoading(true);
     setError(null);
     setProgress(0);
+    setModelLoading(true);
     
     // Create a new AbortController for this transcription
     cancelRef.current = new AbortController();
     
     try {
-      // First simulate model loading if it hasn't been loaded yet
-      const cleanupModelLoading = preloadWhisperModel();
-      
-      // Wait for model loading (simulated)
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Clean up the model loading simulation
-      cleanupModelLoading();
-      
-      // Now simulate the actual transcription
-      let currentProgress = 0;
-      const interval = setInterval(() => {
-        currentProgress += 5;
-        if (currentProgress > 100) {
-          currentProgress = 100;
-          clearInterval(interval);
-        }
-        setProgress(currentProgress);
-      }, 300);
-      
-      // Simulate transcription time based on file size
-      const processingTime = Math.min(file.size / 100000, 10000);
-      await new Promise(resolve => setTimeout(resolve, processingTime));
-      
-      clearInterval(interval);
-      
-      // Mock result
-      const mockTranscript = "This is a simulated transcript for testing purposes. It was processed using the Whisper model. In a real implementation, this would contain the actual transcribed content from the audio file.";
-      const mockJsonData = {
-        text: mockTranscript,
-        segments: [
-          {
-            id: 0,
-            start: 0,
-            end: 5,
-            text: "This is a simulated transcript for testing purposes.",
-            speaker: "Speaker 1"
-          },
-          {
-            id: 1,
-            start: 5,
-            end: 10,
-            text: "It was processed using the Whisper model.",
-            speaker: "Speaker 2"
-          },
-          {
-            id: 2,
-            start: 10,
-            end: 15,
-            text: "In a real implementation, this would contain the actual transcribed content from the audio file.",
-            speaker: "Speaker 1"
+      // Prepare transcription options
+      const options: WhisperTranscriptionOptions = {
+        model: selectedModel.id,
+        language: 'en', // Default to English
+        taskType: 'transcribe',
+        onProgress: (progressValue) => {
+          // For the first 40%, we're loading the model
+          if (progressValue <= 40) {
+            setModelLoadProgress(progressValue);
+          } else {
+            // After 40%, we're transcribing
+            setModelLoading(false);
+            setProgress(progressValue);
           }
-        ]
+        },
+        abortSignal: cancelRef.current.signal
       };
       
-      onTranscriptCreated(mockTranscript, mockJsonData, file);
+      console.log(`Starting transcription of ${file.name} using ${selectedModel.name} model`);
+      
+      // Call the actual Whisper transcription implementation
+      const result = await transcribeAudio(file, options);
+      
+      if (!result || !result.text) {
+        throw new Error("Transcription failed to return valid text");
+      }
+      
+      // Success! Extract transcript text and data
+      const transcript = result.text;
+      
+      // Pass the result to the callback
+      onTranscriptCreated(transcript, result, file);
       
       toast({
         title: "Transcription complete",
@@ -169,6 +151,7 @@ export const useWhisperTranscription = (
       });
     } finally {
       setIsLoading(false);
+      setModelLoading(false);
       setProgress(100); // Ensure progress is complete
       cancelRef.current = null;
     }
@@ -181,7 +164,7 @@ export const useWhisperTranscription = (
     progress,
     modelLoading,
     modelLoadProgress,
-    availableModels: WHISPER_MODELS,
+    availableModels: AVAILABLE_MODELS,
     selectedModel,
     handleFileSelected,
     transcribeAudioFile,

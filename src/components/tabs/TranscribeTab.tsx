@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
@@ -92,6 +93,7 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
     }
     
     setOriginalTranscript(transcript);
+    setProcessedTranscript(transcript); // Also set the processed transcript to ensure display
     setJsonData(jsonData);
     if (file) {
       setAudioFile(file);

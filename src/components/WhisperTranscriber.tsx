@@ -7,7 +7,7 @@ import { ErrorDisplay } from "@/components/audio/ErrorDisplay";
 import { WhisperModelSelector } from "@/components/audio/WhisperModelSelector";
 import { TranscriberFooter } from "@/components/audio/TranscriberFooter";
 import { useWhisperTranscription } from "@/hooks/useWhisperTranscription";
-import { Mic, Loader2 } from "lucide-react";
+import { Mic, Loader2, X } from "lucide-react";
 
 interface WhisperTranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
@@ -98,6 +98,7 @@ export const WhisperTranscriber = ({ onTranscriptCreated }: WhisperTranscriberPr
             className="w-full mt-2" 
             onClick={cancelTranscription}
           >
+            <X className="mr-2 h-4 w-4" />
             Cancel Transcription
           </Button>
         )}
