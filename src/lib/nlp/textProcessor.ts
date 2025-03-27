@@ -4,6 +4,8 @@
  * Handles text normalization, speaker formatting, and cleaning
  */
 
+import { processWithOpenAI } from "./openaiService";
+
 // List of common filler words and hesitations to clean
 const FILLER_WORDS = [
   'uh', 'um', 'er', 'ah', 'like', 'you know', 'i mean', 
@@ -30,6 +32,8 @@ export interface TextProcessingOptions {
   extractEntities: boolean;
   preserveFormatting: boolean;
   cleanFillers: boolean;
+  useAI?: boolean;
+  apiKey?: string;
 }
 
 /**
@@ -44,10 +48,19 @@ export async function processText(
     throw new Error('Invalid text input');
   }
   
-  let processedText = text;
   console.log('Processing text with options:', options);
   
   try {
+    // If AI processing is enabled and API key is provided, use OpenAI
+    if (options.useAI && options.apiKey) {
+      console.log('Using OpenAI for transcript processing');
+      return await processWithOpenAI(text, options, options.apiKey);
+    }
+    
+    // Fallback to local processing if AI is not enabled or API key is missing
+    console.log('Using local processing for transcript');
+    let processedText = text;
+    
     // Apply text normalization if enabled
     if (options.correctPunctuation) {
       processedText = normalizePunctuation(processedText);
