@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -21,11 +21,40 @@ export const TrainingRuleInput = () => {
   const [ruleText, setRuleText] = useState("");
   const { toast } = useToast();
 
+  const validateRule = (rule: string): boolean => {
+    // Basic validation to ensure the rule makes sense
+    if (rule.length < 5) return false;
+    
+    // Ensure the rule doesn't contain invalid patterns
+    try {
+      // Try to construct a RegExp from rules that look like patterns
+      if (rule.startsWith('/') && rule.includes('/')) {
+        const regexParts = rule.split('/');
+        if (regexParts.length >= 3) {
+          new RegExp(regexParts[1], regexParts[2]);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("Invalid rule pattern:", error);
+      return false;
+    }
+  };
+
   const handleSaveRule = () => {
     if (!ruleName.trim() || !ruleText.trim()) {
       toast({
         title: "Missing information",
         description: "Please provide both a name and rule text.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateRule(ruleText.trim())) {
+      toast({
+        title: "Invalid rule",
+        description: "The rule appears to be too short or contains invalid patterns.",
         variant: "destructive",
       });
       return;
@@ -94,6 +123,9 @@ export const TrainingRuleInput = () => {
             onChange={(e) => setRuleText(e.target.value)}
             rows={4}
           />
+          <p className="text-xs text-slate-500">
+            You can use natural language or regex patterns (e.g., /\bcourt\b/g to match 'court')
+          </p>
         </div>
       </CardContent>
       

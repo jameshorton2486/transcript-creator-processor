@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Save } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { analyzeDifferences } from "@/lib/nlp/diffAnalyzer";
 
 interface TrainingExample {
   id: string;
@@ -37,38 +38,44 @@ export const ExampleBasedTraining = () => {
       return;
     }
 
+    if (incorrectText.trim() === correctedText.trim()) {
+      toast({
+        title: "No differences detected",
+        description: "The texts appear to be identical. Please make corrections to the text.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAnalyzing(true);
 
-    // Simulate AI analysis of differences between the texts
-    setTimeout(() => {
-      // Create a new training example
-      const newExample: TrainingExample = {
-        id: Date.now().toString(),
-        incorrect: incorrectText.trim(),
-        corrected: correctedText.trim(),
-        createdAt: Date.now(),
-      };
+    // Create a new training example
+    const newExample: TrainingExample = {
+      id: Date.now().toString(),
+      incorrect: incorrectText.trim(),
+      corrected: correctedText.trim(),
+      createdAt: Date.now(),
+    };
 
-      // Get existing examples from localStorage or initialize empty array
-      const existingExamples = JSON.parse(localStorage.getItem("transcriptExamples") || "[]");
-      
-      // Add new example and save back to localStorage
-      const updatedExamples = [...existingExamples, newExample];
-      localStorage.setItem("transcriptExamples", JSON.stringify(updatedExamples));
+    // Get existing examples from localStorage or initialize empty array
+    const existingExamples = JSON.parse(localStorage.getItem("transcriptExamples") || "[]");
+    
+    // Add new example and save back to localStorage
+    const updatedExamples = [...existingExamples, newExample];
+    localStorage.setItem("transcriptExamples", JSON.stringify(updatedExamples));
 
-      // Reset form
-      setIncorrectText("");
-      setCorrectedText("");
-      setIsAnalyzing(false);
+    // Reset form
+    setIncorrectText("");
+    setCorrectedText("");
+    setIsAnalyzing(false);
 
-      toast({
-        title: "Example saved",
-        description: "Your correction example has been analyzed and saved.",
-      });
-    }, 1500);
+    toast({
+      title: "Example saved",
+      description: "Your correction example has been analyzed and saved.",
+    });
   };
 
-  const generateDifferenceAnalysis = () => {
+  const generateDifferenceAnalysis = async () => {
     if (!incorrectText.trim() || !correctedText.trim()) {
       toast({
         title: "Missing information",
@@ -78,33 +85,42 @@ export const ExampleBasedTraining = () => {
       return;
     }
 
+    if (incorrectText.trim() === correctedText.trim()) {
+      toast({
+        title: "No differences detected",
+        description: "The texts appear to be identical. Please make corrections to the text.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAnalyzing(true);
 
-    // Simulate AI analysis of differences
-    setTimeout(() => {
-      // In a real implementation, this would call an API to analyze the differences
-
-      // Simple mock differences for demonstration
-      const mockDifferences = [
-        "Capitalization of 'court' → 'Court'",
-        "Format of date from '1/5/2023' → 'January 5, 2023'",
-        "Correction of speaker label from 'Speaker 1' → 'THE COURT'",
-      ];
-
+    try {
+      // Real difference analysis
+      const differences = analyzeDifferences(incorrectText, correctedText);
+      
       // Display the detected differences
       toast({
         title: "Differences Detected",
         description: (
           <ul className="list-disc pl-4 mt-2 space-y-1">
-            {mockDifferences.map((diff, index) => (
+            {differences.map((diff, index) => (
               <li key={index} className="text-sm">{diff}</li>
             ))}
           </ul>
         ),
       });
-
+    } catch (error) {
+      console.error("Error analyzing differences:", error);
+      toast({
+        title: "Analysis error",
+        description: "There was an error analyzing the differences between texts.",
+        variant: "destructive",
+      });
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   return (
