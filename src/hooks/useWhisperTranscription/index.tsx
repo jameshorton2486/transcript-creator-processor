@@ -1,26 +1,8 @@
 
-import { useState, useCallback, useRef } from 'react';
-import { useToast } from '@/components/ui/use-toast';
-import { 
-  transcribeAudio, 
-  getAvailableModels, 
-  WHISPER_MODELS,
-  WhisperTranscriptionOptions 
-} from '@/lib/whisper';
-
-// Define the model interface
-interface WhisperModel {
-  id: string;
-  name: string;
-  size: string;
-}
-
-// Create a list of available models from the Whisper library
-const AVAILABLE_MODELS: WhisperModel[] = [
-  { id: 'tiny', name: 'Tiny', size: '75MB' },
-  { id: 'base', name: 'Base', size: '142MB' },
-  { id: 'small', name: 'Small', size: '466MB' }
-];
+import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { transcribeAudio, getAvailableModels, WHISPER_MODELS } from "@/lib/whisper";
+import { getModelStatus } from "@/lib/whisper/core/modelLoader";
 
 export const useWhisperTranscription = (
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void
@@ -31,131 +13,127 @@ export const useWhisperTranscription = (
   const [progress, setProgress] = useState(0);
   const [modelLoading, setModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
-  const [selectedModel, setSelectedModel] = useState<WhisperModel>(AVAILABLE_MODELS[0]);
-  const cancelRef = useRef<AbortController | null>(null);
+  const [selectedModel, setSelectedModel] = useState(WHISPER_MODELS.tiny);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+  
+  // Get available models
+  const availableModels = Object.values(WHISPER_MODELS);
 
-  // Function to handle file selection
-  const handleFileSelected = useCallback((selectedFile: File) => {
-    // Check if file type is supported
-    const isAudioFile = selectedFile.type.includes('audio/') || 
-                       selectedFile.name.toLowerCase().endsWith('.mp3') || 
-                       selectedFile.name.toLowerCase().endsWith('.wav');
+  // Poll for model status during loading
+  useEffect(() => {
+    let intervalId: number | null = null;
     
-    if (!isAudioFile) {
-      setError("Unsupported file type. Please select an MP3 or WAV audio file.");
-      toast({
-        title: "Unsupported file type",
-        description: "Please select an MP3 or WAV audio file.",
-        variant: "destructive",
-      });
-      return;
+    if (modelLoading) {
+      intervalId = window.setInterval(() => {
+        const status = getModelStatus();
+        if (status === 'loaded') {
+          setModelLoading(false);
+          setModelLoadProgress(100);
+          clearInterval(intervalId!);
+        } else if (status === 'failed') {
+          setModelLoading(false);
+          setError('Failed to load Whisper model. Please try again or select a different model.');
+          clearInterval(intervalId!);
+        }
+      }, 1000);
     }
     
-    // File is valid, update state
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [modelLoading]);
+
+  const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
     setError(null);
     setProgress(0);
-    
-    // Log file selection for debugging
-    console.log(`Selected file: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
-  }, [toast]);
+  };
 
-  // Function to select a Whisper model
-  const selectModel = useCallback((model: WhisperModel) => {
+  const selectModel = (model: string) => {
     setSelectedModel(model);
-    console.log(`Selected Whisper model: ${model.name} (${model.size})`);
-  }, []);
+  };
 
-  // Function to cancel an in-progress transcription
-  const cancelTranscription = useCallback(() => {
-    if (cancelRef.current) {
-      cancelRef.current.abort();
-      cancelRef.current = null;
+  const cancelTranscription = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
+    
     setIsLoading(false);
+    setModelLoading(false);
     setProgress(0);
+    setModelLoadProgress(0);
+    
     toast({
       title: "Transcription cancelled",
-      description: "The transcription process was stopped.",
+      description: "The transcription process was cancelled.",
     });
-  }, [toast]);
+  };
 
-  // Function to transcribe the selected audio file
-  const transcribeAudioFile = useCallback(async () => {
+  const transcribeAudioFile = async () => {
     if (!file) {
-      setError("No file selected. Please select an audio file first.");
-      toast({
-        title: "No file selected",
-        description: "Please select an audio file first.",
-        variant: "destructive",
-      });
+      setError("Please select an audio file first");
       return;
     }
 
     setIsLoading(true);
     setError(null);
     setProgress(0);
-    setModelLoading(true);
     
     // Create a new AbortController for this transcription
-    cancelRef.current = new AbortController();
+    abortControllerRef.current = new AbortController();
     
     try {
-      // Prepare transcription options
-      const options: WhisperTranscriptionOptions = {
-        model: selectedModel.id,
-        language: 'en', // Default to English
-        taskType: 'transcribe',
-        onProgress: (progressValue) => {
-          // For the first 40%, we're loading the model
-          if (progressValue <= 40) {
-            setModelLoadProgress(progressValue);
-          } else {
-            // After 40%, we're transcribing
-            setModelLoading(false);
-            setProgress(progressValue);
-          }
-        },
-        abortSignal: cancelRef.current.signal
+      // Track model loading progress separately
+      const handleProgress = (currentProgress: number) => {
+        // If progress is less than 50%, it's likely the model loading
+        if (currentProgress < 50) {
+          setModelLoading(true);
+          setModelLoadProgress(currentProgress * 2); // Scale to 0-100
+        } else {
+          setModelLoading(false);
+          setProgress(currentProgress);
+        }
       };
       
-      console.log(`Starting transcription of ${file.name} using ${selectedModel.name} model`);
+      const result = await transcribeAudio(file, {
+        model: selectedModel,
+        language: 'en',
+        onProgress: handleProgress,
+        abortSignal: abortControllerRef.current.signal
+      });
       
-      // Call the actual Whisper transcription implementation
-      const result = await transcribeAudio(file, options);
-      
-      if (!result || !result.text) {
-        throw new Error("Transcription failed to return valid text");
-      }
-      
-      // Success! Extract transcript text and data
-      const transcript = result.text;
-      
-      // Pass the result to the callback
-      onTranscriptCreated(transcript, result, file);
+      onTranscriptCreated(result.text, result, file);
       
       toast({
         title: "Transcription complete",
-        description: `Successfully transcribed "${file.name}" using ${selectedModel.name} model.`,
+        description: "Your audio has been successfully transcribed.",
       });
-    } catch (error: any) {
-      console.error("Transcription error:", error);
-      const errorMessage = error.message || "An unknown error occurred during transcription.";
-      setError(errorMessage);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
-      toast({
-        title: "Transcription failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Don't show error for cancelled transcriptions
+      if (errorMessage.includes('cancel') || errorMessage.includes('abort')) {
+        console.log('Transcription was cancelled');
+      } else {
+        setError(errorMessage);
+        toast({
+          variant: "destructive",
+          title: "Transcription failed",
+          description: errorMessage,
+        });
+      }
     } finally {
       setIsLoading(false);
+      setProgress(0);
       setModelLoading(false);
-      setProgress(100); // Ensure progress is complete
-      cancelRef.current = null;
+      setModelLoadProgress(0);
+      abortControllerRef.current = null;
     }
-  }, [file, selectedModel, toast, onTranscriptCreated]);
+  };
 
   return {
     file,
@@ -164,7 +142,7 @@ export const useWhisperTranscription = (
     progress,
     modelLoading,
     modelLoadProgress,
-    availableModels: AVAILABLE_MODELS,
+    availableModels,
     selectedModel,
     handleFileSelected,
     transcribeAudioFile,

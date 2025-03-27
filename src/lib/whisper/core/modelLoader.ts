@@ -22,6 +22,11 @@ export type ModelStatus = 'not-loaded' | 'loading' | 'loaded' | 'failed';
 let modelStatus: ModelStatus = 'not-loaded';
 let transcriber: any = null;
 let loadingPromise: Promise<any> | null = null;
+let modelSizes = {
+  [WHISPER_MODELS.tiny]: 150,  // ~150MB
+  [WHISPER_MODELS.base]: 290,  // ~290MB
+  [WHISPER_MODELS.small]: 970, // ~970MB
+};
 
 /**
  * Loads the Whisper model for transcription
@@ -124,4 +129,32 @@ export const preloadWhisperModel = () => {
       console.warn('[WHISPER] Background preload failed:', e)
     );
   }, 5000); // Wait 5 seconds after page load before starting
+};
+
+/**
+ * Checks if a model is available offline (already cached)
+ */
+export const checkModelAvailability = async (modelName: string = DEFAULT_MODEL): Promise<boolean> => {
+  try {
+    // Check if the model is cached by the browser
+    const isAvailable = await env.checkCache('automatic-speech-recognition', modelName);
+    return isAvailable;
+  } catch (e) {
+    console.warn(`[WHISPER] Error checking model availability: ${e}`);
+    return false;
+  }
+};
+
+/**
+ * Gets the current model status
+ */
+export const getModelStatus = (): ModelStatus => {
+  return modelStatus;
+};
+
+/**
+ * Gets the approximate size of the model in MB
+ */
+export const getModelSize = (modelName: string): number => {
+  return modelSizes[modelName] || 0;
 };

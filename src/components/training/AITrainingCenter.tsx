@@ -5,16 +5,20 @@ import { TrainingRuleInput } from "./TrainingRuleInput";
 import { TrainingRulesList } from "./TrainingRulesList";
 import { ExampleBasedTraining } from "./ExampleBasedTraining";
 import { ExamplesList } from "./ExamplesList";
+import { StorageStatusBadge } from "@/components/storage/StorageStatusBadge";
 
 export const AITrainingCenter = () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>AI Training Center</CardTitle>
-          <CardDescription>
-            Train the AI by providing custom rules or correction examples
-          </CardDescription>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>AI Training Center</CardTitle>
+            <CardDescription>
+              Train the AI by providing custom rules or correction examples
+            </CardDescription>
+          </div>
+          <StorageStatusBadge />
         </CardHeader>
         
         <CardContent>

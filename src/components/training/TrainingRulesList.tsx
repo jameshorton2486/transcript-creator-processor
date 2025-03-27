@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Table,
@@ -22,37 +22,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface TrainingRule {
-  id: string;
-  name: string;
-  description: string;
-  rule: string;
-}
+import { getRules, deleteRule, StoredTrainingRule } from "@/lib/storage/modelStorage";
 
 export const TrainingRulesList = () => {
-  const [rules, setRules] = useState<TrainingRule[]>([]);
+  const [rules, setRules] = useState<StoredTrainingRule[]>([]);
   const [ruleToDelete, setRuleToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Load rules from storage
+  const loadRules = () => {
+    const storedRules = getRules();
+    setRules(storedRules);
+  };
+
   useEffect(() => {
-    // Load rules from localStorage
-    const savedRules = localStorage.getItem("transcriptRules");
-    if (savedRules) {
-      setRules(JSON.parse(savedRules));
-    }
+    loadRules();
   }, []);
 
   const handleDeleteRule = (id: string) => {
-    const updatedRules = rules.filter(rule => rule.id !== id);
-    setRules(updatedRules);
-    localStorage.setItem("transcriptRules", JSON.stringify(updatedRules));
-    setRuleToDelete(null);
-    
-    toast({
-      title: "Rule deleted",
-      description: "The training rule has been removed.",
-    });
+    try {
+      deleteRule(id);
+      loadRules(); // Reload rules after deletion
+      setRuleToDelete(null);
+      
+      toast({
+        title: "Rule deleted",
+        description: "The training rule has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete rule",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   if (rules.length === 0) {

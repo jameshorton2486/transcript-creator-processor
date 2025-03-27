@@ -30,38 +30,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-interface TrainingExample {
-  id: string;
-  incorrect: string;
-  corrected: string;
-  createdAt: number;
-}
+import { getExamples, deleteExample, StoredTrainingExample } from "@/lib/storage/modelStorage";
 
 export const ExamplesList = () => {
-  const [examples, setExamples] = useState<TrainingExample[]>([]);
+  const [examples, setExamples] = useState<StoredTrainingExample[]>([]);
   const [exampleToDelete, setExampleToDelete] = useState<string | null>(null);
-  const [selectedExample, setSelectedExample] = useState<TrainingExample | null>(null);
+  const [selectedExample, setSelectedExample] = useState<StoredTrainingExample | null>(null);
   const { toast } = useToast();
 
+  // Load examples from storage
+  const loadExamples = () => {
+    const storedExamples = getExamples();
+    setExamples(storedExamples);
+  };
+
   useEffect(() => {
-    // Load examples from localStorage
-    const savedExamples = localStorage.getItem("transcriptExamples");
-    if (savedExamples) {
-      setExamples(JSON.parse(savedExamples));
-    }
+    loadExamples();
   }, []);
 
   const handleDeleteExample = (id: string) => {
-    const updatedExamples = examples.filter(example => example.id !== id);
-    setExamples(updatedExamples);
-    localStorage.setItem("transcriptExamples", JSON.stringify(updatedExamples));
-    setExampleToDelete(null);
-    
-    toast({
-      title: "Example deleted",
-      description: "The training example has been removed.",
-    });
+    try {
+      deleteExample(id);
+      loadExamples(); // Reload examples after deletion
+      setExampleToDelete(null);
+      
+      toast({
+        title: "Example deleted",
+        description: "The training example has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete example",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (timestamp: number) => {

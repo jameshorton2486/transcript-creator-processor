@@ -14,13 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, Save } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { analyzeDifferences } from "@/lib/nlp/diffAnalyzer";
-
-interface TrainingExample {
-  id: string;
-  incorrect: string;
-  corrected: string;
-  createdAt: number;
-}
+import { saveExample } from "@/lib/storage/modelStorage";
 
 export const ExampleBasedTraining = () => {
   const [incorrectText, setIncorrectText] = useState("");
@@ -47,32 +41,29 @@ export const ExampleBasedTraining = () => {
       return;
     }
 
-    setIsAnalyzing(true);
-
-    // Create a new training example
-    const newExample: TrainingExample = {
-      id: Date.now().toString(),
-      incorrect: incorrectText.trim(),
-      corrected: correctedText.trim(),
-      createdAt: Date.now(),
-    };
-
-    // Get existing examples from localStorage or initialize empty array
-    const existingExamples = JSON.parse(localStorage.getItem("transcriptExamples") || "[]");
-    
-    // Add new example and save back to localStorage
-    const updatedExamples = [...existingExamples, newExample];
-    localStorage.setItem("transcriptExamples", JSON.stringify(updatedExamples));
-
-    // Reset form
-    setIncorrectText("");
-    setCorrectedText("");
-    setIsAnalyzing(false);
-
-    toast({
-      title: "Example saved",
-      description: "Your correction example has been analyzed and saved.",
-    });
+    try {
+      // Save the example using our storage service
+      saveExample({
+        id: Date.now().toString(),
+        incorrect: incorrectText.trim(),
+        corrected: correctedText.trim(),
+      });
+      
+      // Reset form
+      setIncorrectText("");
+      setCorrectedText("");
+      
+      toast({
+        title: "Example saved",
+        description: "Your correction example has been analyzed and saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save example",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   const generateDifferenceAnalysis = async () => {

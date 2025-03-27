@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { saveRule } from "@/lib/storage/modelStorage";
 
 interface TrainingRule {
   id: string;
@@ -60,30 +61,31 @@ export const TrainingRuleInput = () => {
       return;
     }
 
-    // Create a new rule object
-    const newRule: TrainingRule = {
-      id: Date.now().toString(),
-      name: ruleName.trim(),
-      description: ruleDescription.trim(),
-      rule: ruleText.trim(),
-    };
-
-    // Get existing rules from localStorage or initialize empty array
-    const existingRules = JSON.parse(localStorage.getItem("transcriptRules") || "[]");
-    
-    // Add new rule and save back to localStorage
-    const updatedRules = [...existingRules, newRule];
-    localStorage.setItem("transcriptRules", JSON.stringify(updatedRules));
-
-    // Reset form
-    setRuleName("");
-    setRuleDescription("");
-    setRuleText("");
-
-    toast({
-      title: "Rule saved",
-      description: "Your custom rule has been saved and will be applied in future transcript processing.",
-    });
+    try {
+      // Save the rule using our storage service
+      saveRule({
+        id: Date.now().toString(),
+        name: ruleName.trim(),
+        description: ruleDescription.trim(),
+        rule: ruleText.trim(),
+      });
+      
+      // Reset form
+      setRuleName("");
+      setRuleDescription("");
+      setRuleText("");
+      
+      toast({
+        title: "Rule saved",
+        description: "Your custom rule has been saved and will be applied in future transcript processing.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save rule",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
