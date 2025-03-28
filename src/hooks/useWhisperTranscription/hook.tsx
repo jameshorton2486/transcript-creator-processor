@@ -1,9 +1,9 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { transcribeAudio, AVAILABLE_MODELS } from "@/lib/whisper/transcriber";
-import { getModelLoadingStatus } from "@/lib/whisper/core/modelLoader";
 
+// This hook is kept as a stub to prevent import errors
+// The Whisper functionality has been replaced by AssemblyAI
 export const useWhisperTranscription = (
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void
 ) => {
@@ -13,42 +13,12 @@ export const useWhisperTranscription = (
   const [progress, setProgress] = useState(0);
   const [modelLoading, setModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0]);
+  const [selectedModel] = useState({ id: 'base', name: 'Base', size: '142MB' });
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   
-  // Get available models
-  const availableModels = AVAILABLE_MODELS;
-
-  // Poll for model status during loading
-  useEffect(() => {
-    let intervalId: number | null = null;
-    
-    if (modelLoading) {
-      intervalId = window.setInterval(() => {
-        const loadingStatus = getModelLoadingStatus();
-        const currentModelStatus = loadingStatus.find(status => status.id === selectedModel.id);
-        
-        if (currentModelStatus) {
-          if (currentModelStatus.isLoaded) {
-            setModelLoading(false);
-            setModelLoadProgress(100);
-            clearInterval(intervalId!);
-          } else if (currentModelStatus.hasError) {
-            setModelLoading(false);
-            setError(`Failed to load Whisper model: ${currentModelStatus.errorMessage || 'Unknown error'}`);
-            clearInterval(intervalId!);
-          }
-        }
-      }, 1000);
-    }
-    
-    return () => {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [modelLoading, selectedModel.id]);
+  // Empty models array since Whisper is removed
+  const availableModels = [];
 
   const handleFileSelected = (selectedFile: File) => {
     setFile(selectedFile);
@@ -56,8 +26,9 @@ export const useWhisperTranscription = (
     setProgress(0);
   };
 
-  const selectModel = (model: typeof AVAILABLE_MODELS[0]) => {
-    setSelectedModel(model);
+  const selectModel = () => {
+    // No-op function
+    console.warn('Whisper functionality has been removed. Using AssemblyAI instead.');
   };
 
   const cancelTranscription = () => {
@@ -85,51 +56,16 @@ export const useWhisperTranscription = (
 
     setIsLoading(true);
     setError(null);
-    setProgress(0);
-    
-    // Create a new AbortController for this transcription
-    abortControllerRef.current = new AbortController();
     
     try {
-      // Track model loading progress separately
-      const handleProgress = (currentProgress: number) => {
-        // If progress is less than 50%, it's likely the model loading
-        if (currentProgress < 50) {
-          setModelLoading(true);
-          setModelLoadProgress(currentProgress * 2); // Scale to 0-100
-        } else {
-          setModelLoading(false);
-          setProgress(currentProgress);
-        }
-      };
-      
-      const result = await transcribeAudio(file, {
-        model: selectedModel.id,
-        language: 'en',
-        onProgress: handleProgress,
-        abortSignal: abortControllerRef.current.signal
-      });
-      
-      onTranscriptCreated(result.text, result, file);
+      // Simply show an error since Whisper is no longer supported
+      setError("Whisper functionality has been removed. Please use AssemblyAI for transcription.");
       
       toast({
-        title: "Transcription complete",
-        description: "Your audio has been successfully transcribed.",
+        variant: "destructive",
+        title: "Transcription method deprecated",
+        description: "Whisper transcription has been removed. Please use AssemblyAI instead.",
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      // Don't show error for cancelled transcriptions
-      if (errorMessage.includes('cancel') || errorMessage.includes('abort')) {
-        console.log('Transcription was cancelled');
-      } else {
-        setError(errorMessage);
-        toast({
-          variant: "destructive",
-          title: "Transcription failed",
-          description: errorMessage,
-        });
-      }
     } finally {
       setIsLoading(false);
       setProgress(0);

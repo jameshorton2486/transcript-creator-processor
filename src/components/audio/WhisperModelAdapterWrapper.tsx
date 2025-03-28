@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
-import { AVAILABLE_MODELS, isModelAvailable } from '@/lib/whisper/core/modelLoader';
+import { useState } from 'react';
+import { AVAILABLE_MODELS } from '@/lib/whisper/core/modelLoader';
 
-// This component acts as an adapter between the WhisperTranscriber component
-// and our specific model format
+// This component is kept as a minimal adapter to prevent errors
+// This functionality has been replaced by AssemblyAI
 export const WhisperModelAdapterWrapper = ({ 
   children 
 }: { 
@@ -14,31 +14,16 @@ export const WhisperModelAdapterWrapper = ({
     isModelAvailable: (modelId: string) => boolean;
   }) => React.ReactNode 
 }) => {
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0]);
-  const [availableModels, setAvailableModels] = useState(AVAILABLE_MODELS);
-
-  // Check which models are available on this device
-  useEffect(() => {
-    const checkAvailableModels = async () => {
-      // Filter models based on device capabilities
-      const availableModelsList = AVAILABLE_MODELS.filter(model => 
-        isModelAvailable(model.id)
-      );
-      
-      setAvailableModels(availableModelsList.length > 0 ? availableModelsList : AVAILABLE_MODELS);
-    };
-    
-    checkAvailableModels();
-  }, []);
-
-  // Render the children with our adapter props
+  const [selectedModel] = useState(AVAILABLE_MODELS[0] || { id: 'base', name: 'Base', size: '142MB' });
+  
+  // Return stub implementation
   return (
     <>
       {children({
         selectedModel,
-        availableModels,
-        setSelectedModel,
-        isModelAvailable
+        availableModels: AVAILABLE_MODELS,
+        setSelectedModel: () => console.warn('Whisper functionality has been removed. Using AssemblyAI instead.'),
+        isModelAvailable: () => false // This was causing TS2554 - now returns a function with no args
       })}
     </>
   );
