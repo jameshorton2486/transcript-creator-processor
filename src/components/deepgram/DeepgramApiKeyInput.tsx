@@ -2,8 +2,9 @@
 import { useState, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, KeyRound, Save, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, KeyRound, Save, Eye, EyeOff, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeepgramApiKeyInputProps {
   apiKey: string;
@@ -27,27 +28,64 @@ export const DeepgramApiKeyInput = ({
   const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [keyFormatValid, setKeyFormatValid] = useState(false);
+  const { toast } = useToast();
   
   if (!visible) return null;
   
+  const validateKeyFormat = (key: string) => {
+    // Basic format check - any string of reasonable length is acceptable
+    return key.trim().length >= 16;
+  };
+  
   const handleSaveKey = useCallback(async () => {
-    if (apiKey && apiKey.length > 10) {
-      const isValid = await handleTestApiKey(apiKey);
+    if (apiKey && apiKey.length >= 16) {
+      setShowAlert(false);
       
-      if (isValid) {
-        setIsSaved(true);
-        setShowAlert(false);
+      try {
+        const isValid = await handleTestApiKey(apiKey);
         
-        setTimeout(() => {
-          setIsSaved(false);
-        }, 3000);
-      } else {
-        setShowAlert(true);
+        if (isValid) {
+          setIsSaved(true);
+          toast({
+            title: "API Key Saved",
+            description: "Your Deepgram API key has been saved locally."
+          });
+          
+          setTimeout(() => {
+            setIsSaved(false);
+          }, 3000);
+        } else {
+          setShowAlert(true);
+        }
+      } catch (error) {
+        console.error("Error during key validation:", error);
+        
+        // If network error but format appears valid, still allow using the key
+        if (validateKeyFormat(apiKey)) {
+          setKeyFormatValid(true);
+          setIsSaved(true);
+          toast({
+            title: "API Key Saved",
+            description: "Network error during validation, but key format looks valid. You can try using it."
+          });
+          
+          setTimeout(() => {
+            setIsSaved(false);
+          }, 3000);
+        } else {
+          setShowAlert(true);
+          toast({
+            title: "API Key Error",
+            description: "Could not validate your API key. Please check the format.",
+            variant: "destructive"
+          });
+        }
       }
     } else {
       setShowAlert(true);
     }
-  }, [apiKey, handleTestApiKey]);
+  }, [apiKey, handleTestApiKey, toast]);
   
   return (
     <div className="space-y-2">
@@ -62,8 +100,10 @@ export const DeepgramApiKeyInput = ({
             placeholder="Enter your Deepgram API key here"
             value={showKey ? apiKey : apiKey.replace(/./g, '•')}
             onChange={(e) => {
-              setApiKey(e.target.value);
+              const newKey = e.target.value;
+              setApiKey(newKey);
               setShowAlert(false);
+              setKeyFormatValid(validateKeyFormat(newKey));
             }}
             className="w-full text-sm font-mono pr-10"
           />
@@ -87,10 +127,24 @@ export const DeepgramApiKeyInput = ({
             variant="outline"
             onClick={handleSaveKey}
             className="gap-1"
-            disabled={testingKey}
+            disabled={testingKey || apiKey.length < 16}
           >
-            <Save className="h-3.5 w-3.5" />
-            {testingKey ? "Validating..." : isSaved ? "Saved" : "Save Key"}
+            {testingKey ? (
+              <>
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></span>
+                Validating...
+              </>
+            ) : isSaved ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-green-500" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5" />
+                Save Key
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -108,6 +162,14 @@ export const DeepgramApiKeyInput = ({
         <Alert variant="default" className="bg-green-50 text-green-800 border-green-200 py-2">
           <AlertDescription>
             API key is valid and has been saved
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {keyFormatValid && !keyStatus && !showAlert && (
+        <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200 py-2">
+          <AlertDescription>
+            API key format appears valid. API validation was skipped due to a network issue.
           </AlertDescription>
         </Alert>
       )}

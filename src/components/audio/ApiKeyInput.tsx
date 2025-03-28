@@ -69,7 +69,9 @@ export const ApiKeyInput = ({
           title: "API Key Valid",
           description: result.statusCode === 429 
             ? `Your ${provider} API key is valid but rate limited.` 
-            : `Your ${provider} API key is valid.`,
+            : result.skipApiValidation 
+              ? `Your ${provider} API key format looks valid, but API validation was skipped.`
+              : `Your ${provider} API key is valid.`,
           variant: "default"
         });
       } else {
@@ -85,21 +87,32 @@ export const ApiKeyInput = ({
       if (onVerify) {
         onVerify(false);
       }
-      toast({
-        title: "Verification Failed",
-        description: error.message || "Could not verify API key. Please try again.",
-        variant: "destructive"
-      });
+      
+      // If key format appears valid but network error occurs, provide helpful message
+      if (apiKey.trim().length >= 32 && error.message && (
+        error.message.includes('network') || 
+        error.message.includes('fetch') ||
+        error.message.includes('connect')
+      )) {
+        toast({
+          title: "Network Error",
+          description: "Could not verify key due to network issues, but format looks valid. You may proceed.",
+          variant: "default"
+        });
+        // Still treat as valid for UX purposes when network fails but format is good
+        if (onVerify) onVerify(true);
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: error.message || "Could not verify API key. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsTesting(false);
     }
   };
   
-  // Format key for display with proper spacing
-  const formatKeyForDisplay = (key: string) => {
-    return key.replace(/(.{4})/g, "$1 ").trim();
-  };
-
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
