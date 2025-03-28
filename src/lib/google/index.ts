@@ -1,9 +1,10 @@
 
 /**
- * This module provides compatibility with the AssemblyAI backend
- * instead of Google Speech-to-Text.
+ * This module has been updated to remove Google Speech-to-Text references.
+ * The application now uses AssemblyAI exclusively for transcription.
  */
 
-// Export the adapted functions that now use AssemblyAI
-export * from './chunkProcessor';
-export * from './singleFileProcessor';
+// Previously exported chunkProcessor and singleFileProcessor have been removed
+// as the application now uses AssemblyAI for all transcription functionality.
+
+// Any remaining exports can be kept here if needed
