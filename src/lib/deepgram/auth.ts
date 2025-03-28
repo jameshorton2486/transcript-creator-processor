@@ -1,3 +1,4 @@
+
 /**
  * Authentication and API key validation for Deepgram
  */
@@ -23,8 +24,8 @@ export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult
       };
     }
 
-    // Updated regex to accept both old format (dg_...) and new API key formats
-    // This removes the strict format check to be more flexible with future changes
+    // No format validation - accept any non-empty string
+    // This allows both old (dg_...) and new API key formats
     const trimmedKey = apiKey.trim();
     
     // Lightweight endpoint call to test key

@@ -34,7 +34,7 @@ export const ApiKeyInput = ({
 
   // Auto-validate if key is in correct format once user has typed enough characters
   useEffect(() => {
-    if (apiKey && apiKey.length >= 20 && inputTouched) {
+    if (apiKey && apiKey.length >= 16 && inputTouched) {
       const timer = setTimeout(() => {
         handleVerifyKey();
       }, 500);
@@ -70,7 +70,7 @@ export const ApiKeyInput = ({
           description: result.statusCode === 429 
             ? `Your ${provider} API key is valid but rate limited.` 
             : `Your ${provider} API key is valid.`,
-          variant: "default" // Changed from "warning" to "default" for rate limited case
+          variant: "default"
         });
       } else {
         toast({
@@ -130,8 +130,6 @@ export const ApiKeyInput = ({
             disabled={isDisabled}
             className={`flex-1 pr-10 font-mono ${keyStatus === "invalid" ? "border-red-400 focus-visible:ring-red-400" : ""}`}
             aria-invalid={keyStatus === "invalid"}
-            // Better pattern matching for validation feedback
-            pattern="[A-Za-z0-9]{32,}"
           />
           <button
             type="button"
