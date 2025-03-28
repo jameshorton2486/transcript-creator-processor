@@ -67,6 +67,7 @@ export interface FormattedTranscript {
 
 export interface TranscriptionResult {
   transcript: string;
+  text?: string; // Added for compatibility
   formattedResult?: FormattedTranscript;
   rawResponse: AssemblyAITranscriptionResponse;
 }
