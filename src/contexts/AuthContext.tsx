@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { 
   User, 
   signInWithPopup, 
@@ -10,7 +10,7 @@ import {
   createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase/config';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export type UserRole = 'admin' | 'viewer' | 'user';
 
