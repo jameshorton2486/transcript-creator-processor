@@ -1,4 +1,3 @@
-
 /**
  * Authentication and API key validation for Deepgram
  */
@@ -24,16 +23,10 @@ export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult
       };
     }
 
-    // Basic format validation (Deepgram keys usually start with "dg_")
+    // Updated regex to accept both old format (dg_...) and new API key formats
+    // This removes the strict format check to be more flexible with future changes
     const trimmedKey = apiKey.trim();
-    if (!/^dg_[a-zA-Z0-9]{32,}$/.test(trimmedKey)) {
-      console.error('[DEEPGRAM] API key format appears invalid');
-      return {
-        isValid: false,
-        message: 'API key format is invalid'
-      };
-    }
-
+    
     // Lightweight endpoint call to test key
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);

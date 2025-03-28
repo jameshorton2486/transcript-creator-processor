@@ -34,7 +34,7 @@ export const ApiKeyInput = ({
 
   // Auto-validate if key is in correct format once user has typed enough characters
   useEffect(() => {
-    if (apiKey && apiKey.length >= 32 && inputTouched) {
+    if (apiKey && apiKey.length >= 20 && inputTouched) {
       const timer = setTimeout(() => {
         handleVerifyKey();
       }, 500);
