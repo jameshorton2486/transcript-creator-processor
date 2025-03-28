@@ -2,10 +2,12 @@
 // Export audio utilities
 export * from './base64Converter';
 export { 
-  convertToMono 
-} from './wavUtils';
-export { 
-  float32ArrayToWav as encodeFloat32ArrayToWav,
-  writeString as writeWavString 
+  convertToMono,
+  float32ArrayToWav,
+  writeString
 } from './wavUtils';
 export * from './wavEncoder';
+export * from './wavConverter';
+export * from './audioContext';
+export * from './audioBufferUtils';
+export * from './normalization';

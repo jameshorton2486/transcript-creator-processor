@@ -3,3 +3,4 @@
 export * from './assemblyai';
 export * from './audio';
 export * from './config';
+export * from './transcriptProcessor';

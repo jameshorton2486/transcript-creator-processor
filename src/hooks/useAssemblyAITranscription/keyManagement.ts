@@ -1,4 +1,6 @@
+
 import { type UseToastReturn } from "./toastTypes";
+import { testApiKey } from "@/lib/assemblyai/auth";
 
 // Storage key for the API key
 const API_KEY_STORAGE_KEY = "assembly_ai_api_key";
@@ -33,8 +35,7 @@ export const verifyApiKey = async (
   }));
 
   try {
-    // Import the testApiKey function dynamically to avoid circular dependencies
-    const { testApiKey } = await import("@/lib/assemblyai");
+    // Use imported testApiKey function
     const isValid = await testApiKey(apiKey);
 
     if (isValid) {

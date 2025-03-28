@@ -1,77 +1,62 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Wand2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ProcessingOptions } from "@/components/ProcessingOptions";
-import { processText } from "@/lib/nlp/textProcessor";
+import { Label } from "@/components/ui/label";
+import { Wand2 } from "lucide-react";
+import { processTranscript } from "@/lib/transcriptProcessor";
+import { useToast } from "@/components/ui/use-toast";
 
 interface TranscriptProcessorProps {
   transcript: string;
   onProcessed: (processedText: string) => void;
 }
 
-export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProcessorProps) => {
+export const TranscriptProcessor = ({
+  transcript,
+  onProcessed,
+}: TranscriptProcessorProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [options, setOptions] = useState({
-    correctPunctuation: true,
-    formatSpeakers: true,
-    identifyParties: true,
-    extractEntities: true,
-    preserveFormatting: true,
-    cleanFillers: true,
-    useAI: false,
-  });
+  const [correctPunctuation, setCorrectPunctuation] = useState(true);
+  const [extractEntities, setExtractEntities] = useState(false);
+  const [preserveFormatting, setPreserveFormatting] = useState(true);
+  const [formatSpeakers, setFormatSpeakers] = useState(true);
+  const [identifyParties, setIdentifyParties] = useState(true);
+  const [cleanFillers, setCleanFillers] = useState(true);
+  const [useAI, setUseAI] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const { toast } = useToast();
 
-  const processTranscript = async () => {
-    if (!transcript) {
-      toast({
-        title: "No transcript available",
-        description: "Please create a transcript first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate API key if AI processing is enabled
-    if (options.useAI && !apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key to use AI-powered processing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleProcessTranscript = async () => {
     setIsProcessing(true);
     try {
-      // Process text using our enhanced NLP pipeline
-      const processedText = await processText(transcript, {
-        ...options,
-        apiKey: apiKey,
+      // Create a dummy file for processing
+      const file = new File([transcript], "transcript.txt", {
+        type: "text/plain",
       });
-      
-      onProcessed(processedText);
-      
+
+      const result = await processTranscript(file, {
+        correctPunctuation,
+        extractEntities,
+        preserveFormatting,
+        useAI,
+        apiKey,
+        formatSpeakers,
+        identifyParties,
+        cleanFillers
+      });
+
+      onProcessed(result.correctedText);
       toast({
-        title: "Processing complete",
+        title: "Transcript processed",
         description: "The transcript has been successfully processed.",
       });
-    } catch (error) {
-      console.error("Processing error:", error);
+    } catch (error: any) {
+      console.error("Error processing transcript:", error);
       toast({
-        title: "Processing failed",
-        description: typeof error === 'object' && error !== null && 'message' in error
-          ? String(error.message)
-          : "There was an error processing your transcript. Please try again.",
         variant: "destructive",
+        title: "Processing failed",
+        description:
+          error.message || "Failed to process the transcript. Please try again.",
       });
     } finally {
       setIsProcessing(false);
@@ -79,114 +64,109 @@ export const TranscriptProcessor = ({ transcript, onProcessed }: TranscriptProce
   };
 
   return (
-    <Card className="bg-white">
-      <CardHeader className="pb-2">
-        <CardTitle>Process Transcript</CardTitle>
-        <CardDescription>Apply formatting and corrections to the transcript</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <ProcessingOptions 
-          options={{
-            correctPunctuation: options.correctPunctuation,
-            extractEntities: options.extractEntities,
-            preserveFormatting: options.preserveFormatting
-          }}
-          onChange={(newOptions) => {
-            setOptions({
-              ...options,
-              ...newOptions
-            });
-          }}
+    <div className="space-y-4">
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="correct-punctuation">Correct Punctuation</Label>
+        <Switch
+          id="correct-punctuation"
+          checked={correctPunctuation}
+          onCheckedChange={setCorrectPunctuation}
+          disabled={isProcessing}
         />
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="formatSpeakers" 
-            checked={options.formatSpeakers}
-            onCheckedChange={(checked) => 
-              setOptions({...options, formatSpeakers: checked === true})
-            }
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="extract-entities">Extract Entities</Label>
+        <Switch
+          id="extract-entities"
+          checked={extractEntities}
+          onCheckedChange={setExtractEntities}
+          disabled={isProcessing}
+        />
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="preserve-formatting">Preserve Formatting</Label>
+        <Switch
+          id="preserve-formatting"
+          checked={preserveFormatting}
+          onCheckedChange={setPreserveFormatting}
+          disabled={isProcessing}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="format-speakers">Format Speakers</Label>
+        <Switch
+          id="format-speakers"
+          checked={formatSpeakers}
+          onCheckedChange={setFormatSpeakers}
+          disabled={isProcessing}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="identify-parties">Identify Parties</Label>
+        <Switch
+          id="identify-parties"
+          checked={identifyParties}
+          onCheckedChange={setIdentifyParties}
+          disabled={isProcessing}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="clean-fillers">Clean Fillers</Label>
+        <Switch
+          id="clean-fillers"
+          checked={cleanFillers}
+          onCheckedChange={setCleanFillers}
+          disabled={isProcessing}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="use-ai">Use AI (OpenAI)</Label>
+        <Switch
+          id="use-ai"
+          checked={useAI}
+          onCheckedChange={setUseAI}
+          disabled={isProcessing}
+        />
+      </div>
+
+      {useAI && (
+        <div className="space-y-2">
+          <Label htmlFor="api-key">OpenAI API Key</Label>
+          <input
+            type="password"
+            id="api-key"
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder="Enter your OpenAI API key"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            disabled={isProcessing}
           />
-          <Label htmlFor="formatSpeakers">Format speaker labels</Label>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="identifyParties" 
-            checked={options.identifyParties}
-            onCheckedChange={(checked) => 
-              setOptions({...options, identifyParties: checked === true})
-            }
-          />
-          <Label htmlFor="identifyParties">Identify parties and legal terms</Label>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="cleanFillers" 
-            checked={options.cleanFillers}
-            onCheckedChange={(checked) => 
-              setOptions({...options, cleanFillers: checked === true})
-            }
-          />
-          <Label htmlFor="cleanFillers">Remove filler words (uh, um, like)</Label>
-        </div>
-        
-        <div className="flex items-center justify-between border-t pt-3 mt-2">
-          <div>
-            <Label htmlFor="useAI" className="font-medium">Use AI Processing</Label>
-            <p className="text-xs text-slate-500">
-              Process with OpenAI for better results
-            </p>
-          </div>
-          <Switch
-            id="useAI"
-            checked={options.useAI}
-            onCheckedChange={(checked) => 
-              setOptions({...options, useAI: checked})
-            }
-          />
-        </div>
-        
-        {options.useAI && (
-          <div className="space-y-2 pt-2">
-            <Label htmlFor="apiKey">OpenAI API Key</Label>
-            <Textarea
-              id="apiKey"
-              placeholder="Enter your OpenAI API key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-slate-500">
-              Your API key is only used for this session and is not stored.
-            </p>
-          </div>
+      )}
+
+      <Button
+        onClick={handleProcessTranscript}
+        disabled={isProcessing}
+        className="w-full"
+      >
+        {isProcessing ? (
+          <>
+            <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <Wand2 className="mr-2 h-4 w-4" />
+            Process Transcript
+          </>
         )}
-        
-        <div className="text-xs text-slate-500 mt-2">
-          <p>Using natural language processing for transcript enhancement</p>
-        </div>
-        
-        <Button 
-          className="w-full" 
-          onClick={processTranscript} 
-          disabled={!transcript || isProcessing || (options.useAI && !apiKey)}
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Wand2 className="mr-2 h-4 w-4" />
-              Process Transcript
-            </>
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+      </Button>
+    </div>
   );
 };
