@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { FileSelector } from "@/components/audio/FileSelector";
-import { ProgressIndicator } from "@/components/audio/ProgressIndicator";
+import { EnhancedFileSelector } from "@/components/audio/EnhancedFileSelector";
+import { EnhancedProgressIndicator } from "@/components/audio/EnhancedProgressIndicator";
 import { ErrorDisplay } from "@/components/audio/ErrorDisplay";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +91,7 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
       
       <CardContent className="space-y-6 pt-6">
         {/* File Selection */}
-        <FileSelector 
+        <EnhancedFileSelector 
           onFileSelected={handleFileSelected}
           isLoading={isLoading}
           supportedFormats={supportedFormats}
@@ -263,7 +263,7 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
         
         {/* Progress Indicator */}
         {isLoading && (
-          <ProgressIndicator 
+          <EnhancedProgressIndicator 
             progress={progress} 
             isVisible={true}
             label={`Transcribing audio... ${estimatedTimeRemaining ? `(${estimatedTimeRemaining} remaining)` : ''}`}
