@@ -63,7 +63,8 @@ export const verifyApiKey = async (
     setState(state => ({ 
       ...state, 
       keyStatus: result.isValid ? "valid" : "invalid", 
-      testingKey: false 
+      testingKey: false,
+      keyErrorMessage: result.isValid ? undefined : result.message
     }));
     
     // Display appropriate toast notifications
@@ -74,7 +75,7 @@ export const verifyApiKey = async (
           description: result.statusCode === 429 
             ? "Your AssemblyAI API key is valid but rate limited." 
             : "Your AssemblyAI API key is valid.",
-          variant: result.statusCode === 429 ? "warning" : "default",
+          variant: result.statusCode === 429 ? "default" : "default",
         });
       } else {
         toast({
@@ -90,7 +91,12 @@ export const verifyApiKey = async (
     console.error("Error verifying API key:", error);
     
     // Update state to reflect error
-    setState(state => ({ ...state, keyStatus: "untested", testingKey: false }));
+    setState(state => ({ 
+      ...state, 
+      keyStatus: "untested", 
+      testingKey: false,
+      keyErrorMessage: error instanceof Error ? error.message : "Verification failed"
+    }));
     
     // Show toast notification if available
     if (toast) {

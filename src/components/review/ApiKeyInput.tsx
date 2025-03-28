@@ -2,7 +2,7 @@
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, KeyRound, Save } from "lucide-react";
+import { AlertCircle, KeyRound, Save, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ApiKeyInputProps {
@@ -14,6 +14,7 @@ interface ApiKeyInputProps {
 export const ReviewApiKeyInput = ({ apiKey, setApiKey, visible }: ApiKeyInputProps) => {
   const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [showKey, setShowKey] = useState(false);
   
   if (!visible) return null;
   
@@ -42,15 +43,26 @@ export const ReviewApiKeyInput = ({ apiKey, setApiKey, visible }: ApiKeyInputPro
           <span className="text-sm font-medium">OpenAI API Key</span>
         </div>
         
-        <Textarea
-          placeholder="Enter your OpenAI API key here"
-          value={apiKey}
-          onChange={(e) => {
-            setApiKey(e.target.value);
-            setShowAlert(false);
-          }}
-          className="w-full text-sm font-mono"
-        />
+        <div className="relative">
+          <Textarea
+            placeholder="Enter your OpenAI API key here"
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value);
+              setShowAlert(false);
+            }}
+            className="w-full text-sm font-mono pr-10"
+            type={showKey ? "text" : "password"}
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+            aria-label={showKey ? "Hide API key" : "Show API key"}
+          >
+            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         
         <div className="flex justify-between items-center">
           <p className="text-xs text-slate-500">

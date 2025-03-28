@@ -13,6 +13,7 @@ export interface AssemblyAITranscriptionHookState {
   keyStatus: "untested" | "valid" | "invalid";
   testingKey: boolean;
   estimatedTimeRemaining?: string;
+  keyErrorMessage?: string; // Added to store specific error messages
 }
 
 // Options for transcription
@@ -89,4 +90,11 @@ export interface UseAssemblyAITranscriptionReturn extends AssemblyAITranscriptio
   cancelTranscription: () => void;
   handleTestApiKey: () => Promise<boolean>; // Changed from Promise<void> to Promise<boolean>
   setOptions: (options: Partial<AssemblyAITranscriptionOptions>) => void;
+}
+
+// This interface represents the response from testing an API key
+export interface ApiKeyValidationResult {
+  isValid: boolean;
+  message: string;
+  statusCode?: number;
 }
