@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { TranscriptionHookState, UseTranscriptionReturn } from "./types";
+import { DEFAULT_TRANSCRIPTION_OPTIONS } from "@/lib/config";
 
 export const useTranscription = (onTranscriptCreated: (transcript: string, jsonData: any) => void): UseTranscriptionReturn => {
   const [state, setState] = useState<TranscriptionHookState>({
@@ -17,7 +18,8 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   const [options, setOptions] = useState({
     punctuate: true,
     speakerLabels: true,
-    formatText: true
+    formatText: true,
+    model: 'default'
   });
   
   const [customTerms, setCustomTerms] = useState<string[]>([]);
@@ -43,12 +45,9 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
 
   const transcribeAudioFile = async () => {
     toast({
-      title: "Google Speech-to-Text removed",
-      description: "This application now only supports transcription via AssemblyAI.",
-      variant: "destructive",
+      title: "Using AssemblyAI",
+      description: "Please use the AssemblyAI transcriber section for transcription.",
     });
-    
-    setState(prev => ({ ...prev, error: "Google Speech-to-Text has been removed. Please use AssemblyAI transcription instead." }));
   };
 
   const setApiKey = (apiKey: string) => {

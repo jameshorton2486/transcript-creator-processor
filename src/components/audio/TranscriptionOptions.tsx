@@ -2,6 +2,7 @@
 import React from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TranscriptionOptions {
   punctuate: boolean;
@@ -20,7 +21,7 @@ export const TranscriptionOptionsSelector = ({
   onOptionsChange 
 }: TranscriptionOptionsSelectorProps) => {
   // Function to update a specific option
-  const updateOption = (key: keyof TranscriptionOptions, value: boolean) => {
+  const updateOption = (key: keyof TranscriptionOptions, value: any) => {
     const updatedOptions = { 
       ...options, 
       [key]: value 
@@ -66,6 +67,23 @@ export const TranscriptionOptionsSelector = ({
           <Label htmlFor="formatText" className="cursor-pointer text-sm">
             Format text
           </Label>
+        </div>
+
+        <div className="col-span-1 sm:col-span-2 pt-1">
+          <Label htmlFor="model" className="block mb-1 text-sm">Transcription Model</Label>
+          <Select
+            value={options.model}
+            onValueChange={(value) => updateOption('model', value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Standard</SelectItem>
+              <SelectItem value="enhanced">Enhanced</SelectItem>
+              <SelectItem value="nova2">Nova 2</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

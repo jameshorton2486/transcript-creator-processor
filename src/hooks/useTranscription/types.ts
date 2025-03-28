@@ -1,7 +1,5 @@
 
-import { TranscriptionOptions } from "@/lib/config";
-
-export type TranscriptionHookState = {
+export interface TranscriptionHookState {
   file: File | null;
   isLoading: boolean;
   error: string | null;
@@ -9,18 +7,21 @@ export type TranscriptionHookState = {
   isBatchProcessing: boolean;
   apiKey: string;
   documentFiles: File[];
-};
+}
 
-export interface UseTranscriptionProps {
-  options: TranscriptionOptions;
+export interface UseTranscriptionReturn extends TranscriptionHookState {
+  options: {
+    punctuate: boolean;
+    speakerLabels: boolean;
+    formatText: boolean;
+    model?: string;
+  };
   customTerms: string[];
   handleFileSelected: (file: File) => void;
   transcribeAudioFile: () => Promise<void>;
-  setOptions: (options: Partial<TranscriptionOptions>) => void;
+  setOptions: (options: any) => void;
   setApiKey: (apiKey: string) => void;
   setError: (error: string | null) => void;
   setCustomTerms: (terms: string[]) => void;
   handleDocumentFilesChange: (files: File[]) => void;
 }
-
-export interface UseTranscriptionReturn extends TranscriptionHookState, UseTranscriptionProps {}
