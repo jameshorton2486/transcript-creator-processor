@@ -26,21 +26,29 @@ This application helps with processing and creating legal transcripts from audio
 
 ## Required API Keys
 
-This application uses Google Speech-to-Text API for transcription:
+### Deepgram API
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Speech-to-Text API
-4. Create an API key under "Credentials"
+This application uses Deepgram's AI speech-to-text API for high-quality transcription:
+
+1. Go to the [Deepgram Dashboard](https://console.deepgram.com/)
+2. Create a free account if you don't have one
+3. Create a new project and navigate to the API Keys section
+4. Create a new API key with appropriate permissions (at minimum, "Usage" scoped key)
 5. Enter this API key in the application when prompted
+
+**Note**: Your Deepgram API key is stored securely in your browser's local storage and is only used for making API requests. It is not transmitted elsewhere.
 
 ## How to Use
 
 1. **Transcribe Audio**:
-   - Enter your Google API key
-   - Upload an audio file (supports MP3, WAV, FLAC, OGG)
-   - Select transcription options
-   - Click "Transcribe Audio"
+   - Enter your Deepgram API key
+   - Upload an audio file (supports MP3, WAV, FLAC, OGG, M4A)
+   - Configure transcription options:
+     - Speaker Diarization: Identifies different speakers in the audio
+     - Add Punctuation: Automatically adds appropriate punctuation
+     - Smart Format: Intelligently formats numbers, dates, and other entities
+     - Model Selection: Choose between different accuracy levels
+   - Click "Start Transcription"
    - For files larger than 10MB, the application will automatically process them in batches
 
 2. **Process Transcript**:
@@ -52,11 +60,19 @@ This application uses Google Speech-to-Text API for transcription:
    - Use the download button to save transcripts as text files
    - JSON data is also available for export
 
+## Accessibility Features
+
+- Keyboard navigable interface
+- ARIA attributes for screen reader compatibility
+- Visual feedback that doesn't rely solely on color
+- Focus management for form elements
+
 ## Troubleshooting
 
-- **API Key Issues**: Ensure your Google API key has Speech-to-Text permissions enabled
+- **API Key Issues**: Ensure your Deepgram API key has Speech-to-Text permissions enabled
 - **Large File Processing**: Large files are split into chunks. If processing fails, try a smaller file first
 - **Unsupported Format**: If your file isn't recognized, convert it to MP3 or WAV using a tool like Audacity
+- **Network Problems**: If API key validation fails due to network issues, the application can work in offline mode with format-valid API keys
 
 ## Logs and Debugging
 
@@ -67,4 +83,3 @@ The application logs important events to the browser console. Press F12 to open 
 - Files under 10MB are processed directly
 - Files over 10MB are automatically split into chunks
 - Maximum recommended file size: 500MB (approximately 6 hours of audio)
-
