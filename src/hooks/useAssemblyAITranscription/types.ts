@@ -87,6 +87,6 @@ export interface UseAssemblyAITranscriptionReturn extends AssemblyAITranscriptio
   transcribeAudioFile: () => Promise<void>;
   setApiKey: (key: string) => void;
   cancelTranscription: () => void;
-  handleTestApiKey: () => Promise<void>;
+  handleTestApiKey: () => Promise<boolean>; // Changed from Promise<void> to Promise<boolean>
   setOptions: (options: Partial<AssemblyAITranscriptionOptions>) => void;
 }
