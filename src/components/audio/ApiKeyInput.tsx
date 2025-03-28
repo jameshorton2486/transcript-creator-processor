@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
-import { testApiKey } from "@/lib/assemblyai/auth";
+import { testApiKey } from "@/lib/deepgram/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -23,7 +23,7 @@ export const ApiKeyInput = ({
   setApiKey,
   keyStatus = "untested",
   isDisabled = false,
-  provider = "AssemblyAI",
+  provider = "Deepgram",
   onVerify,
   errorMessage
 }: ApiKeyInputProps) => {
@@ -165,8 +165,8 @@ export const ApiKeyInput = ({
             </TooltipTrigger>
             <TooltipContent>
               {isTesting ? 
-                "Checking your API key with the AssemblyAI service" : 
-                "Verify your API key with the AssemblyAI service"}
+                "Checking your API key with the Deepgram service" : 
+                "Verify your API key with the Deepgram service"}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -179,8 +179,8 @@ export const ApiKeyInput = ({
       )}
       
       <div className="text-xs text-gray-500 mt-1">
-        <p>Need an AssemblyAI API key? <a 
-          href="https://www.assemblyai.com/dashboard/signup" 
+        <p>Need a Deepgram API key? <a 
+          href="https://console.deepgram.com/signup" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-blue-500 hover:underline"
