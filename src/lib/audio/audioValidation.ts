@@ -34,8 +34,12 @@ export const validateAudioFile = (file: File): { valid: boolean; reason?: string
   const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
   const validExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'mp4', 'mov', 'webm'];
   
-  if (!validTypes.includes(file.type) && 
-      !validExtensions.includes(fileExtension)) {
+  // Combine the checks for MIME type and file extension
+  const isValidType = 
+    validTypes.includes(file.type) || 
+    validExtensions.includes(fileExtension);
+    
+  if (!isValidType) {
     return { 
       valid: false, 
       reason: `File type "${file.type || 'unknown'}" is not supported. Please use MP3, MP4, WAV, M4A, FLAC, OGG, AAC, etc.` 

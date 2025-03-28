@@ -2,6 +2,8 @@
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, FileAudio, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { validateAudioFile } from "@/lib/audio/audioValidation";
 
 interface FileSelectorProps {
   onFileSelected: (file: File) => void;
@@ -25,6 +27,7 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Format extensions for display and validation
   const formattedFormats = supportedFormats.map(f => f.toLowerCase().replace(".", ""));
@@ -39,17 +42,15 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
     // Reset previous errors
     setError(null);
     
-    // Check file size
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > maxSizeMB) {
-      setError(`File too large: Maximum size is ${maxSizeMB}MB`);
-      return false;
-    }
+    const validationResult = validateAudioFile(file);
     
-    // Check file format
-    const extension = file.name.split('.').pop()?.toLowerCase() || "";
-    if (!formattedFormats.includes(extension)) {
-      setError(`Unsupported file type: Only ${formatString} are supported`);
+    if (!validationResult.valid) {
+      setError(validationResult.reason || "Invalid file");
+      toast({
+        title: "File Error",
+        description: validationResult.reason || "Invalid file",
+        variant: "destructive"
+      });
       return false;
     }
     
@@ -64,7 +65,12 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
     if (files && files.length > 0) {
       const file = files[0];
       if (validateFile(file)) {
+        console.log(`Selected file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         onFileSelected(file);
+        toast({
+          title: "File Selected",
+          description: `${file.name} ready for transcription`
+        });
       }
     }
   };
@@ -103,7 +109,12 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0 && !isLoading) {
       const file = e.dataTransfer.files[0];
       if (validateFile(file)) {
+        console.log(`Dropped file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB)`);
         onFileSelected(file);
+        toast({
+          title: "File Selected",
+          description: `${file.name} ready for transcription`
+        });
       }
     }
   };
@@ -128,7 +139,7 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
           type="file"
           ref={fileInputRef}
           className="hidden"
-          accept={formattedFormats.map(ext => `.${ext}`).join(",")}
+          accept="audio/*,video/*"
           onChange={handleFileChange}
           disabled={isLoading}
           aria-label="File input"
@@ -146,12 +157,12 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
           <div className="space-y-1">
             <p className="text-sm font-medium">
               {dragActive 
-                ? "Drop audio file here" 
-                : "Drag and drop audio file or click to browse"
+                ? "Drop audio or video file here" 
+                : "Drag and drop audio or video file or click to browse"
               }
             </p>
             <p className="text-xs text-slate-500">
-              Supported formats: {formatString.toUpperCase()}
+              Supported formats: {formatString.toUpperCase()}, MP4, MOV, WEBM
             </p>
             <p className="text-xs text-slate-500">
               Maximum file size: {maxSizeMB}MB

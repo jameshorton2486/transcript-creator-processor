@@ -1,21 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Sparkles, Settings2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { ReviewApiKeyInput } from "@/components/review/ApiKeyInput";
-import { ReviewOptions } from "@/components/review/ReviewOptions";
-import { 
-  reviewWithOpenAI, 
-  TrainingRule, 
-  TrainingExample 
-} from "@/lib/nlp/openAIReviewService";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Sparkles, Loader2, EyeOff, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { reviewWithOpenAI, TrainingRule, TrainingExample } from '@/lib/nlp/openAIReviewService';
 
 interface TranscriptReviewerProps {
   transcript: string;
@@ -24,211 +15,181 @@ interface TranscriptReviewerProps {
   setIsLoading: (isLoading: boolean) => void;
 }
 
-export const TranscriptReviewer = ({ 
-  transcript, 
+export const TranscriptReviewer = ({
+  transcript,
   onReviewComplete,
   isLoading,
   setIsLoading
 }: TranscriptReviewerProps) => {
   const [apiKey, setApiKey] = useState<string>("");
-  const [showApiInput, setShowApiInput] = useState<boolean>(false);
-  const [rules, setRules] = useState<TrainingRule[]>([]);
-  const [examples, setExamples] = useState<TrainingExample[]>([]);
-  const [useExamples, setUseExamples] = useState<boolean>(true);
-  const [useRules, setUseRules] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Load saved rules and examples from localStorage
-    const savedRules = localStorage.getItem("transcriptRules");
-    if (savedRules) {
-      setRules(JSON.parse(savedRules));
+  // These would typically come from a database or user settings
+  const rules: TrainingRule[] = [
+    {
+      id: "1",
+      name: "Speaker Format",
+      description: "Format speakers consistently",
+      rule: "Format speaker labels consistently as 'SPEAKER 1:', 'SPEAKER 2:', etc. at the start of paragraphs."
+    },
+    {
+      id: "2",
+      name: "Remove Fillers",
+      description: "Remove filler words",
+      rule: "Remove filler words like 'um', 'uh', 'like', etc."
     }
-    
-    const savedExamples = localStorage.getItem("transcriptExamples");
-    if (savedExamples) {
-      setExamples(JSON.parse(savedExamples));
-    }
-    
-    // Load saved API key from sessionStorage (not localStorage for security)
-    const savedApiKey = sessionStorage.getItem("openai_api_key");
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
+  ];
 
-  const reviewTranscript = async () => {
-    if (!transcript) {
+  const examples: TrainingExample[] = [
+    {
+      id: "1",
+      incorrect: "speaker 1: Yeah, um, I was thinking that, like, we should probably, you know, review the contract.",
+      corrected: "SPEAKER 1: I was thinking that we should review the contract.",
+      createdAt: Date.now()
+    }
+  ];
+
+  const handleReviewTranscript = async () => {
+    if (!transcript || transcript.trim().length === 0) {
+      setError("No transcript to review. Please create or upload a transcript first.");
       toast({
-        title: "No transcript available",
-        description: "Please create a transcript first.",
-        variant: "destructive",
+        title: "Error",
+        description: "No transcript to review",
+        variant: "destructive"
       });
       return;
     }
 
-    if (showApiInput && !apiKey) {
+    if (!apiKey) {
+      setError("OpenAI API key is required to review the transcript.");
       toast({
         title: "API Key Required",
-        description: "Please enter your OpenAI API key to use the AI review feature.",
-        variant: "destructive",
+        description: "Please enter your OpenAI API key",
+        variant: "destructive"
       });
       return;
     }
 
+    setError(null);
     setIsLoading(true);
+
     try {
-      // Save API key to sessionStorage (not localStorage for security)
-      if (apiKey) {
-        sessionStorage.setItem("openai_api_key", apiKey);
-      }
+      console.log("Starting OpenAI review process");
       
-      // Filter rules and examples based on user selection
-      const activeRules = useRules ? rules : [];
-      const activeExamples = useExamples ? examples : [];
+      const reviewedTranscript = await reviewWithOpenAI(
+        transcript, 
+        rules, 
+        examples, 
+        apiKey
+      );
       
-      // Show toast with appropriate message based on what's being used
-      let toastDescription = "Processing transcript";
-      if (activeRules.length > 0 || activeExamples.length > 0) {
-        toastDescription += " with";
-        if (activeRules.length > 0) {
-          toastDescription += ` ${activeRules.length} rules`;
-        }
-        if (activeRules.length > 0 && activeExamples.length > 0) {
-          toastDescription += " and";
-        }
-        if (activeExamples.length > 0) {
-          toastDescription += ` ${activeExamples.length} examples`;
-        }
-      }
-      
-      toast({
-        title: "Processing transcript",
-        description: toastDescription,
+      console.log("OpenAI review complete:", {
+        originalLength: transcript.length,
+        reviewedLength: reviewedTranscript.length,
       });
       
-      console.log("Starting OpenAI transcript review with:", {
-        transcriptLength: transcript?.length,
-        rulesCount: activeRules.length,
-        examplesCount: activeExamples.length
-      });
-      
-      // Make the actual API call to OpenAI for review
-      const reviewedText = await reviewWithOpenAI(transcript, activeRules, activeExamples, apiKey);
-      
-      if (!reviewedText || reviewedText.trim().length === 0) {
-        throw new Error("OpenAI returned an empty response. Please try again.");
+      if (!reviewedTranscript || reviewedTranscript.trim().length === 0) {
+        throw new Error("Review resulted in empty transcript.");
       }
       
-      onReviewComplete(reviewedText);
+      // Pass the reviewed transcript to the parent component
+      onReviewComplete(reviewedTranscript);
       
       toast({
-        title: "AI Review Complete",
-        description: "The transcript has been reviewed and improved by AI.",
+        title: "Transcript Review Complete",
+        description: "Your transcript has been reviewed and enhanced."
       });
-    } catch (error) {
-      console.error("AI review error:", error);
+    } catch (err) {
+      console.error("OpenAI review error:", err);
+      setError(err instanceof Error ? err.message : "Failed to review transcript");
       toast({
-        title: "Review failed",
-        description: typeof error === 'object' && error !== null && 'message' in error
-          ? String(error.message)
-          : "There was an error reviewing your transcript with AI. Please try again.",
-        variant: "destructive",
+        title: "Review Failed",
+        description: err instanceof Error ? err.message : "Failed to review transcript",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const toggleApiKeyVisibility = () => {
+    setShowApiKey(!showApiKey);
+  };
+
   return (
-    <Card className="bg-white">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between">
-          <span>AI Transcript Review</span>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Settings2 className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-4">
-                <h4 className="font-medium">Review Settings</h4>
-                <div className="space-y-2">
-                  <ReviewOptions
-                    options={[
-                      {
-                        id: "useRules",
-                        label: `Use ${rules.length} saved rules`,
-                        checked: useRules,
-                        onChange: setUseRules
-                      },
-                      {
-                        id: "useExamples",
-                        label: `Learn from ${examples.length} examples`,
-                        checked: useExamples,
-                        onChange: setUseExamples
-                      }
-                    ]}
-                  />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </CardTitle>
-        <CardDescription>
-          Use AI to enhance and correct the transcript 
-          {(rules.length > 0 || examples.length > 0) && (
-            <span className="text-green-600 font-medium">
-              {" "}• Using {useRules ? rules.length : 0} rules & {useExamples ? examples.length : 0} examples
-            </span>
-          )}
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <ReviewApiKeyInput 
-          apiKey={apiKey}
-          setApiKey={setApiKey}
-          visible={showApiInput}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2 mb-2">
+          <label htmlFor="openai-api-key" className="text-sm font-medium text-slate-700">
+            OpenAI API Key
+          </label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={toggleApiKeyVisibility}
+          >
+            <EyeOff className="h-3.5 w-3.5 text-slate-500" />
+          </Button>
+        </div>
+        
+        <Input
+          id="openai-api-key"
+          type={showApiKey ? "text" : "password"}
+          placeholder="sk-..."
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
         />
         
-        <Button 
-          className="w-full" 
-          onClick={() => {
-            if (!showApiInput && !apiKey) {
-              setShowApiInput(true);
-            } else {
-              reviewTranscript();
-            }
-          }}
-          disabled={isLoading || !transcript}
+        <p className="text-xs text-slate-500">
+          Your API key is used only for this request and is not stored.
+        </p>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={handleReviewTranscript}
+          disabled={isLoading || !transcript || !apiKey}
+          className="flex items-center gap-2"
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Reviewing with AI...
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Reviewing...
             </>
           ) : (
             <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Review Transcript with AI
-              {(rules.length > 0 || examples.length > 0) && (
-                ` (${(useRules ? rules.length : 0) + (useExamples ? examples.length : 0)} rules/examples)`
-              )}
+              <Sparkles className="h-4 w-4" />
+              Enhance with AI
             </>
           )}
         </Button>
-      </CardContent>
+        
+        <div className="text-xs text-slate-500">
+          Uses rules & examples to improve transcripts
+        </div>
+      </div>
       
-      {(rules.length === 0 && examples.length === 0) && (
-        <CardFooter>
-          <p className="text-xs text-slate-500 w-full text-center">
-            Add custom rules and examples in the Training section for better results
-          </p>
-        </CardFooter>
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-    </Card>
+
+      {isLoading && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <p className="text-sm">Enhancing transcript with AI...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 };
