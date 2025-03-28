@@ -4,7 +4,7 @@
  * The application now uses AssemblyAI exclusively for transcription.
  */
 
-// Previously exported chunkProcessor and singleFileProcessor have been removed
-// as the application now uses AssemblyAI for all transcription functionality.
+// All Google STT-related formatters have been removed as they are no longer needed
+// The application now uses AssemblyAI for all transcription functionality.
 
 // Any remaining exports can be kept here if needed
