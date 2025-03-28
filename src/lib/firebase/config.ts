@@ -22,7 +22,6 @@ let app;
 let auth;
 let googleProvider;
 
-// Only initialize Firebase if we have a valid API key
 if (!isDemoMode && firebaseConfig.apiKey) {
   try {
     app = initializeApp(firebaseConfig);
@@ -34,16 +33,41 @@ if (!isDemoMode && firebaseConfig.apiKey) {
   }
 } else {
   console.log("Firebase in demo mode - authentication features will be unavailable");
-  // Create dummy implementations for demo mode
+  
+  // Create dummy implementations for demo mode with clearer implementation
   app = null;
   auth = {
     currentUser: null,
     onAuthStateChanged: (callback) => {
+      // Call callback with null to indicate no user
       callback(null);
+      // Return no-op unsubscribe function
       return () => {};
-    }
+    },
+    // Add other necessary dummy methods
+    signInWithPopup: () => Promise.reject(new Error("Authentication unavailable in demo mode")),
+    signOut: () => Promise.resolve()
   } as any;
   googleProvider = {} as any;
 }
 
-export { app, auth, googleProvider, isDemoMode };
+// Export with better JSDoc documentation
+/**
+ * Firebase app instance (null in demo mode)
+ */
+export const firebaseApp = app;
+
+/**
+ * Firebase auth instance (mocked in demo mode)
+ */
+export const auth = auth;
+
+/**
+ * Google auth provider for sign-in (mocked in demo mode)
+ */
+export const googleProvider = googleProvider;
+
+/**
+ * Flag indicating if the app is running in demo mode without real Firebase credentials
+ */
+export const isDemoMode = isDemoMode;

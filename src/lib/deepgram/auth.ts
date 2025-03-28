@@ -36,7 +36,6 @@ export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult
     }
 
     // Always try to validate with the actual API, even in development
-    // But have a fallback for network issues
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
