@@ -10,27 +10,40 @@ import { Label } from "@/components/ui/label";
 import { TranscriberFooter } from "@/components/audio/TranscriberFooter";
 import { useAssemblyAITranscription } from "@/hooks/useAssemblyAITranscription";
 import { AssemblyAITranscriptionOptions } from "@/hooks/useAssemblyAITranscription/types";
-import { Mic, Loader2, CheckCircle, XCircle, FileAudio, Info, AlertCircle } from "lucide-react";
+import { 
+  Mic, 
+  Loader2, 
+  CheckCircle, 
+  XCircle, 
+  FileAudio, 
+  Info, 
+  AlertCircle,
+  HelpCircle,
+  Settings
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 interface AssemblyAITranscriberProps {
   onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void;
   initialOptions?: Partial<AssemblyAITranscriptionOptions>;
+  className?: string;
 }
 
 /**
  * AssemblyAITranscriber Component
  * 
- * Provides a user interface for transcribing audio files using AssemblyAI's API.
+ * Provides a user interface for transcribing audio/video files using AssemblyAI's API.
  */
 export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({ 
   onTranscriptCreated,
-  initialOptions
+  initialOptions,
+  className = ""
 }) => {
-  // Supported file formats - updated to only include explicitly supported formats
+  // Supported file formats - restricted to only explicitly supported formats
   const supportedFormats = ["mp3", "mp4", "wav", "m4a", "flac"];
   const maxFileSizeMB = 250; // AssemblyAI supports up to 250MB files
   
@@ -38,9 +51,25 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
   const modelInfo = {
     "default": "Automatically selects the most appropriate model",
     "standard": "General-purpose transcription model",
-    "enhanced": "Highest accuracy, but slower processing time",
-    "nova2": "Fastest processing, but slightly lower accuracy"
+    "enhanced": "Highest accuracy, but slower processing time (uses Nova model)",
+    "nova2": "Fastest processing with good accuracy (uses Nova-2 model)"
   };
+
+  // Language options
+  const languageOptions = [
+    { value: "en", label: "English" },
+    { value: "es", label: "Spanish" },
+    { value: "fr", label: "French" },
+    { value: "de", label: "German" },
+    { value: "it", label: "Italian" },
+    { value: "pt", label: "Portuguese" },
+    { value: "nl", label: "Dutch" },
+    { value: "hi", label: "Hindi" },
+    { value: "ja", label: "Japanese" },
+    { value: "zh", label: "Chinese" },
+    { value: "ru", label: "Russian" },
+    { value: "auto", label: "Auto Detect" }
+  ];
 
   // Advanced options state
   const [advancedOptionsOpen, setAdvancedOptionsOpen] = useState(false);
@@ -72,20 +101,57 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
     setOptions({ model: model as "default" | "standard" | "enhanced" | "nova2" });
   };
 
+  // Helper to update language
+  const handleLanguageChange = (language: string) => {
+    setOptions({ language });
+  };
+
   // Helper to update speaker labels
   const handleSpeakerLabelsChange = (enabled: boolean) => {
     setOptions({ speakerLabels: enabled });
   };
 
+  // Helper to update punctuation
+  const handlePunctuationChange = (enabled: boolean) => {
+    setOptions({ punctuate: enabled });
+  };
+
+  // Helper to update text formatting
+  const handleFormatTextChange = (enabled: boolean) => {
+    setOptions({ formatText: enabled });
+  };
+
   return (
-    <Card className="bg-white shadow-md border-slate-200">
+    <Card className={`bg-white shadow-md border-slate-200 ${className}`}>
       <CardHeader className="pb-4 border-b">
-        <div className="flex items-center space-x-2">
-          <FileAudio className="h-5 w-5 text-primary" />
-          <CardTitle>Audio Transcription</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <FileAudio className="h-5 w-5 text-primary" />
+            <CardTitle>Audio Transcription</CardTitle>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Transcription help">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs">
+                <p className="text-sm">
+                  Upload an audio or video file to automatically create a transcript using AssemblyAI's advanced AI models.
+                </p>
+                <p className="text-xs mt-2">
+                  Supported formats: {supportedFormats.join(', ').toUpperCase()}
+                </p>
+                <p className="text-xs mt-1">
+                  Maximum file size: {maxFileSizeMB}MB
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <CardDescription>
-          Upload an audio file to automatically create a transcript using AssemblyAI
+          Upload audio or video files for AI-powered transcription
         </CardDescription>
       </CardHeader>
       
@@ -134,9 +200,9 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
           <div className="flex justify-between items-center">
             <Label htmlFor="api-key">AssemblyAI API Key</Label>
             {keyStatus === "valid" && (
-              <span className="text-xs text-green-600 flex items-center">
+              <Badge variant="outline" className="text-xs text-green-600 flex items-center bg-green-50">
                 <CheckCircle className="h-3 w-3 mr-1" /> Valid key
-              </span>
+              </Badge>
             )}
           </div>
           
@@ -160,6 +226,7 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
                     onClick={handleTestApiKey}
                     disabled={testingKey || !apiKey.trim() || isLoading}
                     className="whitespace-nowrap flex-shrink-0"
+                    aria-label="Test API key"
                   >
                     {testingKey ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -198,10 +265,32 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
           onValueChange={(val) => setAdvancedOptionsOpen(val === "options")}
         >
           <AccordionItem value="options">
-            <AccordionTrigger className="py-2 text-sm">
+            <AccordionTrigger className="py-2 text-sm flex items-center">
+              <Settings className="h-4 w-4 mr-2 text-slate-500" />
               Advanced Options
             </AccordionTrigger>
             <AccordionContent className="space-y-4 pb-2">
+              {/* Language Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="language-selector">Language</Label>
+                <Select 
+                  defaultValue={initialOptions?.language || "en"}
+                  onValueChange={handleLanguageChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="language-selector" className="w-full">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languageOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            
               {/* Transcription Model Selection */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -240,22 +329,61 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
                 </Select>
               </div>
               
-              {/* Speaker Diarization Option */}
-              <div className="flex items-center justify-between space-x-2">
-                <div className="space-y-0.5">
-                  <Label htmlFor="speaker-labels" className="text-sm">
-                    Speaker Diarization
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Identify and label different speakers
-                  </p>
+              {/* Additional Option Toggles */}
+              <div className="space-y-3 pt-2">
+                {/* Speaker Diarization Option */}
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="speaker-labels" className="text-sm">
+                      Speaker Diarization
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Identify and label different speakers
+                    </p>
+                  </div>
+                  <Switch
+                    id="speaker-labels"
+                    checked={initialOptions?.speakerLabels !== false}
+                    onCheckedChange={handleSpeakerLabelsChange}
+                    disabled={isLoading}
+                  />
                 </div>
-                <Switch
-                  id="speaker-labels"
-                  checked={initialOptions?.speakerLabels !== false}
-                  onCheckedChange={handleSpeakerLabelsChange}
-                  disabled={isLoading}
-                />
+
+                {/* Punctuation Option */}
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="punctuation" className="text-sm">
+                      Add Punctuation
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Include commas, periods, and question marks
+                    </p>
+                  </div>
+                  <Switch
+                    id="punctuation"
+                    checked={initialOptions?.punctuate !== false}
+                    onCheckedChange={handlePunctuationChange}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* Text Formatting Option */}
+                <div className="flex items-center justify-between space-x-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="format-text" className="text-sm">
+                      Format Text
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Capitalize sentences and improve readability
+                    </p>
+                  </div>
+                  <Switch
+                    id="format-text"
+                    checked={initialOptions?.formatText !== false}
+                    onCheckedChange={handleFormatTextChange}
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             </AccordionContent>
           </AccordionItem>

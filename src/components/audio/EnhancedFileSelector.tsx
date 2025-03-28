@@ -19,7 +19,7 @@ interface FileSelectorProps {
 export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
   onFileSelected,
   isLoading = false,
-  supportedFormats = ["mp3", "wav", "m4a", "mp4", "flac", "ogg"],
+  supportedFormats = ["mp3", "wav", "m4a", "mp4", "flac"],
   maxSizeMB = 250
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,6 +120,9 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
+        role="button"
+        tabIndex={0}
+        aria-label="Select audio file"
       >
         <input
           type="file"
@@ -128,6 +131,7 @@ export const EnhancedFileSelector: React.FC<FileSelectorProps> = ({
           accept={formattedFormats.map(ext => `.${ext}`).join(",")}
           onChange={handleFileChange}
           disabled={isLoading}
+          aria-label="File input"
         />
         
         <div className="flex flex-col items-center justify-center space-y-2">

@@ -8,6 +8,7 @@ import {
 import { storeKey, getKey, verifyApiKey } from "./keyManagement";
 import { transcribeAudio } from '@/lib/assemblyai/transcriber';
 import { useToast } from '@/hooks/use-toast';
+import { validateAudioFile } from '@/lib/audio/audioValidation';
 
 const initialState: AssemblyAITranscriptionHookState = {
   file: null,
@@ -215,25 +216,13 @@ export const useAssemblyAITranscription = (
    * @param file - The selected audio file
    */
   const handleFileSelected = useCallback((file: File) => {
-    // Validate file type
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-    const validTypes = ['mp3', 'mp4', 'wav', 'm4a', 'flac'];
+    // Use the updated validation utility
+    const validationResult = validateAudioFile(file);
     
-    if (!validTypes.includes(fileExt)) {
+    if (!validationResult.valid) {
       toast({
-        title: "Unsupported File Type",
-        description: `File type .${fileExt} is not supported. Please select an audio file (MP3, MP4, WAV, M4A, FLAC).`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Check file size (AssemblyAI limit is 250MB)
-    const maxSize = 250 * 1024 * 1024; // 250MB in bytes
-    if (file.size > maxSize) {
-      toast({
-        title: "File Too Large",
-        description: `File exceeds the maximum size of 250MB. Please select a smaller file.`,
+        title: "Invalid File",
+        description: validationResult.reason || "The selected file is not valid for transcription.",
         variant: "destructive",
       });
       return;
