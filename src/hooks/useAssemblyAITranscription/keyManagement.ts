@@ -1,127 +1,111 @@
 
-import { type UseToastReturn } from "./toastTypes";
-import { testApiKey } from "@/lib/assemblyai/auth";
+import { Dispatch, SetStateAction } from "react";
+import { AssemblyAITranscriptionHookState } from "./types";
 
-// Storage key for the API key
-const API_KEY_STORAGE_KEY = "assembly_ai_api_key";
+const API_KEY_STORAGE_KEY = "assemblyai-api-key";
 
 /**
- * Verifies if the provided API key is valid
+ * Store AssemblyAI API key in localStorage
+ * @param key API key to store
  */
-export const verifyApiKey = async (
-  apiKey: string,
-  setState: React.Dispatch<React.SetStateAction<any>>,
-  toast: UseToastReturn
-): Promise<boolean> => {
-  if (!apiKey.trim()) {
-    setState((prev: any) => ({
-      ...prev,
-      error: "Please enter your AssemblyAI API key",
-      keyStatus: "invalid",
-      testingKey: false
-    }));
-    toast.toast({
-      title: "API Key Required",
-      description: "Please enter your AssemblyAI API key",
-      variant: "destructive",
-    });
-    return false;
-  }
-
-  setState((prev: any) => ({
-    ...prev,
-    testingKey: true,
-    error: null
-  }));
-
+export const storeKey = (key: string): void => {
   try {
-    // Use imported testApiKey function
-    const isValid = await testApiKey(apiKey);
-
-    if (isValid) {
-      setState((prev: any) => ({
-        ...prev,
-        keyStatus: "valid",
-        testingKey: false
-      }));
-    
-      // Save the key to localStorage
-      storeKey(apiKey);
-    
-      return true;
-    } else {
-      setState((prev: any) => ({
-        ...prev,
-        keyStatus: "invalid",
-        testingKey: false,
-        error: "Invalid API key. Please check and try again."
-      }));
-    
-      toast.toast({
-        title: "Invalid API Key",
-        description: "The API key you provided seems to be invalid. Please check and try again.",
-        variant: "destructive",
-      });
-    
-      return false;
-    }
+    localStorage.setItem(API_KEY_STORAGE_KEY, key);
   } catch (error) {
-    console.error("Error testing API key:", error);
-    
-    setState((prev: any) => ({
-      ...prev,
-      keyStatus: "invalid",
-      testingKey: false,
-      error: error instanceof Error ? error.message : "Failed to verify API key"
-    }));
-    
-    toast.toast({
-      title: "Verification Failed",
-      description: error instanceof Error ? error.message : "Failed to verify API key",
-      variant: "destructive",
-    });
-    
-    return false;
+    console.error("Failed to store API key:", error);
   }
 };
 
 /**
- * Loads the API key from localStorage
+ * Retrieve AssemblyAI API key from localStorage
+ * @returns The stored API key or empty string if not found
  */
 export const getKey = (): string => {
-  if (typeof window === "undefined") return "";
-  
   try {
-    const savedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    return savedKey || "";
-  } catch (e) {
-    console.warn("Error loading API key from storage:", e);
+    return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+  } catch (error) {
+    console.error("Failed to retrieve API key:", error);
     return "";
   }
 };
 
 /**
- * Saves the API key to localStorage
+ * Clear stored API key from localStorage
  */
-export const storeKey = (apiKey: string): void => {
-  if (typeof window === "undefined") return;
-  
+export const clearKey = (): void => {
   try {
-    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
-  } catch (e) {
-    console.warn("Error saving API key to storage:", e);
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to clear API key:", error);
   }
 };
 
 /**
- * Clears the API key from localStorage
+ * Verify if an AssemblyAI API key is valid by making a test call to their API
+ * 
+ * @param apiKey The API key to verify
+ * @param setState State update function to update keyStatus
+ * @param toast Optional toast notification function
+ * @returns Boolean indicating if the key is valid
  */
-export const clearKey = (): void => {
-  if (typeof window === "undefined") return;
+export const verifyApiKey = async (
+  apiKey: string,
+  setState: Dispatch<SetStateAction<AssemblyAITranscriptionHookState>>,
+  toast?: any
+): Promise<boolean> => {
+  if (!apiKey || apiKey.trim() === "") {
+    setState(state => ({ ...state, keyStatus: "invalid", testingKey: false }));
+    return false;
+  }
 
   try {
-    localStorage.removeItem(API_KEY_STORAGE_KEY);
-  } catch (e) {
-    console.warn("Error clearing API key from storage:", e);
+    // AssemblyAI recommends using the /transcript endpoint with a GET request to validate a key
+    const response = await fetch("https://api.assemblyai.com/v2/transcript", {
+      method: "GET",
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+
+    const isValid = response.status < 400;
+    
+    setState(state => ({ 
+      ...state, 
+      keyStatus: isValid ? "valid" : "invalid", 
+      testingKey: false 
+    }));
+
+    if (isValid && toast) {
+      toast({
+        title: "API Key Valid",
+        description: "Your AssemblyAI API key is valid.",
+      });
+    } else if (!isValid && toast) {
+      toast({
+        title: "Invalid API Key",
+        description: "The API key you provided is not valid.",
+        variant: "destructive",
+      });
+    }
+
+    return isValid;
+  } catch (error) {
+    console.error("Error verifying API key:", error);
+    
+    setState(state => ({ 
+      ...state, 
+      keyStatus: "invalid", 
+      testingKey: false 
+    }));
+
+    if (toast) {
+      toast({
+        title: "Verification Failed",
+        description: "Could not verify API key. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
+    return false;
   }
 };
