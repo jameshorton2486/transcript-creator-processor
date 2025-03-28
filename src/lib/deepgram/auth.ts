@@ -12,59 +12,107 @@ const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
  * @returns Result of the validation, including validity and a descriptive message
  */
 export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult> {
-  if (!apiKey.trim()) {
-    return {
-      isValid: false,
-      message: 'API key cannot be empty',
-    };
-  }
-
   try {
-    const response = await fetch(`${DEEPGRAM_API_URL}/projects`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    console.log('[DEEPGRAM] Testing API key validity...');
 
-    if (response.ok) {
+    // Check for empty API key
+    if (!apiKey || apiKey.trim() === '') {
+      console.error('[DEEPGRAM] Empty API key provided');
       return {
-        isValid: true,
-        message: 'API key is valid',
-        statusCode: response.status,
+        isValid: false,
+        message: 'API key cannot be empty'
       };
     }
 
-    let message: string;
-    switch (response.status) {
-      case 401:
-      case 403:
-        message = 'Invalid API key or insufficient permissions';
-        break;
-      case 429:
-        message = 'Rate limit exceeded';
-        break;
-      default:
-        try {
-          const errorData = await response.json();
-          message = errorData.message || response.statusText;
-        } catch {
-          message = response.statusText || 'Unknown error';
-        }
+    // Basic format validation (Deepgram keys usually start with "dg_")
+    const trimmedKey = apiKey.trim();
+    if (!/^dg_[a-zA-Z0-9]{32,}$/.test(trimmedKey)) {
+      console.error('[DEEPGRAM] API key format appears invalid');
+      return {
+        isValid: false,
+        message: 'API key format is invalid'
+      };
     }
 
-    return {
-      isValid: false,
-      message,
-      statusCode: response.status,
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      message: error instanceof Error ? error.message : 'Network error occurred',
-      statusCode: 0,
-    };
+    // Lightweight endpoint call to test key
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(`${DEEPGRAM_API_URL}/projects`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${trimmedKey}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      console.log(`[DEEPGRAM] API key test status: ${response.status}`);
+
+      if (response.status === 401 || response.status === 403) {
+        console.error('[DEEPGRAM] Unauthorized or insufficient permissions');
+        return {
+          isValid: false,
+          message: 'API key is invalid or lacks permissions',
+          statusCode: response.status
+        };
+      }
+
+      if (response.status === 429) {
+        console.warn('[DEEPGRAM] API key valid but rate limited');
+        return {
+          isValid: true,
+          message: 'API key is valid but rate limited',
+          statusCode: 429
+        };
+      }
+
+      if (!response.ok) {
+        console.warn(`[DEEPGRAM] Unexpected status ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        return {
+          isValid: false,
+          message: errorData?.message || `Unexpected error (${response.status})`,
+          statusCode: response.status
+        };
+      }
+
+      console.log('[DEEPGRAM] API key is valid');
+      return {
+        isValid: true,
+        message: 'API key is valid',
+        statusCode: response.status
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+      console.error('[DEEPGRAM] API key test timed out');
+      return {
+        isValid: false,
+        message: 'API key validation timed out'
+      };
+    } else if (error.message && (
+      error.message.includes('network') || 
+      error.message.includes('fetch') ||
+      error.message.includes('connect')
+    )) {
+      console.error('[DEEPGRAM] Network error during API key test:', error);
+      return {
+        isValid: false,
+        message: 'Network error, please check your connection'
+      };
+    } else {
+      console.error('[DEEPGRAM] Unexpected error:', error);
+      return {
+        isValid: false,
+        message: `Unexpected error: ${error.message || 'Unknown error'}`
+      };
+    }
   }
 }
 
