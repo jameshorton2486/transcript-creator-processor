@@ -3,15 +3,18 @@
  * React hook for managing audio transcription with Deepgram API
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { transcribeAudioFile, testApiKey } from '../../lib/deepgram/transcriber';
-import { retrieveStoredApiKey, storeApiKey } from '../../lib/deepgram/auth';
+import { transcribeAudioFile } from '../../lib/deepgram/transcriber';
+import { retrieveStoredApiKey, storeApiKey, testApiKey } from '../../lib/deepgram/auth';
 import {
   DeepgramTranscriptionOptions,
   DeepgramTranscriptionHookState,
   UseDeepgramTranscriptionReturn,
 } from './types';
 
-export function useDeepgramTranscription(): UseDeepgramTranscriptionReturn {
+export function useDeepgramTranscription(
+  onTranscriptCreated?: (transcript: string, jsonData: any, file?: File) => void,
+  initialOptions?: Partial<DeepgramTranscriptionOptions>
+): UseDeepgramTranscriptionReturn {
   const [state, setState] = useState<DeepgramTranscriptionHookState>({
     file: null,
     isLoading: false,
@@ -23,7 +26,7 @@ export function useDeepgramTranscription(): UseDeepgramTranscriptionReturn {
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const optionsRef = useRef<DeepgramTranscriptionOptions>({});
+  const optionsRef = useRef<DeepgramTranscriptionOptions>(initialOptions || {});
 
   useEffect(() => {
     const storedKey = retrieveStoredApiKey();
@@ -42,7 +45,7 @@ export function useDeepgramTranscription(): UseDeepgramTranscriptionReturn {
   }, []);
 
   const handleFileSelected = useCallback((file: File) => {
-    setState(prev => ({ ...prev, file, error: null, progress: 0 }));
+    setState(prev => ({ ...prev, file, error: null, progress: 0, result: undefined }));
   }, []);
 
   const handleTestApiKey = useCallback(async (keyToTest?: string): Promise<boolean> => {
@@ -119,6 +122,15 @@ export function useDeepgramTranscription(): UseDeepgramTranscriptionReturn {
         progress: 100,
         result
       }));
+
+      // Call onTranscriptCreated callback if provided
+      if (onTranscriptCreated && result) {
+        onTranscriptCreated(
+          result.transcript, 
+          result.rawResponse, 
+          state.file
+        );
+      }
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -129,7 +141,7 @@ export function useDeepgramTranscription(): UseDeepgramTranscriptionReturn {
     } finally {
       abortControllerRef.current = null;
     }
-  }, [state.file, state.apiKey, state.keyStatus, handleTestApiKey]);
+  }, [state.file, state.apiKey, state.keyStatus, handleTestApiKey, onTranscriptCreated]);
 
   const cancelTranscription = useCallback(() => {
     abortControllerRef.current?.abort();
