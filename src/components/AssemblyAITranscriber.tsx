@@ -96,7 +96,7 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Transcribing ({progress}%)
+              Transcribing {progress > 0 && progress < 100 ? `(${Math.round(progress)}%)` : '...'}
             </>
           ) : (
             <>

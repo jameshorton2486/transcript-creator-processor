@@ -88,7 +88,14 @@ export const transcribeAudio = async (
       console.log('[ASSEMBLY] Transcription complete:', result);
       
       // Format result to match expected structure for the app
-      return formatTranscriptionResult(result, file.name);
+      const formattedResult = formatTranscriptionResult(result, file.name);
+      
+      // Ensure the text property is properly set
+      if (!formattedResult.text && result.text) {
+        formattedResult.text = result.text;
+      }
+      
+      return formattedResult;
     } finally {
       clearTimeout(timeoutId);
     }

@@ -47,7 +47,37 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
   };
 
   const handleTestApiKey = async () => {
-    await verifyApiKey(state.apiKey, setState, { toast });
+    if (!state.apiKey.trim()) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your AssemblyAI API key first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setState(prevState => ({ ...prevState, testingKey: true }));
+    
+    try {
+      const isValid = await verifyApiKey(state.apiKey, setState, { toast });
+      
+      if (isValid) {
+        storeKey(state.apiKey);
+      }
+    } catch (error) {
+      console.error("API key verification error:", error);
+      setState(prevState => ({ 
+        ...prevState, 
+        testingKey: false,
+        keyStatus: "invalid" 
+      }));
+      
+      toast({
+        title: "API Key Verification Failed",
+        description: error instanceof Error ? error.message : "Failed to verify API key",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileSelected = (file: File) => {
@@ -109,7 +139,15 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
         ...prevState,
         isLoading: false,
         error: null,
+        progress: 100
       }));
+
+      console.log("Transcription result:", result);
+      
+      // Make sure we have valid text to pass to the callback
+      if (!result || (typeof result.text !== 'string') || result.text.trim() === '') {
+        throw new Error("Invalid transcription result returned");
+      }
 
       // Call the callback with the transcript text and full result data
       onTranscriptCreated(result.text, result, state.file);
@@ -124,6 +162,7 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
         ...prevState,
         isLoading: false,
         error: error.message || "Failed to transcribe audio.",
+        progress: 0
       }));
       toast({
         title: "Transcription failed",
