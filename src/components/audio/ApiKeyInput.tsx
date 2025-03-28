@@ -39,24 +39,27 @@ export const ApiKeyInput = ({
 
     setIsTesting(true);
     try {
-      // Test the API key
-      const isValid = await testApiKey(apiKey);
+      // Test the API key with improved validation
+      const result = await testApiKey(apiKey);
       
       // Call the onVerify callback if provided
       if (onVerify) {
-        onVerify(isValid);
+        onVerify(result.isValid);
       }
       
-      // Show toast notification
-      if (isValid) {
+      // Show detailed toast notification
+      if (result.isValid) {
         toast({
           title: "API Key Valid",
-          description: `Your ${provider} API key is valid.`
+          description: result.statusCode === 429 
+            ? `Your ${provider} API key is valid but rate limited.` 
+            : `Your ${provider} API key is valid.`,
+          variant: result.statusCode === 429 ? "warning" : "default"
         });
       } else {
         toast({
           title: "Invalid API Key",
-          description: `The ${provider} API key you provided is not valid.`,
+          description: result.message || `The ${provider} API key you provided is not valid.`,
           variant: "destructive"
         });
       }

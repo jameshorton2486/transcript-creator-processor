@@ -21,7 +21,7 @@ export const ReviewApiKeyInput = ({ apiKey, setApiKey, visible }: ApiKeyInputPro
     if (apiKey && apiKey.length > 10) {
       // In a real implementation, this would securely store the key
       // in a user's authenticated session or encrypted storage
-      localStorage.setItem('temp_openai_key', apiKey);
+      sessionStorage.setItem('openai_api_key', apiKey);
       setIsSaved(true);
       setShowAlert(false);
       

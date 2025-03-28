@@ -57,28 +57,35 @@ export const verifyApiKey = async (
   // Use the centralized testApiKey function from lib/assemblyai/auth.ts
   try {
     console.log('[ASSEMBLY] Verifying API key...');
-    const isValid = await testApiKey(apiKey);
+    const result = await testApiKey(apiKey);
     
     // Update state based on validation result
-    setState(state => ({ ...state, keyStatus: isValid ? "valid" : "invalid", testingKey: false }));
+    setState(state => ({ 
+      ...state, 
+      keyStatus: result.isValid ? "valid" : "invalid", 
+      testingKey: false 
+    }));
     
     // Display appropriate toast notifications
     if (toast) {
-      if (isValid) {
+      if (result.isValid) {
         toast({
           title: "API Key Valid",
-          description: "Your AssemblyAI API key is valid.",
+          description: result.statusCode === 429 
+            ? "Your AssemblyAI API key is valid but rate limited." 
+            : "Your AssemblyAI API key is valid.",
+          variant: result.statusCode === 429 ? "warning" : "default",
         });
       } else {
         toast({
           title: "Invalid API Key",
-          description: "The API key you provided is not valid.",
+          description: result.message || "The API key you provided is not valid.",
           variant: "destructive",
         });
       }
     }
     
-    return isValid;
+    return result.isValid;
   } catch (error) {
     console.error("Error verifying API key:", error);
     
