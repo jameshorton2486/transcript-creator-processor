@@ -18,7 +18,7 @@
  * This setup is designed as a seamless drop-in replacement for AssemblyAI integrations.
  */
 
-// Export core functionality
+// Export core functionality for file-based transcription only (not URL)
 export { formatTranscriptionResult } from './formatter';
 export {
   transcribeAudioFile,
@@ -32,7 +32,7 @@ export {
 } from './auth';
 
 /**
- * Helper functions for model name mapping between different services
+ * Helper function to map AssemblyAI model names to Deepgram equivalents
  */
 export function mapModelName(assemblyModel?: string): string {
   const modelMap: Record<string, string> = {
