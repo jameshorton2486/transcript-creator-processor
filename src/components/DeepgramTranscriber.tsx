@@ -1,8 +1,7 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDeepgramTranscription } from '@/hooks/useDeepgramTranscription';
 import { TranscriptionResult } from '@/hooks/useDeepgramTranscription/types';
-import { ApiKeyInput } from '@/components/audio/ApiKeyInput';
+import { DeepgramApiKeyInput } from '@/components/deepgram/DeepgramApiKeyInput';
 import { EnhancedFileSelector } from '@/components/audio/EnhancedFileSelector';
 import { EnhancedProgressIndicator } from '@/components/audio/EnhancedProgressIndicator';
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,6 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
     { apiKey: initialApiKey }
   );
 
-  // Handle transcription and update local state
   const handleTranscribe = useCallback(async () => {
     try {
       const result = await transcribeAudioFile();
@@ -86,7 +84,6 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
   );
 
   const handleVerifyKey = useCallback((isValid: boolean) => {
-    // This function handles the verification result from ApiKeyInput
     if (isValid) {
       toast({
         title: "API Key Valid",
@@ -105,14 +102,13 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
       </div>
 
       <Card className="p-4">
-        <ApiKeyInput
+        <DeepgramApiKeyInput
           apiKey={apiKey}
           setApiKey={setApiKey}
+          handleTestApiKey={handleTestApiKey}
           keyStatus={keyStatus}
-          isDisabled={isLoading}
-          provider="Deepgram"
-          onVerify={handleVerifyKey}
-          errorMessage={keyErrorMessage}
+          testingKey={testingKey}
+          keyErrorMessage={keyErrorMessage}
         />
       </Card>
 

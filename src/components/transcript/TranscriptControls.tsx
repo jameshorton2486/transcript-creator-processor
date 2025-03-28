@@ -1,10 +1,13 @@
 
 import { AssemblyAITranscriber } from "@/components/AssemblyAITranscriber";
+import DeepgramTranscriber from "@/components/DeepgramTranscriber";
 import { TranscriptProcessor } from "@/components/TranscriptProcessor";
 import { TranscriptReviewer } from "@/components/TranscriptReviewer";
 import { ClearTranscriptButton } from "@/components/transcript/ClearTranscriptButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AudioLines, Wand2, Sparkles } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 
 interface TranscriptControlsProps {
   originalTranscript: string;
@@ -28,6 +31,7 @@ export const TranscriptControls = ({
   setIsReviewing,
 }: TranscriptControlsProps) => {
   const hasTranscript = originalTranscript || processedTranscript;
+  const [activeTab, setActiveTab] = useState<string>("deepgram");
   
   return (
     <div className="h-full flex flex-col space-y-5">
@@ -39,9 +43,22 @@ export const TranscriptControls = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <AssemblyAITranscriber 
-            onTranscriptCreated={onTranscriptCreated} 
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="deepgram">Deepgram</TabsTrigger>
+              <TabsTrigger value="assemblyai">AssemblyAI</TabsTrigger>
+            </TabsList>
+            <TabsContent value="deepgram">
+              <DeepgramTranscriber 
+                onTranscriptionComplete={(result) => onTranscriptCreated(result.transcript, result.rawResponse, null)}
+              />
+            </TabsContent>
+            <TabsContent value="assemblyai">
+              <AssemblyAITranscriber 
+                onTranscriptCreated={onTranscriptCreated} 
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
       
