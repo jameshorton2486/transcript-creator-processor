@@ -1,12 +1,12 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { 
   AssemblyAITranscriptionHookState, 
   AssemblyAITranscriptionOptions,
   UseAssemblyAITranscriptionReturn
 } from "./types";
-import { storeKey, getKey, clearKey, verifyApiKey } from "./keyManagement";
+import { storeKey, getKey, verifyApiKey } from "./keyManagement";
 import { transcribeAudio } from '@/lib/assemblyai/transcriber';
-import { safePromise } from '@/hooks/useTranscription/promiseUtils';
 import { useToast } from '@/hooks/use-toast';
 
 const initialState: AssemblyAITranscriptionHookState = {
@@ -46,11 +46,11 @@ export const useAssemblyAITranscription = (
     }
   }, []);
 
-  const setApiKey = (apiKey: string) => {
+  const setApiKey = useCallback((apiKey: string) => {
     setState(prevState => ({ ...prevState, apiKey }));
-  };
+  }, []);
 
-  const handleTestApiKey = async () => {
+  const handleTestApiKey = useCallback(async () => {
     if (!state.apiKey.trim()) {
       toast({
         title: "API Key Required",
@@ -82,29 +82,29 @@ export const useAssemblyAITranscription = (
         variant: "destructive",
       });
     }
-  };
+  }, [state.apiKey, toast]);
 
-  const handleFileSelected = (file: File) => {
+  const handleFileSelected = useCallback((file: File) => {
     setState(prevState => ({
       ...prevState,
       file: file,
       error: null,
     }));
-  };
+  }, []);
 
-  const setError = (error: string | null) => {
+  const setError = useCallback((error: string | null) => {
     setState(prevState => ({ ...prevState, error }));
-  };
+  }, []);
 
-  const setOptions = (newOptions: Partial<AssemblyAITranscriptionOptions>) => {
+  const setOptions = useCallback((newOptions: Partial<AssemblyAITranscriptionOptions>) => {
     setTranscriptionOptions(prev => ({
       ...prev,
       ...newOptions
     }));
-  };
+  }, []);
 
   // Helper function to calculate estimated time remaining
-  const updateEstimatedTimeRemaining = (progress: number, startTime: number) => {
+  const updateEstimatedTimeRemaining = useCallback((progress: number, startTime: number) => {
     if (progress <= 0 || progress >= 100) {
       setState(prevState => ({ ...prevState, estimatedTimeRemaining: undefined }));
       return;
@@ -122,9 +122,9 @@ export const useAssemblyAITranscription = (
     }
     
     setState(prevState => ({ ...prevState, estimatedTimeRemaining: timeString }));
-  };
+  }, []);
 
-  const transcribeAudioFile = async () => {
+  const transcribeAudioFile = useCallback(async () => {
     if (!state.file) {
       setError("Please select a file to transcribe.");
       toast({
@@ -209,9 +209,9 @@ export const useAssemblyAITranscription = (
         variant: "destructive",
       });
     }
-  };
+  }, [state.file, state.apiKey, options, toast, onTranscriptCreated, setError, updateEstimatedTimeRemaining]);
 
-  const cancelTranscription = () => {
+  const cancelTranscription = useCallback(() => {
     setState(prevState => ({ 
       ...prevState, 
       isLoading: false, 
@@ -223,7 +223,7 @@ export const useAssemblyAITranscription = (
       title: "Transcription cancelled",
       description: "The transcription process has been cancelled.",
     });
-  };
+  }, [toast]);
 
   return {
     ...state,
