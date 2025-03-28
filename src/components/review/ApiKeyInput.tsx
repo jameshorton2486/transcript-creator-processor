@@ -46,13 +46,12 @@ export const ReviewApiKeyInput = ({ apiKey, setApiKey, visible }: ApiKeyInputPro
         <div className="relative">
           <Textarea
             placeholder="Enter your OpenAI API key here"
-            value={apiKey}
+            value={showKey ? apiKey : apiKey.replace(/./g, '•')}
             onChange={(e) => {
               setApiKey(e.target.value);
               setShowAlert(false);
             }}
             className="w-full text-sm font-mono pr-10"
-            type={showKey ? "text" : "password"}
           />
           <button
             type="button"
