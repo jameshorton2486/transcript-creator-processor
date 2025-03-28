@@ -1,9 +1,7 @@
 
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_TRANSCRIPTION_OPTIONS, TranscriptionOptions } from "@/lib/config";
+import { useToast } from "@/hooks/use-toast";
 import { TranscriptionHookState, UseTranscriptionReturn } from "./types";
-import { performTranscription } from "./transcription";
 
 export const useTranscription = (onTranscriptCreated: (transcript: string, jsonData: any) => void): UseTranscriptionReturn => {
   const [state, setState] = useState<TranscriptionHookState>({
@@ -16,9 +14,12 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     documentFiles: [],
   });
   
-  const [options, setOptions] = useState<TranscriptionOptions>({
-    ...DEFAULT_TRANSCRIPTION_OPTIONS,
+  const [options, setOptions] = useState({
+    punctuate: true,
+    speakerLabels: true,
+    formatText: true
   });
+  
   const [customTerms, setCustomTerms] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -27,7 +28,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
       ...prev,
       file: selectedFile,
       error: null,
-      isBatchProcessing: selectedFile.size > 200 * 1024 * 1024 // 200MB
+      isBatchProcessing: false
     }));
     
     // Log file info for diagnostics
@@ -41,20 +42,13 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
   };
 
   const transcribeAudioFile = async () => {
-    const { file, apiKey } = state;
+    toast({
+      title: "Google Speech-to-Text removed",
+      description: "This application now only supports transcription via AssemblyAI.",
+      variant: "destructive",
+    });
     
-    await performTranscription(
-      file,
-      apiKey,
-      options,
-      customTerms,
-      (progress) => setState(prev => ({ ...prev, progress })),
-      (isLoading) => setState(prev => ({ ...prev, isLoading })),
-      (isBatchProcessing) => setState(prev => ({ ...prev, isBatchProcessing })),
-      (error) => setState(prev => ({ ...prev, error })),
-      onTranscriptCreated,
-      toast
-    );
+    setState(prev => ({ ...prev, error: "Google Speech-to-Text has been removed. Please use AssemblyAI transcription instead." }));
   };
 
   const setApiKey = (apiKey: string) => {
@@ -65,8 +59,7 @@ export const useTranscription = (onTranscriptCreated: (transcript: string, jsonD
     setState(prev => ({ ...prev, error }));
   };
 
-  // Custom setter function to properly handle TranscriptionOptions
-  const updateOptions = (newOptions: Partial<TranscriptionOptions>) => {
+  const updateOptions = (newOptions: any) => {
     setOptions(current => ({
       ...current,
       ...newOptions,

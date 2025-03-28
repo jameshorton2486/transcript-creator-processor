@@ -43,3 +43,30 @@ export interface AssemblyAITranscriptionRequest {
   format_text?: boolean;
   model?: string;
 }
+
+/**
+ * Additional types exported for broader application use
+ */
+export interface SpeakerSegment {
+  speaker: string;
+  text: string;
+  start: number;
+  end: number;
+}
+
+export interface FormattedTranscript {
+  plainText: string;
+  speakerSegments?: SpeakerSegment[];
+  wordTimestamps?: Array<{
+    word: string;
+    start: number;
+    end: number;
+    speaker?: string;
+  }>;
+}
+
+export interface TranscriptionResult {
+  transcript: string;
+  formattedResult?: FormattedTranscript;
+  rawResponse: AssemblyAITranscriptionResponse;
+}
