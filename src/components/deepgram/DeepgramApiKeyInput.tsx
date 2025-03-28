@@ -1,10 +1,12 @@
 
 import { useState, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, KeyRound, Save, Eye, EyeOff, Check } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ApiKeyValidator } from "./ApiKeyValidator";
+import { ApiKeyVisibilityToggle } from "./ApiKeyVisibilityToggle";
+import { ApiKeySaveButton } from "./ApiKeySaveButton";
+import { ApiKeyInfoFooter } from "./ApiKeyInfoFooter";
 
 interface DeepgramApiKeyInputProps {
   apiKey: string;
@@ -108,14 +110,7 @@ export const DeepgramApiKeyInput = ({
             }}
             className="w-full text-sm font-mono pr-10"
           />
-          <button
-            type="button"
-            onClick={() => setShowKey(!showKey)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-            aria-label={showKey ? "Hide API key" : "Show API key"}
-          >
-            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
+          <ApiKeyVisibilityToggle showKey={showKey} setShowKey={setShowKey} />
         </div>
         
         <div className="flex justify-between items-center">
@@ -123,69 +118,23 @@ export const DeepgramApiKeyInput = ({
             Your API key is stored locally and used only for transcription requests.
           </p>
           
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleSaveKey}
-            className="gap-1"
-            disabled={testingKey || apiKey.length < 16}
-          >
-            {testingKey ? (
-              <>
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></span>
-                Validating...
-              </>
-            ) : isSaved ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-green-500" />
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                Save Key
-              </>
-            )}
-          </Button>
+          <ApiKeySaveButton 
+            handleSaveKey={handleSaveKey}
+            testingKey={testingKey}
+            isSaved={isSaved}
+            disabled={apiKey.length < 20}
+          />
         </div>
       </div>
       
-      {showAlert && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {keyErrorMessage || "Please enter a valid Deepgram API key"}
-          </AlertDescription>
-        </Alert>
-      )}
+      <ApiKeyValidator 
+        keyStatus={keyStatus} 
+        keyErrorMessage={keyErrorMessage} 
+        keyFormatValid={keyFormatValid} 
+        showAlert={showAlert} 
+      />
       
-      {keyStatus === "valid" && !showAlert && (
-        <Alert variant="default" className="bg-green-50 text-green-800 border-green-200 py-2">
-          <AlertDescription>
-            API key is valid and has been saved
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {keyFormatValid && !keyStatus && !showAlert && (
-        <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200 py-2">
-          <AlertDescription>
-            API key format appears valid. API validation was skipped due to a network issue.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="flex items-center justify-between text-xs text-slate-500 border-t pt-2 mt-2">
-        <span>Need a Deepgram API key?</span>
-        <a 
-          href="https://console.deepgram.com/signup" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
-        >
-          Get one from Deepgram
-        </a>
-      </div>
+      <ApiKeyInfoFooter />
     </div>
   );
 };
