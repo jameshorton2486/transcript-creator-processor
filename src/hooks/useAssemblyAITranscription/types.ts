@@ -11,6 +11,7 @@ export interface AssemblyAITranscriptionHookState {
   apiKey: string;
   keyStatus: "untested" | "valid" | "invalid";
   testingKey: boolean;
+  estimatedTimeRemaining?: string;
 }
 
 export interface AssemblyAITranscriptionOptions {
@@ -18,6 +19,7 @@ export interface AssemblyAITranscriptionOptions {
   speakerLabels?: boolean;
   punctuate?: boolean;
   formatText?: boolean;
+  model?: 'default' | 'standard' | 'enhanced' | 'nova2';
 }
 
 export interface TranscriptionResult {

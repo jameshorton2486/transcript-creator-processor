@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   AssemblyAITranscriptionHookState, 
   AssemblyAITranscriptionOptions,
@@ -17,16 +17,21 @@ const initialState: AssemblyAITranscriptionHookState = {
   progress: 0,
   apiKey: "",
   keyStatus: "untested",
-  testingKey: false
+  testingKey: false,
+  estimatedTimeRemaining: undefined
 };
 
-export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void): UseAssemblyAITranscriptionReturn => {
+export const useAssemblyAITranscription = (
+  onTranscriptCreated: (transcript: string, jsonData: any, file?: File) => void,
+  initialOptions?: Partial<AssemblyAITranscriptionOptions>
+): UseAssemblyAITranscriptionReturn => {
   const [state, setState] = useState<AssemblyAITranscriptionHookState>(initialState);
   const [options, setTranscriptionOptions] = useState<AssemblyAITranscriptionOptions>({
     language: 'en',
-    speakerLabels: false,
+    speakerLabels: initialOptions?.speakerLabels ?? true,
     punctuate: true,
     formatText: true,
+    model: initialOptions?.model ?? 'default',
   });
   const { toast } = useToast();
   
@@ -99,6 +104,27 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
     }));
   };
 
+  // Helper function to calculate estimated time remaining
+  const updateEstimatedTimeRemaining = (progress: number, startTime: number) => {
+    if (progress <= 0 || progress >= 100) {
+      setState(prevState => ({ ...prevState, estimatedTimeRemaining: undefined }));
+      return;
+    }
+    
+    const elapsedMs = Date.now() - startTime;
+    const totalEstimatedMs = (elapsedMs / progress) * 100;
+    const remainingMs = totalEstimatedMs - elapsedMs;
+    
+    let timeString = "";
+    if (remainingMs > 60000) {
+      timeString = `~${Math.ceil(remainingMs / 60000)} min`;
+    } else {
+      timeString = `~${Math.ceil(remainingMs / 1000)} sec`;
+    }
+    
+    setState(prevState => ({ ...prevState, estimatedTimeRemaining: timeString }));
+  };
+
   const transcribeAudioFile = async () => {
     if (!state.file) {
       setError("Please select a file to transcribe.");
@@ -120,7 +146,15 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
       return;
     }
 
-    setState(prevState => ({ ...prevState, isLoading: true, error: null, progress: 0 }));
+    setState(prevState => ({ 
+      ...prevState, 
+      isLoading: true, 
+      error: null, 
+      progress: 0,
+      estimatedTimeRemaining: undefined 
+    }));
+
+    const startTime = Date.now();
 
     try {
       const result = await transcribeAudio(
@@ -131,7 +165,11 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
           speakerLabels: options.speakerLabels,
           punctuate: options.punctuate,
           formatText: options.formatText,
-          onProgress: (progress: number) => setState(prevState => ({ ...prevState, progress })),
+          model: options.model,
+          onProgress: (progress: number) => {
+            setState(prevState => ({ ...prevState, progress }));
+            updateEstimatedTimeRemaining(progress, startTime);
+          },
         }
       );
 
@@ -139,7 +177,8 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
         ...prevState,
         isLoading: false,
         error: null,
-        progress: 100
+        progress: 100,
+        estimatedTimeRemaining: undefined
       }));
 
       console.log("Transcription result:", result);
@@ -162,7 +201,8 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
         ...prevState,
         isLoading: false,
         error: error.message || "Failed to transcribe audio.",
-        progress: 0
+        progress: 0,
+        estimatedTimeRemaining: undefined
       }));
       toast({
         title: "Transcription failed",
@@ -176,7 +216,8 @@ export const useAssemblyAITranscription = (onTranscriptCreated: (transcript: str
     setState(prevState => ({ 
       ...prevState, 
       isLoading: false, 
-      progress: 0 
+      progress: 0,
+      estimatedTimeRemaining: undefined
     }));
     
     toast({

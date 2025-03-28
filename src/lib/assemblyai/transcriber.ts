@@ -24,6 +24,7 @@ export const transcribeAudio = async (
       speakerLabels = false,
       punctuate = true,
       formatText = true,
+      model = 'default',
       onProgress = () => {},
       abortSignal
     } = options;
@@ -33,7 +34,7 @@ export const transcribeAudio = async (
       throw new Error('API key is required');
     }
     
-    console.log(`[ASSEMBLY] Starting transcription for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+    console.log(`[ASSEMBLY] Starting transcription for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) using model: ${model}`);
     onProgress(0);
     
     // Check if operation was aborted
@@ -66,11 +67,18 @@ export const transcribeAudio = async (
       onProgress(30);
       console.log('[ASSEMBLY] Submitting transcription request...');
       
+      // Map model values to AssemblyAI model names
+      let modelName = undefined;
+      if (model === 'enhanced') modelName = 'nova';
+      else if (model === 'nova2') modelName = 'nova-2';
+      else if (model === 'standard') modelName = 'standard';
+      
       const transcriptionId = await submitTranscription(uploadUrl, apiKey, {
         language_code: language,
         speaker_labels: speakerLabels,
         punctuate: punctuate,
-        format_text: formatText
+        format_text: formatText,
+        model: modelName
       }, signal);
       
       // Step 3: Poll for the transcription result

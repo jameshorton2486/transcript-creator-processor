@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Mic, FileAudio, AlertCircle, Upload, File, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,9 +9,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 interface FileSelectorProps {
   onFileSelected: (file: File) => void;
   isLoading: boolean;
+  supportedFormats?: string[];
+  maxSizeMB?: number;
 }
 
-export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) => {
+export const FileSelector = ({ 
+  onFileSelected, 
+  isLoading, 
+  supportedFormats = ["mp3", "wav", "flac", "m4a"], 
+  maxSizeMB = 100 
+}: FileSelectorProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -21,7 +28,20 @@ export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) =
       const selectedFile = e.target.files[0];
       setError(null);
       
+      // Check file type
       if (selectedFile.type.startsWith("audio/") || selectedFile.type.startsWith("video/")) {
+        // Check file size if maxSizeMB is provided
+        if (maxSizeMB && (selectedFile.size > maxSizeMB * 1024 * 1024)) {
+          const errorMsg = `File is too large. Maximum size is ${maxSizeMB}MB.`;
+          setError(errorMsg);
+          toast({
+            title: "File too large",
+            description: errorMsg,
+            variant: "destructive",
+          });
+          return;
+        }
+        
         setFile(selectedFile);
         onFileSelected(selectedFile);
         console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
@@ -46,6 +66,9 @@ export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) =
     }
   };
 
+  // Format the supported formats string
+  const formatSupported = supportedFormats.map(format => format.toUpperCase()).join(', ');
+
   return (
     <>
       <div className="flex flex-col items-center p-6 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50/80 hover:bg-slate-50 transition-colors">
@@ -60,10 +83,11 @@ export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) =
           accept="audio/*,video/*"
           className="hidden"
           onChange={handleFileChange}
+          disabled={isLoading}
         />
         <label
           htmlFor="audio-file"
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 cursor-pointer transition-colors"
+          className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 cursor-pointer transition-colors ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <FileAudio className="h-4 w-4" />
           Select Audio File
@@ -71,7 +95,7 @@ export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) =
         
         <div className="flex items-center mt-4">
           <p className="text-xs text-slate-500">
-            Supports MP3, WAV, FLAC, M4A and most audio/video formats
+            Supports {formatSupported} and most audio/video formats
           </p>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -81,7 +105,7 @@ export const FileSelector = ({ onFileSelected, isLoading }: FileSelectorProps) =
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               <p className="text-xs">
-                Recommended for best results: WAV or MP3 files under 100MB with clear audio.
+                Recommended for best results: WAV or MP3 files under {maxSizeMB}MB with clear audio.
               </p>
             </TooltipContent>
           </Tooltip>
