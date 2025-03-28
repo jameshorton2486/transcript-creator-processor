@@ -28,6 +28,7 @@ export function useDeepgramTranscription(
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const optionsRef = useRef<DeepgramTranscriptionOptions>(initialOptions || {});
+  const resultRef = useRef<TranscriptionResult | null>(null);
 
   useEffect(() => {
     const storedKey = retrieveStoredApiKey();
@@ -38,7 +39,11 @@ export function useDeepgramTranscription(
   }, []);
 
   const setApiKey = useCallback((key: string) => {
-    setState(prev => ({ ...prev, apiKey: key }));
+    setState(prev => ({ 
+      ...prev, 
+      apiKey: key,
+      keyStatus: key !== prev.apiKey ? 'untested' : prev.keyStatus
+    }));
   }, []);
 
   const setOptions = useCallback((options: Partial<DeepgramTranscriptionOptions>) => {
@@ -116,6 +121,8 @@ export function useDeepgramTranscription(
         onProgress,
         abortSignal: abortControllerRef.current.signal,
       });
+
+      resultRef.current = result;
 
       setState(prev => ({ 
         ...prev, 
