@@ -26,7 +26,7 @@ export const TranscriptReviewer = ({
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const { toast } = useToast();
   
-  // Use our new AI transcript review hook
+  // Use our AI transcript review hook
   const { 
     reviewTranscript, 
     error: reviewError, 
