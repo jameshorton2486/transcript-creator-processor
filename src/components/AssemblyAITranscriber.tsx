@@ -44,7 +44,6 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
     setApiKey,
     cancelTranscription,
     handleTestApiKey,
-    setOptions,
     estimatedTimeRemaining
   } = useAssemblyAITranscription(onTranscriptCreated, {
     model: transcriptionModel as any,
@@ -59,17 +58,6 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
   
   // Calculate if file is too large (over 100MB)
   const isFileTooLarge = file && file.size > 100 * 1024 * 1024;
-
-  // Update options when they change
-  const handleModelChange = (value: string) => {
-    setTranscriptionModel(value);
-    setOptions({ model: value as any });
-  };
-
-  const handleSpeakerLabelsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEnableSpeakerLabels(e.target.checked);
-    setOptions({ speakerLabels: e.target.checked });
-  };
 
   return (
     <Card className="bg-white shadow-md">
@@ -181,7 +169,7 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
                 <Label htmlFor="transcription-model">Transcription Model</Label>
                 <Select 
                   value={transcriptionModel}
-                  onValueChange={handleModelChange}
+                  onValueChange={setTranscriptionModel}
                   disabled={isLoading}
                 >
                   <SelectTrigger id="transcription-model">
@@ -204,7 +192,7 @@ export const AssemblyAITranscriber = ({ onTranscriptCreated }: AssemblyAITranscr
                   type="checkbox"
                   id="speaker-labels"
                   checked={enableSpeakerLabels}
-                  onChange={handleSpeakerLabelsChange}
+                  onChange={(e) => setEnableSpeakerLabels(e.target.checked)}
                   disabled={isLoading}
                   className="rounded"
                 />

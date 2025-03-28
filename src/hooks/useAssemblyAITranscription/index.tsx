@@ -1,6 +1,4 @@
-
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useCallback, useRef, useEffect } from "react";
 import { 
   AssemblyAITranscriptionHookState, 
   AssemblyAITranscriptionOptions,
@@ -9,6 +7,7 @@ import {
 import { storeKey, getKey, clearKey, verifyApiKey } from "./keyManagement";
 import { transcribeAudio } from '@/lib/assemblyai/transcriber';
 import { safePromise } from '@/hooks/useTranscription/promiseUtils';
+import { useToast } from '@/hooks/use-toast';
 
 const initialState: AssemblyAITranscriptionHookState = {
   file: null,
