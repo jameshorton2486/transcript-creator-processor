@@ -21,20 +21,24 @@ export const validateAudioFile = (file: File): { valid: boolean; reason?: string
     };
   }
 
-  // Check file type - only the specifically supported formats
+  // Check file type - support more media formats
   const validTypes = [
     'audio/wav', 'audio/x-wav',
     'audio/mp3', 'audio/mpeg',
     'audio/flac',
     'audio/m4a', 'audio/x-m4a',
-    'video/mp4', 'video/quicktime'
+    'audio/aac', 'audio/ogg',
+    'video/mp4', 'video/quicktime', 'video/webm'
   ];
   
+  const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+  const validExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'mp4', 'mov', 'webm'];
+  
   if (!validTypes.includes(file.type) && 
-      !file.name.match(/\.(wav|mp3|flac|m4a|mp4)$/i)) {
+      !validExtensions.includes(fileExtension)) {
     return { 
       valid: false, 
-      reason: `File type "${file.type || 'unknown'}" is not supported. Please use MP3, MP4, WAV, M4A, or FLAC format.` 
+      reason: `File type "${file.type || 'unknown'}" is not supported. Please use MP3, MP4, WAV, M4A, FLAC, OGG, AAC, etc.` 
     };
   }
 

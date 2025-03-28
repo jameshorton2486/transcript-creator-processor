@@ -53,6 +53,13 @@ export async function reviewWithOpenAI(
   const systemPrompt = buildReviewPrompt(rules, examples);
   
   try {
+    console.log("Sending transcript to OpenAI for review:", {
+      transcriptLength: transcript.length,
+      rulesCount: rules.length,
+      examplesCount: examples.length,
+      model: DEFAULT_CONFIG.model
+    });
+    
     // Prepare the API request
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -79,7 +86,16 @@ export async function reviewWithOpenAI(
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const result = data.choices[0].message.content;
+    
+    // Log result summary
+    console.log("OpenAI review complete:", {
+      originalLength: transcript.length,
+      resultLength: result.length,
+      success: result.length > 0
+    });
+    
+    return result;
   } catch (error) {
     console.error("Error reviewing transcript with OpenAI:", error);
     throw error;

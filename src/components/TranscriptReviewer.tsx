@@ -107,8 +107,18 @@ export const TranscriptReviewer = ({
         description: toastDescription,
       });
       
+      console.log("Starting OpenAI transcript review with:", {
+        transcriptLength: transcript?.length,
+        rulesCount: activeRules.length,
+        examplesCount: activeExamples.length
+      });
+      
       // Make the actual API call to OpenAI for review
       const reviewedText = await reviewWithOpenAI(transcript, activeRules, activeExamples, apiKey);
+      
+      if (!reviewedText || reviewedText.trim().length === 0) {
+        throw new Error("OpenAI returned an empty response. Please try again.");
+      }
       
       onReviewComplete(reviewedText);
       

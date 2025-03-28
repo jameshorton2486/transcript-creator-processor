@@ -19,6 +19,31 @@ export async function transcribeAudioFile(
   apiKey: string, 
   options: DeepgramTranscriptionOptions = {}
 ): Promise<TranscriptionResult> {
+  if (!file) {
+    throw new Error("No file provided for transcription");
+  }
+  
+  if (!apiKey) {
+    throw new Error("Deepgram API key is required");
+  }
+  
+  // Validate file type
+  const validAudioTypes = [
+    'audio/mp3', 'audio/mpeg', 'audio/wav', 
+    'audio/x-wav', 'audio/ogg', 'audio/flac', 
+    'audio/m4a', 'audio/x-m4a', 'audio/aac',
+    'video/mp4', 'video/quicktime', 'video/webm'
+  ];
+  
+  const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+  const validExtensions = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'mp4', 'mov', 'webm'];
+  
+  const isValidType = validAudioTypes.includes(file.type) || validExtensions.includes(fileExtension);
+  
+  if (!isValidType) {
+    throw new Error(`Unsupported file type: ${file.type || fileExtension}. Please upload an audio or video file like MP3, WAV, MP4, etc.`);
+  }
+  
   const { onProgress, abortSignal, ...apiOptions } = options;
 
   // Default options
@@ -51,6 +76,8 @@ export async function transcribeAudioFile(
 
     // Setup request
     const endpoint = `${DEEPGRAM_API_URL}/listen?${queryParams.toString()}`;
+    
+    console.log(`[DEEPGRAM] Transcribing file: ${file.name} (${file.type}, ${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     
     // Create form data with file
     const formData = new FormData();
@@ -86,9 +113,25 @@ export async function transcribeAudioFile(
       onProgress(100);
     }
 
-    // Parse and return results
+    // Parse response
     const data: DeepgramTranscriptionResponse = await response.json();
-    return formatTranscriptionResult(data);
+    
+    // Check if we actually got some transcript content
+    if (!data.results?.channels?.[0]?.alternatives?.[0]?.transcript) {
+      console.error('[DEEPGRAM] Empty transcript result received:', data);
+      throw new Error("No transcription content found. The audio file may not contain recognizable speech.");
+    }
+    
+    // Format and return results
+    const result = formatTranscriptionResult(data);
+    
+    console.log('[DEEPGRAM] Transcription successful:', {
+      transcriptLength: result.transcript?.length || 0,
+      hasContent: result.transcript?.trim().length > 0,
+      duration: data.metadata?.duration || 'unknown'
+    });
+    
+    return result;
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('Transcription was cancelled');
