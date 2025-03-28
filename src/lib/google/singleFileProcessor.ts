@@ -1,55 +1,46 @@
 
-import { DEFAULT_TRANSCRIPTION_OPTIONS } from '../config';
-import { sendTranscriptionRequest } from './processor/apiRequest';
-import { validateAudioFile, detectAudioEncoding } from './audio/audioValidation';
-import { convertAudioToBase64 } from './audio/wavConverter';
+/**
+ * Single file processor adapter for AssemblyAI (replacing Google Speech-to-Text)
+ */
+import { TranscriptionOptions } from '@/lib/config';
+import { transcribeAudio } from '@/lib/assemblyai/transcriber';
 
 /**
- * Process a single audio file with Google Speech-to-Text API
+ * Process a single audio file using AssemblyAI
  */
-export const transcribeSingleFile = async (
+export const processSingleFile = async (
   file: File,
   apiKey: string,
-  options = DEFAULT_TRANSCRIPTION_OPTIONS
+  options: TranscriptionOptions,
+  onProgress?: (progress: number) => void
 ): Promise<any> => {
   try {
-    console.log(`[GOOGLE] Processing file: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
-    
-    // Validate the file
-    const validation = validateAudioFile(file);
-    if (!validation.valid) {
-      throw new Error(`Invalid audio file: ${validation.reason}`);
-    }
-    
-    // Detect encoding from file
-    const encoding = detectAudioEncoding(file);
-    console.log(`[GOOGLE] Detected encoding: ${encoding}`);
-    
-    // Convert audio to base64
-    const base64Audio = await convertAudioToBase64(file);
-    
-    // Create request config
-    const requestOptions = {
-      encoding: encoding,
-      sampleRateHertz: options.sampleRateHertz || 16000,
-      languageCode: options.languageCode || 'en-US',
-      enableAutomaticPunctuation: options.enableAutomaticPunctuation,
-      enableSpeakerDiarization: options.enableSpeakerDiarization,
-      diarizationSpeakerCount: options.diarizationSpeakerCount,
+    // Map the options to AssemblyAI format
+    const assemblyOptions = {
+      language: options.language || 'en',
+      speakerLabels: options.speakerLabels ?? true,
+      punctuate: options.punctuate ?? true,
+      formatText: options.formatText ?? true,
       model: options.model || 'default',
-      maxAlternatives: options.maxAlternatives || 1,
-      enableWordTimeOffsets: options.enableWordTimeOffsets,
-      profanityFilter: options.profanityFilter
+      onProgress: onProgress || (() => {}),
+      wordBoost: options.customTerms || []
     };
     
-    // Send the request
-    console.log('[GOOGLE] Sending transcription request...');
-    const result = await sendTranscriptionRequest(base64Audio, apiKey, requestOptions);
+    // Use the AssemblyAI transcriber directly
+    const result = await transcribeAudio(file, apiKey, assemblyOptions);
     
-    console.log('[GOOGLE] Transcription complete:', result);
     return result;
   } catch (error) {
-    console.error('[GOOGLE] Transcription error:', error);
+    console.error('Error in single file processor:', error);
     throw error;
   }
+};
+
+/**
+ * Helper method to estimate transcription time based on file size
+ */
+export const estimateTranscriptionTime = (fileSizeMB: number): number => {
+  // Rough estimate: 1MB audio ≈ 1 minute processing time
+  // This is a very rough estimate and can vary widely
+  return Math.max(30, fileSizeMB * 60); // in seconds, minimum 30 seconds
 };

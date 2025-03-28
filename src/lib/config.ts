@@ -16,4 +16,14 @@ export interface TranscriptionOptions {
   punctuate?: boolean;
   formatText?: boolean;
   model?: string;
+  customTerms?: string[];
 }
+
+/**
+ * Application information
+ */
+export const APP_INFO = {
+  name: "Audio Transcription Tool",
+  version: "1.0.0",
+  description: "Transcribe audio files using AssemblyAI"
+};

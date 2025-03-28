@@ -1,147 +1,127 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Loader2, HelpCircle } from "lucide-react";
-import { testApiKey, testSpeechApiAccess } from "@/lib/google";
-import { useToast } from "@/components/ui/use-toast";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { testApiKey } from "@/lib/assemblyai/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface ApiKeyInputProps {
   apiKey: string;
-  onApiKeyChange: (apiKey: string) => void;
+  setApiKey: (key: string) => void;
+  keyStatus?: "untested" | "valid" | "invalid";
+  isDisabled?: boolean;
+  provider?: string;
+  onVerify?: (isValid: boolean) => void;
 }
 
-export const ApiKeyInput = ({ apiKey, onApiKeyChange }: ApiKeyInputProps) => {
-  const [testing, setTesting] = useState(false);
-  const [keyStatus, setKeyStatus] = useState<"untested" | "valid" | "invalid">("untested");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export const ApiKeyInput = ({
+  apiKey,
+  setApiKey,
+  keyStatus = "untested",
+  isDisabled = false,
+  provider = "AssemblyAI",
+  onVerify
+}: ApiKeyInputProps) => {
+  const [isTesting, setIsTesting] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Reset status when API key changes
-    if (keyStatus !== "untested") {
-      setKeyStatus("untested");
-      setErrorMessage(null);
-    }
-  }, [apiKey]);
-
-  const handleTestApiKey = async () => {
+  const handleVerifyKey = async () => {
     if (!apiKey.trim()) {
       toast({
-        title: "No API key",
-        description: "Please enter a Google API key to test",
-        variant: "destructive",
+        title: "API Key Required",
+        description: "Please enter an API key first.",
+        variant: "destructive"
       });
       return;
     }
 
-    setTesting(true);
-    setKeyStatus("untested");
-    setErrorMessage(null);
-    
+    setIsTesting(true);
     try {
-      // First do a basic test
-      const isBasicValid = await testApiKey(apiKey);
+      // Test the API key
+      const isValid = await testApiKey(apiKey);
       
-      if (!isBasicValid) {
-        setKeyStatus("invalid");
-        setErrorMessage("API key is invalid or unauthorized");
+      // Call the onVerify callback if provided
+      if (onVerify) {
+        onVerify(isValid);
+      }
+      
+      // Show toast notification
+      if (isValid) {
         toast({
-          title: "API key is invalid",
-          description: "The provided key was rejected by Google's API",
-          variant: "destructive",
+          title: "API Key Valid",
+          description: `Your ${provider} API key is valid.`
         });
-        return;
+      } else {
+        toast({
+          title: "Invalid API Key",
+          description: `The ${provider} API key you provided is not valid.`,
+          variant: "destructive"
+        });
       }
-      
-      // Then do a more comprehensive test
-      const { isValid, message } = await testSpeechApiAccess(apiKey);
-      setKeyStatus(isValid ? "valid" : "invalid");
-      
-      if (!isValid && message) {
-        setErrorMessage(message);
-      }
-      
-      toast({
-        title: isValid ? "API key is valid" : "API key issue detected",
-        description: isValid 
-          ? "Your Google API key is working correctly with Speech-to-Text API" 
-          : message || "Please check your Google API key and make sure Speech-to-Text API is enabled",
-        variant: isValid ? "default" : "destructive",
-      });
     } catch (error) {
-      setKeyStatus("invalid");
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      setErrorMessage("Connection error");
-      
+      console.error("Error verifying API key:", error);
+      // Call the onVerify callback with false
+      if (onVerify) {
+        onVerify(false);
+      }
       toast({
-        title: "Error testing API key",
-        description: `Could not connect to Google API: ${errorMsg}`,
-        variant: "destructive",
+        title: "Verification Failed",
+        description: "Could not verify API key. Please try again.",
+        variant: "destructive"
       });
     } finally {
-      setTesting(false);
+      setIsTesting(false);
     }
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <Label htmlFor="api-key">Google API Key</Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-                <HelpCircle className="h-4 w-4 text-slate-500" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>You need a Google Cloud API key with Speech-to-Text API enabled. Make sure billing is set up for your Google Cloud project.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <Label htmlFor="api-key">{provider} API Key</Label>
+        {keyStatus === "valid" && (
+          <span className="text-xs text-green-600 flex items-center">
+            <CheckCircle className="h-3 w-3 mr-1" /> Valid key
+          </span>
+        )}
       </div>
       
-      <div className="flex gap-2 mt-1">
-        <Input 
+      <div className="flex gap-2">
+        <Input
           id="api-key"
-          type="password" 
-          placeholder="Enter your Google API key" 
+          type="password"
           value={apiKey}
-          onChange={(e) => {
-            onApiKeyChange(e.target.value);
-          }}
-          className="flex-1"
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={`Enter your ${provider} API key`}
+          disabled={isDisabled}
+          className={`flex-1 ${keyStatus === "invalid" ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+          aria-invalid={keyStatus === "invalid"}
         />
+        
         <Button 
-          onClick={handleTestApiKey} 
           variant="outline" 
           size="sm" 
-          disabled={testing || !apiKey.trim()}
+          onClick={handleVerifyKey}
+          disabled={isTesting || !apiKey.trim() || isDisabled}
           className="whitespace-nowrap"
         >
-          {testing ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          {isTesting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : keyStatus === "valid" ? (
-            <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+            <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
           ) : keyStatus === "invalid" ? (
-            <XCircle className="h-4 w-4 mr-1 text-red-500" />
+            <XCircle className="mr-2 h-4 w-4 text-red-500" />
           ) : null}
-          Test Key
+          Verify
         </Button>
       </div>
       
-      {errorMessage && (
-        <p className="text-xs text-red-500 mt-1">
-          Error: {errorMessage}
+      {keyStatus === "invalid" && (
+        <p className="text-xs text-red-500">
+          Invalid API key. Please check and try again.
         </p>
       )}
-      
-      <p className="text-xs text-slate-500 mt-1">
-        Your API key is required for transcription and is not stored permanently
-      </p>
     </div>
   );
 };
