@@ -1,6 +1,21 @@
 
 /**
  * Main exports for Deepgram transcription module
+ *
+ * This module serves as a direct integration point for Deepgram,
+ * offering functionality equivalent to AssemblyAI with the following mapping:
+ *
+ * | AssemblyAI    | Deepgram       |
+ * |---------------|----------------|
+ * | speakerLabels | diarize        |
+ * | formatText    | smart_format   |
+ * | punctuate     | punctuate      |
+ * | models:       | models:        |
+ * | - nova2       | - nova-2       |
+ * | - enhanced    | - enhanced     |
+ * | - standard    | - base         |
+ *
+ * This setup is designed as a seamless drop-in replacement for AssemblyAI integrations.
  */
 
 // Export core functionality
