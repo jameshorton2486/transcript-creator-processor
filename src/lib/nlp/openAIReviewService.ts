@@ -2,6 +2,7 @@
 /**
  * AI-powered transcript review service using OpenAI
  */
+import { useToast } from "@/hooks/use-toast";
 
 // Configuration for OpenAI API requests
 interface OpenAIReviewConfig {

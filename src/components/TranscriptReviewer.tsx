@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Loader2, EyeOff, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { reviewWithOpenAI, TrainingRule, TrainingExample } from '@/lib/nlp/openAIReviewService';
+import { Progress } from "@/components/ui/progress";
+import { useAITranscriptReview } from '@/hooks/useAITranscriptReview';
 
 interface TranscriptReviewerProps {
   transcript: string;
@@ -22,48 +23,27 @@ export const TranscriptReviewer = ({
   setIsLoading
 }: TranscriptReviewerProps) => {
   const [apiKey, setApiKey] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const { toast } = useToast();
-
-  // These would typically come from a database or user settings
-  const rules: TrainingRule[] = [
-    {
-      id: "1",
-      name: "Speaker Format",
-      description: "Format speakers consistently",
-      rule: "Format speaker labels consistently as 'SPEAKER 1:', 'SPEAKER 2:', etc. at the start of paragraphs."
-    },
-    {
-      id: "2",
-      name: "Remove Fillers",
-      description: "Remove filler words",
-      rule: "Remove filler words like 'um', 'uh', 'like', etc."
-    }
-  ];
-
-  const examples: TrainingExample[] = [
-    {
-      id: "1",
-      incorrect: "speaker 1: Yeah, um, I was thinking that, like, we should probably, you know, review the contract.",
-      corrected: "SPEAKER 1: I was thinking that we should review the contract.",
-      createdAt: Date.now()
-    }
-  ];
+  
+  // Use our new AI transcript review hook
+  const { 
+    reviewTranscript, 
+    error: reviewError, 
+    progress 
+  } = useAITranscriptReview();
 
   const handleReviewTranscript = async () => {
     if (!transcript || transcript.trim().length === 0) {
-      setError("No transcript to review. Please create or upload a transcript first.");
       toast({
         title: "Error",
-        description: "No transcript to review",
+        description: "No transcript to review. Please create or upload a transcript first.",
         variant: "destructive"
       });
       return;
     }
 
     if (!apiKey) {
-      setError("OpenAI API key is required to review the transcript.");
       toast({
         title: "API Key Required",
         description: "Please enter your OpenAI API key",
@@ -72,18 +52,12 @@ export const TranscriptReviewer = ({
       return;
     }
 
-    setError(null);
     setIsLoading(true);
 
     try {
       console.log("Starting OpenAI review process");
       
-      const reviewedTranscript = await reviewWithOpenAI(
-        transcript, 
-        rules, 
-        examples, 
-        apiKey
-      );
+      const reviewedTranscript = await reviewTranscript(transcript, apiKey);
       
       console.log("OpenAI review complete:", {
         originalLength: transcript.length,
@@ -103,7 +77,6 @@ export const TranscriptReviewer = ({
       });
     } catch (err) {
       console.error("OpenAI review error:", err);
-      setError(err instanceof Error ? err.message : "Failed to review transcript");
       toast({
         title: "Review Failed",
         description: err instanceof Error ? err.message : "Failed to review transcript",
@@ -173,19 +146,24 @@ export const TranscriptReviewer = ({
         </div>
       </div>
       
-      {error && (
+      {reviewError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{reviewError}</AlertDescription>
         </Alert>
       )}
 
       {isLoading && (
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center justify-center space-x-2">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <p className="text-sm">Enhancing transcript with AI...</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-center space-x-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <p className="text-sm">Enhancing transcript with AI...</p>
+              </div>
+              {progress > 0 && (
+                <Progress value={progress} className="h-2" />
+              )}
             </div>
           </CardContent>
         </Card>
