@@ -89,17 +89,23 @@ export const DeepgramApiKeyInput = ({
       setShowAlert(true);
     }
   }, [apiKey, handleTestApiKey, toast]);
+
+  // Generate unique IDs for aria attributes
+  const inputId = "deepgram-api-key-input";
+  const errorId = "deepgram-api-key-error";
+  const statusId = "deepgram-api-key-status";
   
   return (
     <div className="space-y-2">
       <div className="flex flex-col space-y-2">
         <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-slate-500" />
-          <span className="text-sm font-medium">Deepgram API Key</span>
+          <KeyRound className="h-4 w-4 text-slate-500" aria-hidden="true" />
+          <label htmlFor={inputId} className="text-sm font-medium">Deepgram API Key</label>
         </div>
         
         <div className="relative">
           <Textarea
+            id={inputId}
             placeholder="Enter your Deepgram API key here"
             value={showKey ? apiKey : apiKey.replace(/./g, '•')}
             onChange={(e) => {
@@ -109,13 +115,21 @@ export const DeepgramApiKeyInput = ({
               setKeyFormatValid(validateKeyFormat(newKey));
             }}
             className="w-full text-sm font-mono pr-10"
+            aria-describedby={keyStatus === 'invalid' ? errorId : statusId}
+            aria-invalid={keyStatus === 'invalid'}
           />
-          <ApiKeyVisibilityToggle showKey={showKey} setShowKey={setShowKey} />
+          <ApiKeyVisibilityToggle 
+            showKey={showKey} 
+            setShowKey={setShowKey} 
+            inputId={inputId}
+          />
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500" id={statusId}>
             Your API key is stored locally and used only for transcription requests.
+            {keyStatus === 'valid' && " Your key has been validated and is ready to use."}
+            {keyStatus === 'untested' && " Your key has not been tested yet."}
           </p>
           
           <ApiKeySaveButton 
@@ -131,7 +145,8 @@ export const DeepgramApiKeyInput = ({
         keyStatus={keyStatus} 
         keyErrorMessage={keyErrorMessage} 
         keyFormatValid={keyFormatValid} 
-        showAlert={showAlert} 
+        showAlert={showAlert}
+        errorId={errorId}
       />
       
       <ApiKeyInfoFooter />
