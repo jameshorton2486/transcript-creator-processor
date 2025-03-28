@@ -6,71 +6,10 @@ import { formatTranscriptionResult } from './formatter';
 import { 
   DeepgramTranscriptionOptions, 
   DeepgramTranscriptionResponse, 
-  ApiKeyValidationResult,
   TranscriptionResult 
 } from '../../hooks/useDeepgramTranscription/types';
 
 const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
-
-/**
- * Tests if the provided API key is valid
- */
-export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult> {
-  if (!apiKey.trim()) {
-    return {
-      isValid: false,
-      message: 'API key cannot be empty',
-    };
-  }
-
-  try {
-    const response = await fetch(`${DEEPGRAM_API_URL}/projects`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Token ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      return {
-        isValid: true,
-        message: 'API key is valid',
-        statusCode: response.status,
-      };
-    }
-
-    let message: string;
-    switch (response.status) {
-      case 401:
-      case 403:
-        message = 'Invalid API key or insufficient permissions';
-        break;
-      case 429:
-        message = 'Rate limit exceeded';
-        break;
-      default:
-        try {
-          const errorData = await response.json();
-          message = errorData.message || response.statusText;
-        } catch {
-          message = response.statusText || 'Unknown error';
-        }
-    }
-
-    return {
-      isValid: false,
-      message,
-      statusCode: response.status,
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      message: error instanceof Error ? error.message : 'Network error occurred',
-      statusCode: 0,
-    };
-  }
-}
 
 /**
  * Transcribes an audio file using Deepgram API
