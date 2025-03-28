@@ -81,13 +81,13 @@ export interface DeepgramTranscriptionOptions {
   model?: string;
   diarize?: boolean;
   punctuate?: boolean;
-  smart_format?: boolean; // Added smart_format property
+  smart_format?: boolean;
   utterances?: boolean;
   numSpeakers?: number;
   keywords?: string[];
   onProgress?: (progress: number) => void;
   abortSignal?: AbortSignal;
-  apiKey?: string; // Added apiKey property
+  apiKey?: string;
 }
 
 /**
@@ -125,4 +125,5 @@ export interface ApiKeyValidationResult {
   isValid: boolean;
   message: string;
   statusCode?: number;
+  skipApiValidation?: boolean;
 }

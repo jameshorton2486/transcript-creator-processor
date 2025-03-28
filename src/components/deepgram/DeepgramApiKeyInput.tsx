@@ -35,11 +35,12 @@ export const DeepgramApiKeyInput = ({
   
   const validateKeyFormat = (key: string) => {
     // Basic format check - any string of reasonable length is acceptable
-    return key.trim().length >= 16;
+    // Using 20 characters minimum length as per the improved validation logic
+    return key.trim().length >= 20;
   };
   
   const handleSaveKey = useCallback(async () => {
-    if (apiKey && apiKey.length >= 16) {
+    if (apiKey && validateKeyFormat(apiKey)) {
       setShowAlert(false);
       
       try {
