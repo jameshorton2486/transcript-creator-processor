@@ -34,9 +34,6 @@ export const transcribeAudio = async (
       throw new Error('API key is required');
     }
     
-    console.log(`[ASSEMBLY] Starting transcription for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) using model: ${model}`);
-    onProgress(0);
-    
     // Check if operation was aborted
     if (abortSignal?.aborted) {
       throw new Error('Transcription cancelled');
@@ -51,27 +48,28 @@ export const transcribeAudio = async (
       abortSignal.addEventListener('abort', () => controller.abort());
     }
     
-    // Set a timeout for large files
+    // Set a reduced timeout for large files (15 minutes instead of 30)
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, 30 * 60 * 1000); // 30-minute timeout for large files
+    }, 15 * 60 * 1000); // 15-minute timeout for large files
     
     try {
       // Step 1: Upload the file to AssemblyAI
       onProgress(10);
-      console.log('[ASSEMBLY] Uploading audio file...');
       
       const uploadUrl = await uploadFile(file, apiKey, signal);
       
       // Step 2: Submit the transcription request
       onProgress(30);
-      console.log('[ASSEMBLY] Submitting transcription request...');
       
-      // Map model values to AssemblyAI model names
-      let modelName = undefined;
-      if (model === 'enhanced') modelName = 'nova';
-      else if (model === 'nova2') modelName = 'nova-2';
-      else if (model === 'standard') modelName = 'standard';
+      // Simplified model mapping logic
+      const modelMap = {
+        'default': undefined,
+        'standard': 'standard',
+        'enhanced': 'nova',
+        'nova2': 'nova-2',
+      };
+      const modelName = modelMap[model] || undefined;
       
       const transcriptionId = await submitTranscription(uploadUrl, apiKey, {
         language_code: language,
@@ -83,7 +81,6 @@ export const transcribeAudio = async (
       
       // Step 3: Poll for the transcription result
       onProgress(40);
-      console.log('[ASSEMBLY] Processing audio, polling for results...');
       
       const result = await pollForTranscription(
         transcriptionId, 
@@ -93,7 +90,6 @@ export const transcribeAudio = async (
       );
       
       onProgress(100);
-      console.log('[ASSEMBLY] Transcription complete:', result);
       
       // Format result to match expected structure for the app
       const formattedResult = formatTranscriptionResult(result, file.name);

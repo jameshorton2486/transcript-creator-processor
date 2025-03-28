@@ -44,6 +44,7 @@ export const submitTranscription = async (
   signal: AbortSignal
 ): Promise<string> => {
   try {
+    // Only include essential parameters needed for the application
     const response = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
@@ -56,11 +57,7 @@ export const submitTranscription = async (
         speaker_labels: config.speaker_labels,
         punctuate: config.punctuate,
         format_text: config.format_text,
-        word_boost: config.word_boost || [],
-        boost_param: config.boost_param || "high",
-        auto_chapters: true,
-        entity_detection: true,
-        auto_highlights: true
+        model: config.model
       }),
       signal
     });
@@ -112,19 +109,12 @@ export const pollForTranscription = async (
       
       const data = await response.json();
       
-      // Update progress based on status
+      // Simplified progress status logic
       if (data.status === 'queued') {
-        onProgress(0);
+        onProgress(10);
       } else if (data.status === 'processing') {
-        if (data.words && data.text) {
-          // Estimate progress based on words processed compared to total text length
-          const wordsProcessed = data.words.length;
-          const totalEstimatedWords = data.text.split(' ').length;
-          const progressEstimate = Math.min(90, Math.floor((wordsProcessed / totalEstimatedWords) * 100));
-          onProgress(progressEstimate);
-        } else {
-          onProgress(30); // Default progress estimate
-        }
+        // Simplified progress calculation based on attempt count
+        onProgress(Math.min(95, 10 + attempts));
       } else if (data.status === 'completed') {
         onProgress(100);
         completed = true;

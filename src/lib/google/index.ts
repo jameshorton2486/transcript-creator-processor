@@ -4,7 +4,8 @@
  * The application now uses AssemblyAI exclusively for transcription.
  */
 
-// All Google STT-related formatters have been removed as they are no longer needed
-// The application now uses AssemblyAI for all transcription functionality.
+// All Google STT-related functionality has been removed
+// The application now exclusively uses AssemblyAI for transcription
 
-// Any remaining exports can be kept here if needed
+// This file is kept as a placeholder to prevent import errors
+// No functionality is exported from this module

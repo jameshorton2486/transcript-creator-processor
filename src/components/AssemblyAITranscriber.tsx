@@ -30,8 +30,8 @@ export const AssemblyAITranscriber: React.FC<AssemblyAITranscriberProps> = ({
   onTranscriptCreated,
   initialOptions
 }) => {
-  // Supported file formats
-  const supportedFormats = ["mp3", "mp4", "wav", "m4a", "flac", "ogg", "aac", "wma"];
+  // Supported file formats - updated to only include explicitly supported formats
+  const supportedFormats = ["mp3", "mp4", "wav", "m4a", "flac"];
   const maxFileSizeMB = 250; // AssemblyAI supports up to 250MB files
   
   // Model information for tooltips
