@@ -4,6 +4,8 @@ import { TranscriptControls } from "@/components/transcript/TranscriptControls";
 import { TranscriptViewerPanel } from "@/components/transcript/TranscriptViewerPanel";
 import { TranscribeDownloadOptions } from "@/components/tabs/TranscribeDownloadOptions";
 import { TranscribeDebugTools } from "@/components/tabs/TranscribeDebugTools";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface TranscribeTabProps {
   originalTranscript: string;
@@ -37,6 +39,8 @@ export const TranscribeTab = ({
   setIsReviewing,
 }: TranscribeTabProps) => {
   
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+
   const loadSampleTranscript = () => {
     const sampleTranscript = `Speaker 1: This is a sample transcript for testing the display components.
 
@@ -55,6 +59,7 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
     setOriginalTranscript(sampleTranscript);
     setProcessedTranscript(sampleTranscript);
     setFileName("sample-transcript");
+    setTranscriptionError(null);
   };
   
   useEffect(() => {
@@ -68,16 +73,6 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
     });
   }, [originalTranscript, processedTranscript, aiReviewedTranscript]);
   
-  console.log("TranscribeTab rendering with state:", {
-    originalLength: originalTranscript?.length, 
-    originalType: typeof originalTranscript,
-    originalSample: originalTranscript?.substring(0, 100),
-    processedLength: processedTranscript?.length, 
-    aiReviewedLength: aiReviewedTranscript?.length,
-    fileName,
-    hasJsonData: Boolean(jsonData),
-  });
-  
   const handleTranscriptCreated = (transcript: string, jsonData: any, file?: File) => {
     console.log("Transcript created:", { 
       transcriptLength: transcript?.length, 
@@ -87,14 +82,17 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
       fileProvided: Boolean(file)
     });
     
-    if (!transcript || typeof transcript !== 'string') {
-      console.error("Invalid transcript received:", transcript);
+    if (!transcript || typeof transcript !== 'string' || transcript.trim().length === 0) {
+      console.error("Invalid or empty transcript received:", transcript);
+      setTranscriptionError("No valid transcript was generated. The audio file may not contain recognizable speech.");
       return;
     }
     
     setOriginalTranscript(transcript);
     setProcessedTranscript(transcript); // Also set the processed transcript to ensure display
     setJsonData(jsonData);
+    setTranscriptionError(null);
+    
     if (file) {
       setAudioFile(file);
       setFileName(file.name.split('.')[0]);
@@ -137,16 +135,11 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
     setJsonData(null);
     setAudioFile(null);
     setFileName("transcript");
+    setTranscriptionError(null);
   };
 
   const currentTranscript = aiReviewedTranscript || processedTranscript || originalTranscript || "";
-  console.log("Current transcript to display:", { 
-    currentLength: currentTranscript?.length,
-    currentType: typeof currentTranscript,
-    isEmpty: currentTranscript === '',
-    source: aiReviewedTranscript ? "AI Reviewed" : (processedTranscript ? "Processed" : "Original")
-  });
-
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
       <div className="lg:col-span-5 space-y-5">
@@ -160,6 +153,15 @@ Speaker 2: Let's ensure this transcript has enough content to properly test the 
           isReviewing={isReviewing}
           setIsReviewing={setIsReviewing}
         />
+        
+        {transcriptionError && (
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {transcriptionError}
+            </AlertDescription>
+          </Alert>
+        )}
         
         {originalTranscript ? (
           <TranscribeDownloadOptions

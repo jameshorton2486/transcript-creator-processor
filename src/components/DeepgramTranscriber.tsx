@@ -22,6 +22,7 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
   showTranscription = true,
 }) => {
   const [transcriptionResult, setTranscriptionResult] = useState<TranscriptionResult | null>(null);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -53,17 +54,40 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
   );
 
   const handleTranscribe = useCallback(async () => {
+    // Reset previous errors and results
+    setTranscriptionError(null);
+    setTranscriptionResult(null);
+    
     try {
       const result = await transcribeAudioFile();
+      
       if (result) {
-        setTranscriptionResult(result);
-        onTranscriptionComplete?.(result);
+        if (!result.transcript || result.transcript.trim().length === 0) {
+          setTranscriptionError("No speech was detected in the audio file. Please check the file and try again.");
+          toast({
+            title: "Transcription Warning",
+            description: "No speech was detected in the audio file.",
+            variant: "destructive",
+          });
+        } else {
+          setTranscriptionResult(result);
+          onTranscriptionComplete?.(result);
+        }
+      } else {
+        setTranscriptionError("Transcription failed to produce a valid result.");
+        toast({
+          title: "Transcription Failed",
+          description: "Failed to generate transcript.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Transcription error:', error);
+      const errorMessage = error instanceof Error ? error.message : "An error occurred during transcription";
+      setTranscriptionError(errorMessage);
       toast({
         title: "Transcription Failed",
-        description: error instanceof Error ? error.message : "An error occurred during transcription",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -122,6 +146,7 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
 
       <TranscriptionResultDisplay
         result={transcriptionResult}
+        error={transcriptionError || error}
         showTranscription={showTranscription}
       />
     </div>

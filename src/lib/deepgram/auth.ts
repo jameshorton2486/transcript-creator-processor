@@ -27,21 +27,16 @@ export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult
 
     const trimmedKey = apiKey.trim();
 
-    // Skip format validation - Deepgram now supports multiple formats
-
-    const isDevelopment = window.location.hostname === 'localhost' ||
-                          window.location.hostname.includes('lovableproject.com');
-
-    if (isDevelopment && trimmedKey.length >= 20) {
-      console.log('[DEEPGRAM] Development environment detected. Skipping API validation.');
-      storeApiKey(trimmedKey);
+    // Basic format validation - Deepgram keys should be of reasonable length
+    if (trimmedKey.length < 20) {
       return {
-        isValid: true,
-        message: 'API key format looks valid (API validation skipped in development)',
-        statusCode: 200
+        isValid: false,
+        message: 'API key format appears invalid (too short)'
       };
     }
 
+    // Always try to validate with the actual API, even in development
+    // But have a fallback for network issues
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -91,38 +86,35 @@ export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      throw error;
+      
+      // If network error but format appears valid, provide a clear message
+      // but still allow using the key with a warning
+      console.warn('[DEEPGRAM] API validation failed due to network error', error);
+      storeApiKey(trimmedKey);
+      return {
+        isValid: true,
+        message: 'API key format looks valid, but validation failed due to network error. You can try using it, but it may not work.',
+        skipApiValidation: true
+      };
     }
   } catch (error: any) {
     if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      if (apiKey.trim().length >= 20) {
-        storeApiKey(apiKey.trim());
-        return {
-          isValid: true,
-          message: 'API key format looks valid (API call timed out, but proceeding)',
-          skipApiValidation: true
-        };
-      }
+      storeApiKey(apiKey.trim());
       return {
-        isValid: false,
-        message: 'API key validation timed out'
+        isValid: true,
+        message: 'API key format looks valid (API call timed out, but proceeding)',
+        skipApiValidation: true
       };
     } else if (error.message && (
       error.message.includes('network') ||
       error.message.includes('fetch') ||
       error.message.includes('connect')
     )) {
-      if (apiKey.trim().length >= 20) {
-        storeApiKey(apiKey.trim());
-        return {
-          isValid: true,
-          message: 'Key format looks valid (network error encountered, but proceeding)',
-          skipApiValidation: true
-        };
-      }
+      storeApiKey(apiKey.trim());
       return {
-        isValid: false,
-        message: 'Network error, please check your connection'
+        isValid: true,
+        message: 'Key format looks valid (network error encountered, but proceeding)',
+        skipApiValidation: true
       };
     } else {
       return {
