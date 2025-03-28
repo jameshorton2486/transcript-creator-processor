@@ -29,13 +29,13 @@ export const processAudioChunk = async (
     const fileName = `chunk-${chunkIndex}.wav`;
     const file = new File([chunk], fileName, { type: 'audio/wav' });
     
-    // Map options to AssemblyAI format
+    // Map options to AssemblyAI format, ensuring model type compatibility
     const assemblyOptions = {
       language: options.language || 'en',
       speakerLabels: options.speakerLabels ?? true,
       punctuate: options.punctuate ?? true,
       formatText: options.formatText ?? true,
-      model: options.model || 'default',
+      model: (options.model || 'default') as "default" | "standard" | "enhanced" | "nova2",
       wordBoost: options.customTerms || [],
       onProgress
     };

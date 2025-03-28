@@ -15,13 +15,13 @@ export const processSingleFile = async (
   onProgress?: (progress: number) => void
 ): Promise<any> => {
   try {
-    // Map the options to AssemblyAI format
+    // Map the options to AssemblyAI format with proper type casting
     const assemblyOptions = {
       language: options.language || 'en',
       speakerLabels: options.speakerLabels ?? true,
       punctuate: options.punctuate ?? true,
       formatText: options.formatText ?? true,
-      model: options.model || 'default',
+      model: (options.model || 'default') as "default" | "standard" | "enhanced" | "nova2",
       onProgress: onProgress || (() => {}),
       wordBoost: options.customTerms || []
     };

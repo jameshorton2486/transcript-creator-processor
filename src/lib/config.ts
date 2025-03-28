@@ -7,7 +7,7 @@ export const DEFAULT_TRANSCRIPTION_OPTIONS = {
   speakerLabels: true,
   punctuate: true,
   formatText: true,
-  model: 'default'
+  model: 'default' as "default" | "standard" | "enhanced" | "nova2"
 };
 
 export interface TranscriptionOptions {
@@ -15,7 +15,7 @@ export interface TranscriptionOptions {
   speakerLabels?: boolean;
   punctuate?: boolean;
   formatText?: boolean;
-  model?: string;
+  model?: "default" | "standard" | "enhanced" | "nova2";
   customTerms?: string[];
 }
 
