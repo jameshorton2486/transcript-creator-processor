@@ -1,64 +1,53 @@
 
+import { useState, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, KeyRound, Save, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { storeApiKey, testApiKey } from "@/lib/deepgram/auth";
 
 interface DeepgramApiKeyInputProps {
   apiKey: string;
   setApiKey: (key: string) => void;
-  visible: boolean;
+  handleTestApiKey: (keyToTest?: string) => Promise<boolean>;
+  keyStatus: 'untested' | 'valid' | 'invalid';
+  testingKey: boolean;
+  keyErrorMessage?: string;
+  visible?: boolean;
 }
 
-export const DeepgramApiKeyInput = ({ apiKey, setApiKey, visible }: DeepgramApiKeyInputProps) => {
+export const DeepgramApiKeyInput = ({ 
+  apiKey, 
+  setApiKey, 
+  handleTestApiKey, 
+  keyStatus, 
+  testingKey, 
+  keyErrorMessage,
+  visible = true
+}: DeepgramApiKeyInputProps) => {
   const [isSaved, setIsSaved] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
-  const [validationMessage, setValidationMessage] = useState("");
-  const [keyStatus, setKeyStatus] = useState<"untested" | "valid" | "invalid">("untested");
   
   if (!visible) return null;
   
-  const handleSaveKey = async () => {
+  const handleSaveKey = useCallback(async () => {
     if (apiKey && apiKey.length > 10) {
-      setIsValidating(true);
-      try {
-        // Test the API key before saving
-        const validationResult = await testApiKey(apiKey);
+      const isValid = await handleTestApiKey(apiKey);
+      
+      if (isValid) {
+        setIsSaved(true);
+        setShowAlert(false);
         
-        if (validationResult.isValid) {
-          // Store the key if valid
-          storeApiKey(apiKey);
-          setIsSaved(true);
-          setShowAlert(false);
-          setKeyStatus("valid");
-          setValidationMessage("API key is valid and has been saved");
-          
-          // Reset saved indicator after 3 seconds
-          setTimeout(() => {
-            setIsSaved(false);
-          }, 3000);
-        } else {
-          setShowAlert(true);
-          setKeyStatus("invalid");
-          setValidationMessage(validationResult.message);
-        }
-      } catch (error) {
+        setTimeout(() => {
+          setIsSaved(false);
+        }, 3000);
+      } else {
         setShowAlert(true);
-        setKeyStatus("invalid");
-        setValidationMessage("Failed to validate key");
-      } finally {
-        setIsValidating(false);
       }
     } else {
       setShowAlert(true);
-      setValidationMessage("Please enter a valid Deepgram API key");
-      setKeyStatus("invalid");
     }
-  };
+  }, [apiKey, handleTestApiKey]);
   
   return (
     <div className="space-y-2">
@@ -75,7 +64,6 @@ export const DeepgramApiKeyInput = ({ apiKey, setApiKey, visible }: DeepgramApiK
             onChange={(e) => {
               setApiKey(e.target.value);
               setShowAlert(false);
-              setKeyStatus("untested");
             }}
             className="w-full text-sm font-mono pr-10"
           />
@@ -99,10 +87,10 @@ export const DeepgramApiKeyInput = ({ apiKey, setApiKey, visible }: DeepgramApiK
             variant="outline"
             onClick={handleSaveKey}
             className="gap-1"
-            disabled={isValidating}
+            disabled={testingKey}
           >
             <Save className="h-3.5 w-3.5" />
-            {isValidating ? "Validating..." : isSaved ? "Saved" : "Save Key"}
+            {testingKey ? "Validating..." : isSaved ? "Saved" : "Save Key"}
           </Button>
         </div>
       </div>
@@ -111,7 +99,7 @@ export const DeepgramApiKeyInput = ({ apiKey, setApiKey, visible }: DeepgramApiK
         <Alert variant="destructive" className="py-2">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {validationMessage}
+            {keyErrorMessage || "Please enter a valid Deepgram API key"}
           </AlertDescription>
         </Alert>
       )}
@@ -119,7 +107,7 @@ export const DeepgramApiKeyInput = ({ apiKey, setApiKey, visible }: DeepgramApiK
       {keyStatus === "valid" && !showAlert && (
         <Alert variant="default" className="bg-green-50 text-green-800 border-green-200 py-2">
           <AlertDescription>
-            {validationMessage}
+            API key is valid and has been saved
           </AlertDescription>
         </Alert>
       )}

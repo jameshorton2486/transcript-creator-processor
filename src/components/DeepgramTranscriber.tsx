@@ -85,6 +85,16 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
     [setOptions]
   );
 
+  const handleVerifyKey = useCallback((isValid: boolean) => {
+    // This function handles the verification result from ApiKeyInput
+    if (isValid) {
+      toast({
+        title: "API Key Valid",
+        description: "Your Deepgram API key is valid.",
+      });
+    }
+  }, [toast]);
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -101,7 +111,7 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
           keyStatus={keyStatus}
           isDisabled={isLoading}
           provider="Deepgram"
-          onVerify={handleTestApiKey}
+          onVerify={handleVerifyKey}
           errorMessage={keyErrorMessage}
         />
       </Card>

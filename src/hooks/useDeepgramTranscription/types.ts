@@ -81,11 +81,13 @@ export interface DeepgramTranscriptionOptions {
   model?: string;
   diarize?: boolean;
   punctuate?: boolean;
+  smart_format?: boolean; // Added smart_format property
   utterances?: boolean;
   numSpeakers?: number;
   keywords?: string[];
   onProgress?: (progress: number) => void;
   abortSignal?: AbortSignal;
+  apiKey?: string; // Added apiKey property
 }
 
 /**
@@ -109,7 +111,7 @@ export interface DeepgramTranscriptionHookState {
  */
 export interface UseDeepgramTranscriptionReturn extends DeepgramTranscriptionHookState {
   handleFileSelected: (file: File) => void;
-  transcribeAudioFile: () => Promise<void>;
+  transcribeAudioFile: () => Promise<TranscriptionResult | undefined>;
   setApiKey: (key: string) => void;
   cancelTranscription: () => void;
   handleTestApiKey: (keyToTest?: string) => Promise<boolean>;
