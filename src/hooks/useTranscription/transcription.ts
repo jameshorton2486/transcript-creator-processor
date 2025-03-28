@@ -1,6 +1,6 @@
 
 // This file is kept for backward compatibility but is disabled
-// All transcription is now handled through AssemblyAI directly
+// All transcription is now handled through Deepgram directly
 
 import { useToast } from "@/components/ui/use-toast";
 
@@ -16,10 +16,10 @@ export const performTranscription = async (
   onSuccess: (transcript: string, jsonData: any) => void,
   toast: ReturnType<typeof useToast>["toast"]
 ) => {
-  onErrorUpdate("Google Speech-to-Text has been removed. Please use AssemblyAI transcription instead.");
+  onErrorUpdate("Google Speech-to-Text has been removed. Please use Deepgram transcription instead.");
   toast({
     title: "Service Removed",
-    description: "Google Speech-to-Text has been removed. Please use AssemblyAI transcription instead.",
+    description: "Google Speech-to-Text has been removed. Please use Deepgram transcription instead.",
     variant: "destructive",
   });
   
