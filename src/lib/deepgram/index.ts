@@ -20,10 +20,7 @@
 
 // Export core functionality for file-based transcription only (not URL)
 export { formatTranscriptionResult } from './formatter';
-export {
-  transcribeAudioFile,
-  // Don't re-export testApiKey from transcriber as it would conflict with auth
-} from './transcriber';
+export { transcribeAudioFile } from './transcriber';
 export {
   testApiKey,
   retrieveStoredApiKey,

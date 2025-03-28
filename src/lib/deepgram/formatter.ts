@@ -11,98 +11,126 @@ import {
 } from '../../hooks/useDeepgramTranscription/types';
 
 /**
- * Formats a Deepgram transcription response into a structured transcription result
+ * Format a Deepgram response into a consistent structure
  * @param response Raw response from Deepgram API
  * @returns Formatted transcription result
  */
 export function formatTranscriptionResult(response: DeepgramTranscriptionResponse): TranscriptionResult {
   try {
-    const transcript = response.results?.channels[0]?.alternatives[0]?.transcript || '';
-
+    // Extract the main transcript from the first alternative of the first channel
+    const mainTranscript = response.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    
+    // Format the response
+    const formattedResult = formatDeepgramResponse(response);
+    
     return {
-      transcript,
-      text: transcript,
-      formattedResult: formatDeepgramResponse(response),
-      rawResponse: response,
+      transcript: mainTranscript,
+      text: mainTranscript, // For compatibility with existing code
+      formattedResult,
+      rawResponse: response
     };
   } catch (error) {
     console.error('Error formatting transcription result:', error);
-
+    
+    // Return a minimal valid result
     return {
       transcript: '',
       text: '',
-      formattedResult: { plainText: '' },
-      rawResponse: response,
+      formattedResult: {
+        plainText: ''
+      },
+      rawResponse: response
     };
   }
 }
 
 /**
- * Converts raw Deepgram response into structured formatted transcript
- * @param response Deepgram transcription response
- * @returns Structured formatted transcript
+ * Format a raw Deepgram response into a structured format
+ * @param response Raw Deepgram response
+ * @returns Formatted transcript with word timings and speaker segments
  */
 function formatDeepgramResponse(response: DeepgramTranscriptionResponse): FormattedTranscript {
   const formatted: FormattedTranscript = {
-    plainText: response.results?.channels[0]?.alternatives[0]?.transcript || '',
+    plainText: ''
   };
-
-  const alternative = response.results?.channels[0]?.alternatives[0];
-
-  if (alternative?.words?.length) {
-    formatted.wordTimestamps = alternative.words.map((word) => ({
+  
+  // Early return if no data
+  if (!response.results?.channels?.[0]?.alternatives?.[0]) {
+    return formatted;
+  }
+  
+  const alternative = response.results.channels[0].alternatives[0];
+  formatted.plainText = alternative.transcript || '';
+  
+  // Format word timestamps
+  if (alternative.words && alternative.words.length > 0) {
+    formatted.wordTimestamps = alternative.words.map(word => ({
       word: word.word,
       start: word.start,
       end: word.end,
-      speaker: word.speaker !== undefined ? `Speaker ${word.speaker}` : undefined,
+      speaker: word.speaker !== undefined ? `Speaker ${word.speaker}` : undefined
     }));
   }
-
-  if (response.results?.utterances?.length) {
-    formatted.speakerSegments = response.results.utterances.map((utterance) => ({
+  
+  // Format speaker segments if available (from utterances)
+  if (response.results.utterances && response.results.utterances.length > 0) {
+    formatted.speakerSegments = response.results.utterances.map(utterance => ({
       speaker: `Speaker ${utterance.speaker}`,
       text: utterance.transcript,
       start: utterance.start,
-      end: utterance.end,
+      end: utterance.end
     }));
-  } else if (alternative?.words?.some((word) => word.speaker !== undefined)) {
+  } 
+  // If no utterances but words have speaker info, create segments
+  else if (alternative.words && alternative.words.some(word => word.speaker !== undefined)) {
     formatted.speakerSegments = createSpeakerSegmentsFromWords(alternative.words);
   }
-
+  
   return formatted;
 }
 
 /**
- * Creates speaker segments from word-level speaker data
- * @param words Array of words with speaker and timing info
+ * Create speaker segments from word-level speaker information
+ * @param words Array of words with timing and speaker info
  * @returns Array of speaker segments
  */
 function createSpeakerSegmentsFromWords(words: DeepgramWord[]): SpeakerSegment[] {
   const segments: SpeakerSegment[] = [];
-
-  if (!words.length) return segments;
-
+  
+  if (!words.length) {
+    return segments;
+  }
+  
   let currentSegment: SpeakerSegment | null = null;
-
+  
   for (const word of words) {
-    const speakerLabel = word.speaker !== undefined ? `Speaker ${word.speaker}` : 'Unknown';
-
-    if (!currentSegment || currentSegment.speaker !== speakerLabel) {
-      if (currentSegment) segments.push(currentSegment);
-
+    const speaker = word.speaker !== undefined ? `Speaker ${word.speaker}` : 'Unknown';
+    
+    // Start a new segment if there's no current one or speaker changed
+    if (!currentSegment || currentSegment.speaker !== speaker) {
+      // Push the current segment if it exists
+      if (currentSegment) {
+        segments.push(currentSegment);
+      }
+      
+      // Start a new segment
       currentSegment = {
-        speaker: speakerLabel,
+        speaker,
         text: word.word,
         start: word.start,
-        end: word.end,
+        end: word.end
       };
     } else {
+      // Add to existing segment
       currentSegment.text += ` ${word.word}`;
       currentSegment.end = word.end;
     }
   }
-
-  if (currentSegment) segments.push(currentSegment);
-
+  
+  // Add the last segment if it exists
+  if (currentSegment) {
+    segments.push(currentSegment);
+  }
+  
   return segments;
 }

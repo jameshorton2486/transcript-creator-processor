@@ -5,12 +5,13 @@
 import { ApiKeyValidationResult } from '../../hooks/useDeepgramTranscription/types';
 import { safePromise } from '../../hooks/useTranscription/promiseUtils';
 
+// Base URL for Deepgram API
 const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
 
 /**
- * Tests the validity of a Deepgram API key.
- * @param apiKey API key to validate
- * @returns Result of the validation, including validity and a descriptive message
+ * Test if a Deepgram API key is valid
+ * @param apiKey API key to test
+ * @returns Result of validation, including validity and error message if any
  */
 export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult> {
   try {
