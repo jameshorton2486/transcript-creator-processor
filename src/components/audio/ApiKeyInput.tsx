@@ -54,7 +54,7 @@ export const ApiKeyInput = ({
           description: result.statusCode === 429 
             ? `Your ${provider} API key is valid but rate limited.` 
             : `Your ${provider} API key is valid.`,
-          variant: result.statusCode === 429 ? "warning" : "default"
+          variant: "default" // Changed from "warning" to "default" for rate limited case
         });
       } else {
         toast({
