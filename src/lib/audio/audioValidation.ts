@@ -12,16 +12,16 @@ export const validateAudioFile = (file: File): { valid: boolean; reason?: string
     return { valid: false, reason: 'No file provided' };
   }
 
-  // Check file size (100MB limit is reasonable for most use cases)
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+  // Check file size (250MB limit for AssemblyAI)
+  const MAX_FILE_SIZE = 250 * 1024 * 1024; // 250MB
   if (file.size > MAX_FILE_SIZE) {
     return { 
       valid: false, 
-      reason: `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 100MB limit` 
+      reason: `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 250MB limit` 
     };
   }
 
-  // Check file type - updated to match explicitly supported formats
+  // Check file type - only the specifically supported formats
   const validTypes = [
     'audio/wav', 'audio/x-wav',
     'audio/mp3', 'audio/mpeg',
@@ -34,7 +34,7 @@ export const validateAudioFile = (file: File): { valid: boolean; reason?: string
       !file.name.match(/\.(wav|mp3|flac|m4a|mp4)$/i)) {
     return { 
       valid: false, 
-      reason: `File type "${file.type || 'unknown'}" is not supported` 
+      reason: `File type "${file.type || 'unknown'}" is not supported. Please use MP3, MP4, WAV, M4A, or FLAC format.` 
     };
   }
 
