@@ -9,6 +9,7 @@ import {
   DeepgramTranscriptionOptions,
   DeepgramTranscriptionHookState,
   UseDeepgramTranscriptionReturn,
+  TranscriptionResult,
 } from './types';
 
 export function useDeepgramTranscription(
@@ -20,7 +21,7 @@ export function useDeepgramTranscription(
     isLoading: false,
     error: null,
     progress: 0,
-    apiKey: '',
+    apiKey: initialOptions?.apiKey || '',
     keyStatus: 'untested',
     testingKey: false,
   });
@@ -81,7 +82,7 @@ export function useDeepgramTranscription(
     }
   }, [state.apiKey]);
 
-  const transcribe = useCallback(async (): Promise<void> => {
+  const transcribe = useCallback(async (): Promise<TranscriptionResult | undefined> => {
     if (!state.file) {
       setState(prev => ({ ...prev, error: 'No file selected' }));
       return;
@@ -131,6 +132,8 @@ export function useDeepgramTranscription(
           state.file
         );
       }
+
+      return result;
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -138,6 +141,7 @@ export function useDeepgramTranscription(
         error: error instanceof Error ? error.message : 'Error during transcription',
         progress: 0,
       }));
+      throw error;
     } finally {
       abortControllerRef.current = null;
     }
