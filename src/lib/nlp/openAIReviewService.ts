@@ -2,6 +2,7 @@
 /**
  * AI-powered transcript review service using OpenAI
  */
+import OpenAI from 'openai';
 
 // Define types for our functions
 export interface TrainingRule {
@@ -88,6 +89,11 @@ export async function reviewWithOpenAI(
   if (!transcript) throw new Error("No transcript provided for review");
   if (!apiKey) throw new Error("OpenAI API key required");
 
+  // Create OpenAI instance with user-provided API key
+  const openai = new OpenAI({
+    apiKey: apiKey,
+  });
+
   // Build the system prompt based on rules and examples
   const systemPrompt = buildReviewPrompt(rules, examples);
   
@@ -99,33 +105,17 @@ export async function reviewWithOpenAI(
       model: "gpt-4o-mini" // Using a fast, cost-effective model
     });
     
-    // Prepare the API request
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini", // Using a smaller, faster model 
-        temperature: 0.3,     // Lower temperature for more consistent results
-        max_tokens: 2048,     // Reasonable limit for transcript processing
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: transcript }
-        ]
-      })
+    // Make the API request to OpenAI
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: transcript }
+      ]
     });
 
-    // Handle API response
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("OpenAI API error:", error);
-      throw new Error(error.error?.message || "Failed to review transcript with OpenAI");
-    }
-
-    const data = await response.json();
-    const result = data.choices[0].message.content;
+    const result = response.choices[0].message.content || "";
     
     // Log result summary
     console.log("OpenAI review complete:", {
