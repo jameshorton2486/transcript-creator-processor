@@ -1,60 +1,71 @@
 
-import { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, FileAudio, AlertCircle, Upload, File, Info } from "lucide-react";
+import { Mic, FileAudio, AlertCircle, Upload, Info } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { validateAudioFile } from "@/lib/audio/audioValidation";
 
 interface FileSelectorProps {
   onFileSelected: (file: File) => void;
   isLoading: boolean;
   supportedFormats?: string[];
   maxSizeMB?: number;
+  className?: string;
 }
 
-export const FileSelector = ({ 
+/**
+ * FileSelector Component
+ * 
+ * A simpler file selector component for audio/video uploads without drag-and-drop functionality
+ */
+export const FileSelector: React.FC<FileSelectorProps> = ({ 
   onFileSelected, 
   isLoading, 
-  supportedFormats = ["mp3", "wav", "flac", "m4a"], 
-  maxSizeMB = 100 
+  supportedFormats = ["mp3", "wav", "flac", "m4a", "ogg", "aac"], 
+  maxSizeMB = 250,
+  className = ""
 }: FileSelectorProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setError(null);
       
-      // Check file type
-      if (selectedFile.type.startsWith("audio/") || selectedFile.type.startsWith("video/")) {
-        // Check file size if maxSizeMB is provided
-        if (maxSizeMB && (selectedFile.size > maxSizeMB * 1024 * 1024)) {
-          const errorMsg = `File is too large. Maximum size is ${maxSizeMB}MB.`;
-          setError(errorMsg);
-          toast({
-            title: "File too large",
-            description: errorMsg,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        setFile(selectedFile);
-        onFileSelected(selectedFile);
-        console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
-      } else {
-        setError("Invalid file type. Please select an audio or video file.");
+      const validationResult = validateAudioFile(selectedFile);
+      
+      if (!validationResult.valid) {
+        setError(validationResult.reason || "Invalid file");
         toast({
-          title: "Invalid file type",
-          description: "Please select an audio or video file.",
-          variant: "destructive",
+          title: "File Error",
+          description: validationResult.reason || "Invalid file",
+          variant: "destructive"
         });
+        return;
       }
+      
+      setFile(selectedFile);
+      onFileSelected(selectedFile);
+      console.log(`File selected: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      toast({
+        title: "File Selected",
+        description: `${selectedFile.name} ready for transcription`,
+        variant: "default"
+      });
     }
-  };
+  }, [onFileSelected, toast]);
+
+  const handleButtonClick = useCallback(() => {
+    if (!isLoading && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, [isLoading]);
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.includes("audio/")) {
@@ -70,7 +81,7 @@ export const FileSelector = ({
   const formatSupported = supportedFormats.map(format => format.toUpperCase()).join(', ');
 
   return (
-    <>
+    <div className={className}>
       <div className="flex flex-col items-center p-6 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50/80 hover:bg-slate-50 transition-colors">
         <Upload className="h-10 w-10 text-indigo-500 mb-3" />
         <p className="text-sm text-slate-700 mb-2 font-medium">Upload an audio or video file for transcription</p>
@@ -80,18 +91,20 @@ export const FileSelector = ({
         <input
           type="file"
           id="audio-file"
+          ref={fileInputRef}
           accept="audio/*,video/*"
           className="hidden"
           onChange={handleFileChange}
           disabled={isLoading}
         />
-        <label
-          htmlFor="audio-file"
+        <Button
+          onClick={handleButtonClick}
           className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 cursor-pointer transition-colors ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+          disabled={isLoading}
         >
           <FileAudio className="h-4 w-4" />
           Select Audio File
-        </label>
+        </Button>
         
         <div className="flex items-center mt-4">
           <p className="text-xs text-slate-500">
@@ -120,7 +133,7 @@ export const FileSelector = ({
         </Alert>
       )}
       
-      {file && (
+      {file && !error && (
         <div className="p-4 mt-4 bg-white rounded-md border border-slate-200 shadow-sm">
           <p className="text-sm font-medium text-slate-700 flex items-center mb-1">
             {getFileIcon(file.type)}
@@ -129,7 +142,7 @@ export const FileSelector = ({
           <p className="text-sm text-slate-800 font-medium truncate">{file.name}</p>
           <div className="flex items-center justify-between mt-1">
             <p className="text-xs text-slate-500">
-              {file.type}
+              {file.type || 'audio/video file'}
             </p>
             <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-full font-medium">
               {(file.size / 1024 / 1024).toFixed(2)} MB
@@ -137,6 +150,6 @@ export const FileSelector = ({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
