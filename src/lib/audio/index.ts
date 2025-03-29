@@ -1,8 +1,8 @@
-
 // Export audio utilities
 export * from './audioValidation';
 export * from './wavConverter';
 export * from './audioContext';
+export * from './transcriptionService';
 
 /**
  * Convert a Float32Array to WAV format
