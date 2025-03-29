@@ -1,5 +1,7 @@
 
 import { formatDeepgramTranscript } from "../transcriptProcessor";
+import { formatTranscriptionResult } from "./formatter";
+import { TranscriptionResult } from "@/hooks/useDeepgramTranscription/types";
 
 export interface DeepgramResponse {
   transcript: string;
@@ -51,6 +53,21 @@ export function processDeepgramResponse(response: any): DeepgramResponse {
 }
 
 /**
+ * Convert a DeepgramResponse to a TranscriptionResult
+ */
+function convertToTranscriptionResult(response: any, deepgramResponse: DeepgramResponse): TranscriptionResult {
+  // Use the formatter to create a properly formatted result
+  const formattedResult = formatTranscriptionResult(response);
+  
+  return {
+    transcript: deepgramResponse.transcript,
+    text: deepgramResponse.transcript,
+    formattedResult: formattedResult.formattedResult,
+    rawResponse: response
+  };
+}
+
+/**
  * Transcribes an audio file using Deepgram API
  * 
  * @param file The audio file to transcribe
@@ -61,7 +78,7 @@ export async function transcribeAudioFile(
   file: File,
   apiKey: string,
   options: any = {}
-): Promise<DeepgramResponse> {
+): Promise<TranscriptionResult> {
   if (!file) {
     throw new Error("No file provided for transcription");
   }
@@ -107,7 +124,8 @@ export async function transcribeAudioFile(
     }
 
     const data = await response.json();
-    return processDeepgramResponse(data);
+    const deepgramResponse = processDeepgramResponse(data);
+    return convertToTranscriptionResult(data, deepgramResponse);
   } catch (error) {
     console.error("Error transcribing with Deepgram:", error);
     throw error;

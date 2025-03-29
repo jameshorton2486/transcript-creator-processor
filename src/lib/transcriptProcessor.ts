@@ -16,6 +16,26 @@ const readFileContent = async (file: File): Promise<string> => {
 };
 
 /**
+ * Format a Deepgram transcript response
+ * Extracts the main transcript text from Deepgram's API response
+ */
+export function formatDeepgramTranscript(response: any): string {
+  try {
+    // Standard response path for Deepgram
+    const transcript = response?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    
+    if (!transcript) {
+      console.warn("No transcript found in Deepgram response", response);
+    }
+    
+    return transcript;
+  } catch (error) {
+    console.error("Error formatting Deepgram transcript:", error);
+    return '';
+  }
+}
+
+/**
  * Process transcript with AI or basic text processing
  */
 export const processTranscript = async (

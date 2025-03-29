@@ -1,4 +1,3 @@
-
 /**
  * React hook for managing audio transcription with Deepgram API
  */
