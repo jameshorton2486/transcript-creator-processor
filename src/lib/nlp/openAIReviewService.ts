@@ -3,20 +3,7 @@
  * AI-powered transcript review service using OpenAI
  */
 
-// Configuration for OpenAI API requests
-interface OpenAIReviewConfig {
-  model: string;
-  temperature: number;
-  max_tokens: number;
-}
-
-// Default configuration values
-const DEFAULT_CONFIG: OpenAIReviewConfig = {
-  model: "gpt-4o-mini", // Using a fast, cost-effective model
-  temperature: 0.3,     // Lower temperature for more consistent results
-  max_tokens: 2048      // Reasonable limit for transcript processing
-};
-
+// Define types for our functions
 export interface TrainingRule {
   id: string;
   name: string;
@@ -32,81 +19,10 @@ export interface TrainingExample {
 }
 
 /**
- * Processes a transcript using OpenAI's API with rules and examples
- * 
- * @param transcript The raw transcript text to review
- * @param rules Array of custom rules to apply
- * @param examples Array of training examples to learn from
- * @param apiKey The user's OpenAI API key
- * @returns Reviewed and enhanced transcript text
- */
-export async function reviewWithOpenAI(
-  transcript: string,
-  rules: TrainingRule[],
-  examples: TrainingExample[],
-  apiKey: string
-): Promise<string> {
-  if (!transcript) throw new Error("No transcript provided for review");
-  if (!apiKey) throw new Error("OpenAI API key required");
-
-  // Build the system prompt based on rules and examples
-  const systemPrompt = buildReviewPrompt(rules, examples);
-  
-  try {
-    console.log("Sending transcript to OpenAI for review:", {
-      transcriptLength: transcript.length,
-      rulesCount: rules.length,
-      examplesCount: examples.length,
-      model: DEFAULT_CONFIG.model
-    });
-    
-    // Prepare the API request
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: DEFAULT_CONFIG.model,
-        temperature: DEFAULT_CONFIG.temperature,
-        max_tokens: DEFAULT_CONFIG.max_tokens,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: transcript }
-        ]
-      })
-    });
-
-    // Handle API response
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("OpenAI API error:", error);
-      throw new Error(error.error?.message || "Failed to review transcript with OpenAI");
-    }
-
-    const data = await response.json();
-    const result = data.choices[0].message.content;
-    
-    // Log result summary
-    console.log("OpenAI review complete:", {
-      originalLength: transcript.length,
-      resultLength: result.length,
-      success: result.length > 0
-    });
-    
-    return result;
-  } catch (error) {
-    console.error("Error reviewing transcript with OpenAI:", error);
-    throw error;
-  }
-}
-
-/**
  * Builds a comprehensive system prompt for the AI review
  * Incorporates custom rules and learning from examples
  */
-function buildReviewPrompt(rules: TrainingRule[], examples: TrainingExample[]): string {
+function buildReviewPrompt(rules: TrainingRule[] = [], examples: TrainingExample[] = []): string {
   let instructions = [
     "You are an expert transcript editor specializing in legal and professional transcripts.",
     "Your task is to review, improve, and correct the provided transcript according to the rules and examples below.",
@@ -152,4 +68,75 @@ function buildReviewPrompt(rules: TrainingRule[], examples: TrainingExample[]): 
   instructions.push("Return ONLY the improved transcript text without any explanations, comments, or meta information.");
 
   return instructions.join("\n");
+}
+
+/**
+ * Processes a transcript using OpenAI's API with rules and examples
+ * 
+ * @param transcript The raw transcript text to review
+ * @param rules Array of custom rules to apply
+ * @param examples Array of training examples to learn from
+ * @param apiKey The user's OpenAI API key
+ * @returns Reviewed and enhanced transcript text
+ */
+export async function reviewWithOpenAI(
+  transcript: string,
+  rules: TrainingRule[] = [],
+  examples: TrainingExample[] = [],
+  apiKey: string
+): Promise<string> {
+  if (!transcript) throw new Error("No transcript provided for review");
+  if (!apiKey) throw new Error("OpenAI API key required");
+
+  // Build the system prompt based on rules and examples
+  const systemPrompt = buildReviewPrompt(rules, examples);
+  
+  try {
+    console.log("Sending transcript to OpenAI for review:", {
+      transcriptLength: transcript.length,
+      rulesCount: rules.length,
+      examplesCount: examples.length,
+      model: "gpt-4o-mini" // Using a fast, cost-effective model
+    });
+    
+    // Prepare the API request
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // Using a smaller, faster model 
+        temperature: 0.3,     // Lower temperature for more consistent results
+        max_tokens: 2048,     // Reasonable limit for transcript processing
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: transcript }
+        ]
+      })
+    });
+
+    // Handle API response
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("OpenAI API error:", error);
+      throw new Error(error.error?.message || "Failed to review transcript with OpenAI");
+    }
+
+    const data = await response.json();
+    const result = data.choices[0].message.content;
+    
+    // Log result summary
+    console.log("OpenAI review complete:", {
+      originalLength: transcript.length,
+      resultLength: result.length,
+      success: result.length > 0
+    });
+    
+    return result;
+  } catch (error) {
+    console.error("Error reviewing transcript with OpenAI:", error);
+    throw error;
+  }
 }
