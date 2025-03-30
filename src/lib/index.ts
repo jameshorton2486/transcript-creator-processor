@@ -11,7 +11,13 @@ export { audioTranscribeAudioFile };
 export * from './audio/audioValidation';
 export * from './audio/wavConverter';
 export * from './audio/audioContext';
-export * from './audio/transcriptionService';
+
+// Export transcriptionService but rename the transcribeAudioFile function
+// to avoid naming conflicts
+import { transcribeAudioFile as serviceTranscribeAudioFile } from './audio/transcriptionService';
+export { serviceTranscribeAudioFile };
+// Export other items from transcriptionService
+export { prepareAudioForTranscription, validateAudioForTranscription } from './audio/transcriptionService';
 
 // Export Deepgram utilities
 export * from './deepgram';
