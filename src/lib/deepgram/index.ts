@@ -28,6 +28,15 @@ export {
   clearApiKey,
 } from './auth';
 
+// Export new auth service functions
+export {
+  validateApiKey,
+  mockValidateApiKey,
+  getSavedApiKey,
+  saveApiKey,
+  clearApiKey as clearDeepgramApiKey,
+} from './authService';
+
 /**
  * Helper function to map AssemblyAI model names to Deepgram equivalents
  */
