@@ -12,6 +12,24 @@ import {
   TranscriptionResult,
 } from './types';
 
+// Export the new service-based hook
+export { useDeepgramService } from './useDeepgramService';
+export type { 
+  UseDeepgramTranscriptionProps, 
+  UseDeepgramTranscriptionReturn 
+} from './useDeepgramService';
+
+// Re-export types from deepgramService
+export { 
+  DeepgramTranscriptionResponse,
+  DeepgramChannel,
+  DeepgramAlternative,
+  DeepgramWord,
+  DeepgramParagraph,
+  DeepgramUtterance,
+  TranscriptionResult
+} from '@/lib/deepgram/deepgramService';
+
 export function useDeepgramTranscription(
   onTranscriptCreated?: (transcript: string, jsonData: any, file?: File) => void,
   initialOptions?: Partial<DeepgramTranscriptionOptions>

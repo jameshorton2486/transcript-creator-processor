@@ -37,6 +37,10 @@ export {
   saveApiKey,
 } from './authService';
 
+// Export new service modules
+export * from './deepgramConfig';
+export * from './deepgramService';
+
 /**
  * Helper function to map AssemblyAI model names to Deepgram equivalents
  */
