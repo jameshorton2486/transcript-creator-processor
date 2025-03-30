@@ -16,8 +16,7 @@ export * from './audio/audioContext';
 // to avoid naming conflicts
 import { transcribeAudioFile as serviceTranscribeAudioFile } from './audio/transcriptionService';
 export { serviceTranscribeAudioFile };
-// Export other items from transcriptionService
-export { prepareAudioForTranscription, validateAudioForTranscription } from './audio/transcriptionService';
+// Note: No other items to export from transcriptionService
 
 // Export Deepgram utilities
 export * from './deepgram';
