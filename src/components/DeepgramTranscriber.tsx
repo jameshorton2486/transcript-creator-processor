@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDeepgramTranscription } from '@/hooks/useDeepgramTranscription';
-import { TranscriptionResult } from '@/hooks/useDeepgramTranscription/types';
+import type { TranscriptionResult } from '@/lib/deepgram/deepgramService';
 import { DeepgramApiKeyInput } from '@/components/deepgram/DeepgramApiKeyInput';
 import { EnhancedFileSelector } from '@/components/audio/EnhancedFileSelector';
 import { Card } from "@/components/ui/card";

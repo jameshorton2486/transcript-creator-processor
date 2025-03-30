@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with Deepgram API through server-side proxies
  */
@@ -240,3 +239,6 @@ export const apiKeyStorage = {
     }
   }
 };
+
+// Re-export DeepgramRequestOptions from deepgramConfig
+export type { DeepgramRequestOptions } from './deepgramConfig';

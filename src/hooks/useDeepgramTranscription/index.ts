@@ -1,3 +1,4 @@
+
 /**
  * React hook for managing audio transcription with Deepgram API
  */
@@ -19,8 +20,8 @@ export type {
   UseDeepgramTranscriptionReturn 
 } from './useDeepgramService';
 
-// Re-export types from deepgramService
-export { 
+// Re-export types from deepgramService with 'export type'
+export type { 
   DeepgramTranscriptionResponse,
   DeepgramChannel,
   DeepgramAlternative,

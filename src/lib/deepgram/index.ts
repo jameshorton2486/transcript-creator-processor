@@ -29,12 +29,13 @@ export {
 } from './auth';
 
 // Export new auth service functions
-// We don't re-export clearApiKey to avoid naming conflicts 
+// We rename clearApiKey from authService to avoid naming conflicts
 export {
   validateApiKey,
   mockValidateApiKey,
   getSavedApiKey,
   saveApiKey,
+  clearApiKey as clearDeepgramAuthApiKey,
 } from './authService';
 
 // Export new service modules

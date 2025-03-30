@@ -1,15 +1,13 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   validateApiKey, 
   transcribeFile, 
   extractTranscriptionResult,
   apiKeyStorage,
-  DeepgramRequestOptions,
   TranscriptionResult,
   DeepgramTranscriptionResponse
 } from '@/lib/deepgram/deepgramService';
-import { DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
+import { DeepgramRequestOptions, DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
 
 export interface UseDeepgramTranscriptionProps {
   initialApiKey?: string;
