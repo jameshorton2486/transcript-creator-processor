@@ -23,6 +23,19 @@ export * from './deepgram';
 // Export the Deepgram API validator
 export * from './audio/deepgramApiValidator';
 
-// Export Deepgram auth service
-export * from './deepgram/authService';
+// Export Deepgram auth service with renamed clearApiKey function
+import { 
+  validateApiKey,
+  mockValidateApiKey,
+  getSavedApiKey,
+  saveApiKey,
+  clearApiKey as clearDeepgramAuthApiKey 
+} from './deepgram/authService';
 
+export {
+  validateApiKey,
+  mockValidateApiKey,
+  getSavedApiKey,
+  saveApiKey,
+  clearDeepgramAuthApiKey
+};
