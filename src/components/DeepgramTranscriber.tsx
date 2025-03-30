@@ -105,6 +105,15 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
         <p className="text-sm text-slate-500">
           Upload an audio file and transcribe it using Deepgram's advanced AI models.
         </p>
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-sm text-amber-800">
+            <strong>Note:</strong> For optimal performance, set up the included Express proxy server from the 
+            <span className="font-mono mx-1">server/</span> 
+            directory to avoid CORS issues. See 
+            <span className="font-mono mx-1">server/README.md</span> 
+            for instructions.
+          </p>
+        </div>
       </div>
 
       <Card className="p-4">

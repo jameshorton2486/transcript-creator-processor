@@ -2,7 +2,7 @@
 /**
  * Authentication service for Deepgram API
  */
-import { validateDeepgramApiKey, checkDeepgramApiStatus } from '../audio/deepgramApiValidator';
+import { validateDeepgramApiKey as directValidateApiKey, checkDeepgramApiStatus } from '../audio/deepgramApiValidator';
 
 /**
  * Validate Deepgram API key
@@ -18,35 +18,41 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
       };
     }
 
-    // Try server-side validation first (if available)
-    try {
-      const response = await fetch('/api/auth/validate-key', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ apiKey }),
-      });
+    // Server options for validation - try multiple endpoints
+    const serverEndpoints = [
+      '/api/auth/validate-key',          // Next.js API route
+      'http://localhost:4000/validate-key'  // Express proxy
+    ];
 
-      if (response.ok) {
-        return { valid: true };
+    // Try server-side validation first
+    for (const endpoint of serverEndpoints) {
+      try {
+        console.log(`Trying to validate via server endpoint: ${endpoint}`);
+        const response = await fetch(endpoint, {
+          method: endpoint.includes('validate-key') ? 'POST' : 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: endpoint.includes('validate-key') ? JSON.stringify({ apiKey }) : undefined,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { 
+            valid: data.isValid || data.valid || false,
+            message: data.message || (data.isValid ? 'API key is valid' : 'Invalid API key')
+          };
+        }
+      } catch (serverError) {
+        console.log(`Server validation endpoint ${endpoint} failed:`, serverError);
+        // Continue to next endpoint or direct validation
       }
-      
-      // If server-side validation fails with a proper error response, use that
-      const errorData = await response.json().catch(() => null);
-      if (errorData?.error) {
-        return { 
-          valid: false, 
-          message: errorData.error 
-        };
-      }
-    } catch (serverError) {
-      console.log('Server-side validation not available, falling back to direct validation');
-      // Continue to direct validation if server-side fails
     }
 
+    console.log('Server-side validation not available, falling back to direct validation');
+    
     // Fall back to direct validation if server-side isn't available
-    const directResult = await validateDeepgramApiKey(apiKey);
+    const directResult = await directValidateApiKey(apiKey);
     
     return {
       valid: directResult.isValid,
@@ -74,9 +80,9 @@ export const checkApiStatus = async (apiKey: string): Promise<{ active: boolean;
       };
     }
 
-    // Try server-side check first (if available)
+    // Try server-side check with Express proxy first
     try {
-      const response = await fetch(`/api/auth/check-status?apiKey=${encodeURIComponent(apiKey)}`);
+      const response = await fetch(`http://localhost:4000/check-status?apiKey=${encodeURIComponent(apiKey)}`);
       
       if (response.ok) {
         const data = await response.json();

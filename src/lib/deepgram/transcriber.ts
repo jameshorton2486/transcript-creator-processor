@@ -69,6 +69,7 @@ function convertToTranscriptionResult(response: any, deepgramResponse: DeepgramR
 
 /**
  * Transcribes an audio file using Deepgram API
+ * Attempts to use proxy server first, falls back to direct API call
  * 
  * @param file The audio file to transcribe
  * @param apiKey The Deepgram API key
@@ -87,7 +88,38 @@ export async function transcribeAudioFile(
     throw new Error("Deepgram API key is required");
   }
 
+  // Try transcribing through the proxy server first
   try {
+    console.log("Attempting to transcribe via proxy server...");
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("apiKey", apiKey);
+    
+    // Add options to formData
+    Object.entries(options).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+    
+    // Try the Express proxy server
+    const proxyResponse = await fetch("http://localhost:4000/transcribe", {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (proxyResponse.ok) {
+      const data = await proxyResponse.json();
+      const deepgramResponse = processDeepgramResponse(data);
+      return convertToTranscriptionResult(data, deepgramResponse);
+    } else {
+      console.log("Proxy server returned error, falling back to direct API");
+    }
+  } catch (proxyError) {
+    console.log("Error using proxy server, falling back to direct API:", proxyError);
+  }
+  
+  // Fall back to direct API call if proxy server is unavailable
+  try {
+    console.log("Attempting direct Deepgram API call...");
     // Create form data to send the audio file
     const formData = new FormData();
     formData.append("file", file);
