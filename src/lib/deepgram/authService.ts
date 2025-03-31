@@ -1,179 +1,173 @@
+import { apiKeyStorage } from './apiHelpers';
 
 /**
- * Authentication service for Deepgram API
+ * Validate a Deepgram API key
+ * Attempts to validate via proxy server first, then falls back to direct validation
+ * 
+ * @param apiKey The API key to validate
+ * @returns Object indicating if the key is valid and any error message
  */
-import { validateDeepgramApiKey as directValidateApiKey, checkDeepgramApiStatus } from '../audio/deepgramApiValidator';
-
-/**
- * Validate Deepgram API key
- * Tries to use a server-side proxy first, but falls back to direct validation
- * @param apiKey The Deepgram API key to validate
- */
-export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; message?: string }> => {
-  try {
-    if (!apiKey || apiKey.trim() === '') {
-      return { 
-        valid: false, 
-        message: 'API key is required' 
-      };
-    }
-
-    // Server options for validation - try multiple endpoints
-    const serverEndpoints = [
-      '/api/auth/validate-key',          // Next.js API route
-      'http://localhost:4000/validate-key'  // Express proxy
-    ];
-
-    // Try server-side validation first
-    for (const endpoint of serverEndpoints) {
-      try {
-        console.log(`Trying to validate via server endpoint: ${endpoint}`);
-        const response = await fetch(endpoint, {
-          method: endpoint.includes('validate-key') ? 'POST' : 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: endpoint.includes('validate-key') ? JSON.stringify({ apiKey }) : undefined,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return { 
-            valid: data.isValid || data.valid || false,
-            message: data.message || (data.isValid ? 'API key is valid' : 'Invalid API key')
-          };
-        }
-      } catch (serverError) {
-        console.log(`Server validation endpoint ${endpoint} failed:`, serverError);
-        // Continue to next endpoint or direct validation
-      }
-    }
-
-    console.log('Server-side validation not available, falling back to direct validation');
-    
-    // Fall back to direct validation if server-side isn't available
-    const directResult = await directValidateApiKey(apiKey);
-    
-    return {
-      valid: directResult.isValid,
-      message: directResult.message
-    };
-  } catch (error) {
-    console.error('API key validation error:', error);
+export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; message?: string }> {
+  console.log("[DEEPGRAM AUTH SERVICE] Starting API key validation for key:", { 
+    keyLength: apiKey?.length,
+    keyPrefix: apiKey ? `${apiKey.substring(0, 4)}...` : 'undefined'
+  });
+  
+  if (!apiKey || apiKey.trim() === '') {
+    console.log("[DEEPGRAM AUTH SERVICE] No API key provided");
     return { 
       valid: false, 
-      message: 'Failed to validate API key. Please check your network connection.' 
+      message: 'API key is required' 
     };
   }
-};
 
-/**
- * Check the status of a Deepgram API key
- * @param apiKey The Deepgram API key to check
- */
-export const checkApiStatus = async (apiKey: string): Promise<{ active: boolean; message: string }> => {
+  // Try validating through proxy server first
   try {
-    if (!apiKey || apiKey.trim() === '') {
+    console.log("[DEEPGRAM AUTH SERVICE] Attempting to validate via proxy server...");
+    const proxyResponse = await fetch('http://localhost:4000/validate-key', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ apiKey }),
+    });
+    
+    console.log("[DEEPGRAM AUTH SERVICE] Proxy server response status:", proxyResponse.status);
+    
+    if (proxyResponse.ok) {
+      const data = await proxyResponse.json();
+      console.log("[DEEPGRAM AUTH SERVICE] Proxy validation result:", data);
+      return {
+        valid: data.valid,
+        message: data.message
+      };
+    } else {
+      console.log("[DEEPGRAM AUTH SERVICE] Proxy validation failed, falling back to direct API test");
+    }
+  } catch (proxyError) {
+    console.error("[DEEPGRAM AUTH SERVICE] Error using proxy server:", proxyError);
+    console.log("[DEEPGRAM AUTH SERVICE] Falling back to direct API test");
+  }
+  
+  // Fall back to direct API test
+  try {
+    console.log("[DEEPGRAM AUTH SERVICE] Attempting direct Deepgram API validation...");
+    const response = await fetch('https://api.deepgram.com/v1/projects', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log("[DEEPGRAM AUTH SERVICE] Direct API response status:", response.status);
+    
+    if (!response.ok) {
+      let errorMessage = '';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || `Invalid API key (Status: ${response.status})`;
+      } catch (e) {
+        errorMessage = `API returned status ${response.status}`;
+      }
+      
+      console.error("[DEEPGRAM AUTH SERVICE] API validation failed:", errorMessage);
       return { 
-        active: false, 
-        message: 'API key is required' 
+        valid: false, 
+        message: errorMessage
       };
     }
-
-    // Try server-side check with Express proxy first
-    try {
-      const response = await fetch(`http://localhost:4000/check-status?apiKey=${encodeURIComponent(apiKey)}`);
+    
+    console.log("[DEEPGRAM AUTH SERVICE] API key validated successfully");
+    return { 
+      valid: true 
+    };
+  } catch (error) {
+    console.error("[DEEPGRAM AUTH SERVICE] Error during API validation:", error);
+    
+    // Network error detection
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      console.log("[DEEPGRAM AUTH SERVICE] Error message:", errorMessage);
       
-      if (response.ok) {
-        const data = await response.json();
-        return { 
-          active: data.active, 
-          message: data.message || (data.active ? 'API key is active' : 'API key is invalid or inactive')
+      // CORS error detection
+      if (errorMessage.includes('CORS') || errorMessage.includes('cross-origin')) {
+        console.log("[DEEPGRAM AUTH SERVICE] CORS error detected, performing fallback validation");
+        
+        // Basic check of API key format as fallback
+        const seemsValid = /^[a-zA-Z0-9]{24,}$/.test(apiKey);
+        if (seemsValid) {
+          console.log("[DEEPGRAM AUTH SERVICE] API key format seems valid despite CORS error");
+          return {
+            valid: true,
+            message: 'API key format seems valid, but could not verify with Deepgram due to CORS restrictions. Using proxy server is recommended.'
+          };
+        }
+      }
+      
+      // Other network error handling
+      if (errorMessage.includes('network') || 
+          errorMessage.includes('Failed to fetch') ||
+          errorMessage.includes('Network request failed')) {
+        console.log("[DEEPGRAM AUTH SERVICE] Network error detected");
+        return {
+          valid: false,
+          message: 'Network error occurred. Please check your internet connection and try again.'
         };
       }
-    } catch (serverError) {
-      console.log('Server-side status check not available, falling back to direct check');
-      // Continue to direct check if server-side fails
     }
-
-    // Fall back to direct check
-    return await checkDeepgramApiStatus(apiKey);
-  } catch (error) {
-    console.error('API status check error:', error);
+    
     return { 
-      active: false, 
-      message: 'Failed to check API status. Please check your network connection.'
+      valid: false, 
+      message: error instanceof Error ? error.message : 'Unknown error validating API key'
     };
   }
-};
+}
 
 /**
- * Mock validation function for development/testing when API validation isn't available
- * @param apiKey The Deepgram API key to validate
+ * Mock API key validation for testing without making network requests
  */
-export const mockValidateApiKey = (apiKey: string): Promise<{ valid: boolean; message?: string }> => {
-  return new Promise((resolve) => {
-    // Simulate network delay
-    setTimeout(() => {
-      if (!apiKey || apiKey.trim() === '') {
-        resolve({ 
-          valid: false, 
-          message: 'API key is required' 
-        });
-      } else if (apiKey.length < 20) {
-        resolve({ 
-          valid: false, 
-          message: 'Invalid API key format' 
-        });
-      } else {
-        resolve({ valid: true });
-      }
-    }, 500);
-  });
-};
-
-/**
- * Get API key from local storage
- */
-export const getSavedApiKey = (): string | null => {
-  if (typeof window === 'undefined') {
-    return null;
+export function mockValidateApiKey(apiKey: string): { valid: boolean; message?: string } {
+  console.log("[DEEPGRAM AUTH SERVICE] Running mock API key validation");
+  
+  if (!apiKey || apiKey.trim() === '') {
+    return { 
+      valid: false, 
+      message: 'API key is required' 
+    };
   }
   
-  try {
-    return localStorage.getItem('deepgram_api_key');
-  } catch (error) {
-    console.error('Error accessing localStorage:', error);
-    return null;
-  }
-};
-
-/**
- * Save API key to local storage
- */
-export const saveApiKey = (apiKey: string): void => {
-  if (typeof window === 'undefined') {
-    return;
+  // Simple format validation
+  if (/^[a-zA-Z0-9]{24,}$/.test(apiKey)) {
+    return { 
+      valid: true,
+      message: 'API key format is valid (mock validation)'
+    };
   }
   
-  try {
-    localStorage.setItem('deepgram_api_key', apiKey);
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-  }
-};
+  return { 
+    valid: false, 
+    message: 'Invalid API key format (mock validation)'
+  };
+}
 
 /**
- * Remove API key from local storage
+ * Get saved API key from storage
  */
-export const clearApiKey = (): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  
-  try {
-    localStorage.removeItem('deepgram_api_key');
-  } catch (error) {
-    console.error('Error removing from localStorage:', error);
-  }
-};
+export function getSavedApiKey(): string {
+  return apiKeyStorage.get() || '';
+}
+
+/**
+ * Save API key to storage
+ */
+export function saveApiKey(apiKey: string): void {
+  apiKeyStorage.save(apiKey);
+}
+
+/**
+ * Clear API key from storage
+ */
+export function clearApiKey(): void {
+  apiKeyStorage.clear();
+}

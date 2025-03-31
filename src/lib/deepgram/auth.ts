@@ -1,4 +1,3 @@
-
 /**
  * Authentication and API key validation for Deepgram
  */
@@ -9,118 +8,108 @@ import { safePromise } from '../../hooks/useTranscription/promiseUtils';
 const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
 
 /**
- * Test if a Deepgram API key is valid
- * @param apiKey API key to test
- * @returns Result of validation, including validity and error message if any
+ * Test if the provided API key is valid by making a test request to Deepgram
  */
-export async function testApiKey(apiKey: string): Promise<ApiKeyValidationResult> {
+export async function testApiKey(apiKey: string): Promise<{
+  isValid: boolean;
+  message?: string;
+}> {
+  console.log("[DEEPGRAM AUTH] Testing API key validity...", { 
+    keyLength: apiKey?.length,
+    keyPrefix: apiKey?.substring(0, 4) + '...',
+  });
+
+  if (!apiKey || apiKey.trim() === '') {
+    console.log("[DEEPGRAM AUTH] Empty API key provided");
+    return {
+      isValid: false,
+      message: 'API key is required'
+    };
+  }
+
   try {
-    console.log('[DEEPGRAM] Testing API key validity...');
-
-    if (!apiKey || apiKey.trim() === '') {
-      console.error('[DEEPGRAM] Empty API key provided');
-      return {
-        isValid: false,
-        message: 'API key cannot be empty'
-      };
-    }
-
-    const trimmedKey = apiKey.trim();
-
-    // Basic format validation - Deepgram keys should be of reasonable length
-    if (trimmedKey.length < 20) {
-      return {
-        isValid: false,
-        message: 'API key format appears invalid (too short)'
-      };
-    }
-
-    // Always try to validate with the actual API, even in development
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+    console.log("[DEEPGRAM AUTH] Making test request to Deepgram API...");
+    
+    // First try the proxy server if it's available
     try {
-      const response = await safePromise(fetch(`${DEEPGRAM_API_URL}/projects`, {
-        method: 'GET',
+      console.log("[DEEPGRAM AUTH] Attempting to use proxy server for validation");
+      const proxyResponse = await fetch('http://localhost:4000/validate-key', {
+        method: 'POST',
         headers: {
-          'Authorization': `Token ${trimmedKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        signal: controller.signal
-      }), 8000);
-
-      clearTimeout(timeoutId);
-      console.log(`[DEEPGRAM] API key test status: ${response.status}`);
-
-      if (response.status === 401 || response.status === 403) {
-        return {
-          isValid: false,
-          message: 'API key is invalid or lacks permissions',
-          statusCode: response.status
-        };
-      }
-
-      if (response.status === 429) {
-        return {
-          isValid: true,
-          message: 'API key is valid but rate limited',
-          statusCode: 429
-        };
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        return {
-          isValid: false,
-          message: errorData?.message || `Unexpected error (${response.status})`,
-          statusCode: response.status
-        };
-      }
-
-      storeApiKey(trimmedKey);
-      return {
-        isValid: true,
-        message: 'API key is valid',
-        statusCode: response.status
-      };
-    } catch (error) {
-      clearTimeout(timeoutId);
+        body: JSON.stringify({ apiKey }),
+      });
       
-      // If network error but format appears valid, provide a clear message
-      // but still allow using the key with a warning
-      console.warn('[DEEPGRAM] API validation failed due to network error', error);
-      storeApiKey(trimmedKey);
-      return {
-        isValid: true,
-        message: 'API key format looks valid, but validation failed due to network error. You can try using it, but it may not work.',
-        skipApiValidation: true
-      };
+      console.log("[DEEPGRAM AUTH] Proxy server response status:", proxyResponse.status);
+      
+      if (proxyResponse.ok) {
+        const data = await proxyResponse.json();
+        console.log("[DEEPGRAM AUTH] Proxy validation result:", data);
+        return {
+          isValid: data.valid,
+          message: data.message
+        };
+      } else {
+        console.log("[DEEPGRAM AUTH] Proxy validation failed, falling back to direct validation");
+      }
+    } catch (proxyError) {
+      console.log("[DEEPGRAM AUTH] Error using proxy server:", proxyError);
+      console.log("[DEEPGRAM AUTH] Falling back to direct validation");
     }
-  } catch (error: any) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
-      storeApiKey(apiKey.trim());
-      return {
-        isValid: true,
-        message: 'API key format looks valid (API call timed out, but proceeding)',
-        skipApiValidation: true
-      };
-    } else if (error.message && (
-      error.message.includes('network') ||
-      error.message.includes('fetch') ||
-      error.message.includes('connect')
-    )) {
-      storeApiKey(apiKey.trim());
-      return {
-        isValid: true,
-        message: 'Key format looks valid (network error encountered, but proceeding)',
-        skipApiValidation: true
-      };
-    } else {
+    
+    // Fall back to direct API call
+    console.log("[DEEPGRAM AUTH] Attempting direct Deepgram API validation...");
+    const response = await fetch('https://api.deepgram.com/v1/projects', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log("[DEEPGRAM AUTH] Direct API response status:", response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error("[DEEPGRAM AUTH] API validation failed:", errorData);
       return {
         isValid: false,
-        message: `Unexpected error: ${error.message || 'Unknown error'}`
+        message: errorData?.error || `Invalid API key (Status: ${response.status})`
       };
     }
+    
+    console.log("[DEEPGRAM AUTH] API key validation successful");
+    return {
+      isValid: true,
+    };
+  } catch (error) {
+    console.error("[DEEPGRAM AUTH] API validation failed due to network error", error);
+    
+    // Special handling for network errors
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch') || 
+          error.message.includes('Network request failed') ||
+          error.message.includes('CORS')) {
+        // CORS or network issue likely
+        console.log("[DEEPGRAM AUTH] Detected CORS or network error, checking key format");
+        
+        // Basic format validation (not guaranteeing it works, just checking format)
+        const isFormatValid = /^[a-zA-Z0-9]{32,}$/.test(apiKey);
+        if (isFormatValid) {
+          console.log("[DEEPGRAM AUTH] API key format looks valid, might be a CORS issue");
+          return {
+            isValid: true,
+            message: 'Unable to verify key online. Format appears valid, but functionality is not guaranteed.'
+          };
+        }
+      }
+    }
+    
+    return {
+      isValid: false,
+      message: 'Failed to validate API key. Please check your network connection and try again.'
+    };
   }
 }
 

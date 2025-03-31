@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -51,19 +50,43 @@ const DeepgramServiceTranscriber: React.FC<DeepgramServiceTranscriberProps> = ({
   const [showProxyInfo, setShowProxyInfo] = useState<boolean>(true);
 
   const handleFileSelected = useCallback((file: File) => {
+    console.log("[DEEPGRAM UI] File selected:", {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
+    });
     setSelectedFile(file);
     resetTranscription();
   }, [setSelectedFile, resetTranscription]);
 
   const handleTranscribe = useCallback(async () => {
+    console.log("[DEEPGRAM UI] Transcribe button clicked");
+    
+    if (!selectedFile) {
+      console.log("[DEEPGRAM UI] No file selected, aborting transcription");
+      return;
+    }
+    
+    if (!isApiKeyValid) {
+      console.log("[DEEPGRAM UI] API key not validated yet");
+      const validated = await validateKeyManually();
+      if (!validated) {
+        console.log("[DEEPGRAM UI] API key validation failed, aborting transcription");
+        return;
+      }
+    }
+    
+    console.log("[DEEPGRAM UI] Starting transcription process");
     await transcribeSelectedFile();
     
     if (transcription && onTranscriptionComplete) {
+      console.log("[DEEPGRAM UI] Transcription complete, calling onTranscriptionComplete callback");
       onTranscriptionComplete(transcription);
     }
-  }, [transcribeSelectedFile, transcription, onTranscriptionComplete]);
+  }, [transcribeSelectedFile, transcription, onTranscriptionComplete, selectedFile, isApiKeyValid, validateKeyManually]);
 
   const handleOptionChange = useCallback((name: string, value: any) => {
+    console.log(`[DEEPGRAM UI] Transcription option changed: ${name} = ${value}`);
     updateRequestOptions({ [name]: value });
   }, [updateRequestOptions]);
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   validateApiKey, 
@@ -61,13 +60,17 @@ export const useDeepgramService = ({
   
   // Update API key and save to storage
   const setApiKey = useCallback((key: string) => {
+    console.log("[DEEPGRAM SERVICE] Setting API key:", { 
+      keyLength: key?.length, 
+      keyChanged: key !== apiKey 
+    });
     setApiKeyState(key);
     apiKeyStorage.save(key);
     
     // Reset validation state when key changes
     setIsApiKeyValid(false);
     setApiKeyError(null);
-  }, []);
+  }, [apiKey]);
   
   // Clear API key from state and storage
   const clearApiKey = useCallback(() => {
@@ -87,30 +90,33 @@ export const useDeepgramService = ({
   // Validate API key
   const validateKeyManually = useCallback(async (): Promise<boolean> => {
     if (!apiKey) {
+      console.log("[DEEPGRAM SERVICE] No API key provided for validation");
       setApiKeyError('API key is required');
       setIsApiKeyValid(false);
       return false;
     }
     
+    console.log("[DEEPGRAM SERVICE] Starting API key validation...");
     setIsValidatingApiKey(true);
     setApiKeyError(null);
     
     try {
-      console.log('Validating Deepgram API key...');
+      console.log('[DEEPGRAM SERVICE] Calling validateApiKey function...');
       const result = await validateApiKey(apiKey);
       
+      console.log('[DEEPGRAM SERVICE] API key validation result:', result);
       setIsApiKeyValid(result.valid);
       
       if (!result.valid) {
         setApiKeyError(result.message || 'Invalid API key');
-        console.error('API validation failed:', result.message);
+        console.error('[DEEPGRAM SERVICE] API validation failed:', result.message);
       } else {
-        console.log('API key is valid');
+        console.log('[DEEPGRAM SERVICE] API key is valid');
       }
       
       return result.valid;
     } catch (error: any) {
-      console.error('API validation error:', error);
+      console.error('[DEEPGRAM SERVICE] API validation error:', error);
       setIsApiKeyValid(false);
       setApiKeyError(error.message || 'Failed to validate API key');
       return false;
@@ -138,36 +144,59 @@ export const useDeepgramService = ({
   // Transcribe the selected file
   const transcribeSelectedFile = useCallback(async (): Promise<void> => {
     if (!selectedFile) {
+      console.log("[DEEPGRAM SERVICE] Transcription attempted with no file selected");
       setTranscriptionError('No file selected');
       return;
     }
     
     if (!isApiKeyValid) {
+      console.log("[DEEPGRAM SERVICE] API key not validated yet, attempting validation...");
       const isValid = await validateKeyManually();
       if (!isValid) {
+        console.log("[DEEPGRAM SERVICE] API key validation failed, aborting transcription");
         setTranscriptionError('Please provide a valid API key');
         return;
       }
     }
     
+    console.log("[DEEPGRAM SERVICE] Starting transcription process...");
     resetTranscription();
     setIsTranscribing(true);
     
     try {
-      console.log(`Transcribing file: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB)`);
-      console.log('Using options:', requestOptions);
+      console.log(`[DEEPGRAM SERVICE] Transcribing file: ${selectedFile.name} (${selectedFile.type}, ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log('[DEEPGRAM SERVICE] Using options:', requestOptions);
       
+      console.log("[DEEPGRAM SERVICE] Calling transcribeFile function...");
       const response = await transcribeFile(selectedFile, apiKey, requestOptions);
+      console.log("[DEEPGRAM SERVICE] Received transcription response:", { 
+        status: "success",
+        hasResults: Boolean(response?.results),
+        requestId: response?.request_id
+      });
+      
       setRawResponse(response);
       
       // Extract and process the transcription result
+      console.log("[DEEPGRAM SERVICE] Extracting transcription result...");
       const result = extractTranscriptionResult(response);
-      setTranscription(result);
+      console.log("[DEEPGRAM SERVICE] Extracted result:", { 
+        hasTranscript: Boolean(result?.transcript),
+        transcriptLength: result?.transcript?.length || 0,
+        confidence: result?.confidence
+      });
       
+      setTranscription(result);
       setIsProcessingComplete(true);
-      console.log('Transcription completed successfully');
+      console.log('[DEEPGRAM SERVICE] Transcription completed successfully');
     } catch (error: any) {
-      console.error('Transcription failed:', error);
+      console.error('[DEEPGRAM SERVICE] Transcription failed:', error);
+      console.log('[DEEPGRAM SERVICE] Error details:', { 
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack
+      });
+      
       setTranscriptionError(error.message || 'Failed to transcribe file');
     } finally {
       setIsTranscribing(false);
