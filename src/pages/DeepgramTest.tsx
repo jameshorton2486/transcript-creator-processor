@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { DeepgramTranscriptionOptions } from '@/components/deepgram/DeepgramTranscriptionOptions';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ExtractedTermsEditor } from '@/components/document/ExtractedTermsEditor';
 
 // The default options in case none were saved
 const DEFAULT_OPTIONS = {
@@ -23,21 +24,29 @@ const DEFAULT_OPTIONS = {
   topics: false,
   intents: false,
   detect_entities: false,
-  sentiment: false
+  sentiment: false,
+  keyterm: [],
+  replace: []
 };
 
 const DeepgramTest = () => {
   const [transcriptionOptions, setTranscriptionOptions] = useState(DEFAULT_OPTIONS);
+  const [extractedTerms, setExtractedTerms] = useState<string[]>([]);
   
-  // Load any saved options from session storage
+  // Load any saved options and terms from session storage
   useEffect(() => {
     try {
       const savedOptions = sessionStorage.getItem('deepgramOptions');
       if (savedOptions) {
         setTranscriptionOptions(JSON.parse(savedOptions));
       }
+      
+      const savedTerms = sessionStorage.getItem('extractedTerms');
+      if (savedTerms) {
+        setExtractedTerms(JSON.parse(savedTerms));
+      }
     } catch (error) {
-      console.error('Error loading saved transcription options:', error);
+      console.error('Error loading saved data:', error);
     }
   }, []);
   
@@ -56,6 +65,20 @@ const DeepgramTest = () => {
     }
   };
 
+  const handleTermsUpdate = (updatedTerms: string[]) => {
+    setExtractedTerms(updatedTerms);
+    
+    // Update keyterm option with the new terms
+    handleOptionsChange('keyterm', updatedTerms);
+    
+    // Save to session storage for persistence
+    try {
+      sessionStorage.setItem('extractedTerms', JSON.stringify(updatedTerms));
+    } catch (error) {
+      console.error('Error saving extracted terms:', error);
+    }
+  };
+
   return (
     <div className="container py-8 max-w-4xl mx-auto">
       <div className="mb-4">
@@ -69,7 +92,14 @@ const DeepgramTest = () => {
       
       <h1 className="text-3xl font-bold mb-6">Deepgram Transcription</h1>
       
-      <Card className="p-6 mb-6">
+      {extractedTerms.length > 0 && (
+        <ExtractedTermsEditor 
+          terms={extractedTerms} 
+          onTermsUpdate={handleTermsUpdate} 
+        />
+      )}
+      
+      <Card className="p-6 my-6">
         <h2 className="text-xl font-semibold mb-2">Transcription Settings</h2>
         <p className="text-sm text-slate-500 mb-4">
           Customize how Deepgram processes your audio files

@@ -11,6 +11,7 @@ import { DocumentTextExtractor } from "@/components/document/DocumentTextExtract
 import { Loader2, FileText, ArrowRight, Mic } from "lucide-react";
 import { DeepgramTranscriptionOptions } from "@/components/deepgram/DeepgramTranscriptionOptions";
 import { Separator } from "@/components/ui/separator";
+import { ExtractedTermsEditor } from "@/components/document/ExtractedTermsEditor";
 
 // Default Deepgram options
 const DEFAULT_OPTIONS = {
@@ -27,7 +28,9 @@ const DEFAULT_OPTIONS = {
   topics: false,
   intents: false,
   detect_entities: false,
-  sentiment: false
+  sentiment: false,
+  keyterm: [],
+  replace: []
 };
 
 const DocumentAnalyzer = () => {
@@ -40,15 +43,20 @@ const DocumentAnalyzer = () => {
   const [deepgramOptions, setDeepgramOptions] = useState(DEFAULT_OPTIONS);
   const { toast } = useToast();
 
-  // Load saved Deepgram options from session storage
+  // Load saved Deepgram options and terms from session storage
   useEffect(() => {
     try {
       const savedOptions = sessionStorage.getItem('deepgramOptions');
       if (savedOptions) {
         setDeepgramOptions(JSON.parse(savedOptions));
       }
+      
+      const savedTerms = sessionStorage.getItem('extractedTerms');
+      if (savedTerms) {
+        setExtractedTerms(JSON.parse(savedTerms));
+      }
     } catch (error) {
-      console.error('Error loading saved transcription options:', error);
+      console.error('Error loading saved data:', error);
     }
   }, []);
 
@@ -59,21 +67,54 @@ const DocumentAnalyzer = () => {
 
   const handleTermsExtracted = (terms: string[]) => {
     setExtractedTerms(terms);
+    
+    // Save the terms for Deepgram keyterm option
+    const updatedOptions = {
+      ...deepgramOptions,
+      keyterm: terms
+    };
+    setDeepgramOptions(updatedOptions);
+    
+    // Save to session storage
+    try {
+      sessionStorage.setItem('extractedTerms', JSON.stringify(terms));
+      sessionStorage.setItem('deepgramOptions', JSON.stringify(updatedOptions));
+    } catch (error) {
+      console.error('Error saving extracted terms:', error);
+    }
+    
     setIsLoading(false);
+  };
+  
+  const handleTermsUpdate = (updatedTerms: string[]) => {
+    setExtractedTerms(updatedTerms);
+    
+    // Update keyterm option with the new terms
+    const updatedOptions = {
+      ...deepgramOptions,
+      keyterm: updatedTerms
+    };
+    setDeepgramOptions(updatedOptions);
+    
+    // Save to session storage
+    try {
+      sessionStorage.setItem('extractedTerms', JSON.stringify(updatedTerms));
+      sessionStorage.setItem('deepgramOptions', JSON.stringify(updatedOptions));
+    } catch (error) {
+      console.error('Error saving updated terms:', error);
+    }
   };
 
   const handleDeepgramOptionsChange = (name: string, value: any) => {
-    setDeepgramOptions(prev => ({
-      ...prev,
+    const updatedOptions = {
+      ...deepgramOptions,
       [name]: value
-    }));
+    };
+    setDeepgramOptions(updatedOptions);
     
     // Save to session storage for persistence
     try {
-      sessionStorage.setItem('deepgramOptions', JSON.stringify({
-        ...deepgramOptions,
-        [name]: value
-      }));
+      sessionStorage.setItem('deepgramOptions', JSON.stringify(updatedOptions));
     } catch (error) {
       console.error('Error saving transcription options:', error);
     }
@@ -275,21 +316,10 @@ const DocumentAnalyzer = () => {
         </Card>
 
         {extractedTerms.length > 0 && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Extracted Terms</h2>
-            <div className="border rounded-md p-4 bg-gray-50">
-              <div className="flex flex-wrap gap-2">
-                {extractedTerms.map((term, index) => (
-                  <span 
-                    key={index} 
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
-                  >
-                    {term}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </Card>
+          <ExtractedTermsEditor 
+            terms={extractedTerms} 
+            onTermsUpdate={handleTermsUpdate} 
+          />
         )}
 
         <Card className="p-6">

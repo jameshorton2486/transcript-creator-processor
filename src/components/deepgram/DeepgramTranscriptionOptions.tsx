@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,67 +12,60 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface DeepgramTranscriptionOptionsProps {
   onOptionsChange: (name: string, value: any) => void;
   isLoading?: boolean;
-  initialOptions?: Record<string, any>;
+  initialOptions?: any;
 }
 
 export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptionsProps> = ({
   onOptionsChange,
   isLoading = false,
-  initialOptions
+  initialOptions = {}
 }) => {
-  // Load initial options if provided
+  const [options, setOptions] = useState(initialOptions);
+
+  // Update options when initialOptions change
   useEffect(() => {
-    if (initialOptions) {
-      Object.entries(initialOptions).forEach(([key, value]) => {
-        onOptionsChange(key, value);
-      });
+    setOptions(initialOptions);
+  }, [initialOptions]);
+
+  const handleOptionChange = (name: string, value: any) => {
+    const updatedOptions = { ...options, [name]: value };
+    setOptions(updatedOptions);
+    onOptionsChange(name, value);
+    
+    // Special handling for automatic enablement of punctuation
+    if (
+      ['summarize', 'topics', 'intents', 'detect_entities', 'sentiment'].includes(name) && 
+      value === true && 
+      !options.punctuate
+    ) {
+      onOptionsChange('punctuate', true);
+      setOptions(prev => ({ ...prev, punctuate: true }));
     }
-  }, [initialOptions, onOptionsChange]);
+  };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Deepgram Transcription Options</h3>
-      <Separator />
-      
-      <Accordion type="multiple" className="w-full">
+      <Accordion type="multiple" defaultValue={["transcription", "intelligence"]}>
         <AccordionItem value="transcription">
-          <AccordionTrigger className="text-base font-medium">
-            Core Transcription Options
-          </AccordionTrigger>
+          <AccordionTrigger>Transcription Options</AccordionTrigger>
           <AccordionContent>
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
-              <div className="flex items-start space-x-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="diarize" 
-                    onCheckedChange={(checked) => onOptionsChange('diarize', checked === true)}
-                    disabled={isLoading}
-                  />
-                  <Label htmlFor="diarize">Speaker Diarization</Label>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-slate-400" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Identifies and labels different speakers in the audio, making it easier to follow conversations.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              
+            <div className="grid gap-4 sm:grid-cols-2 mt-2">
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="punctuate" 
-                    defaultChecked
-                    onCheckedChange={(checked) => onOptionsChange('punctuate', checked === true)}
+                    checked={options.punctuate}
+                    onCheckedChange={(checked) => handleOptionChange('punctuate', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="punctuate">Add Punctuation</Label>
@@ -93,8 +86,8 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="smart_format" 
-                    defaultChecked
-                    onCheckedChange={(checked) => onOptionsChange('smart_format', checked === true)}
+                    checked={options.smart_format}
+                    onCheckedChange={(checked) => handleOptionChange('smart_format', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="smart_format">Smart Format</Label>
@@ -105,59 +98,18 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Formats numbers, dates, and other entities in a human-readable way (e.g., "five hundred" becomes "500").</p>
+                      <p>Formats numbers, dates, and other entities in a human-readable way (e.g., "five hundred" becomes "500"). Also enables punctuation.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
-              <div className="flex items-start space-x-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="detect_language" 
-                    onCheckedChange={(checked) => onOptionsChange('detect_language', checked === true)}
-                    disabled={isLoading}
-                  />
-                  <Label htmlFor="detect_language">Auto-detect Language</Label>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-slate-400" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Automatically identifies the spoken language in the audio instead of assuming English.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
-              <div className="flex items-start space-x-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="profanity_filter" 
-                    onCheckedChange={(checked) => onOptionsChange('profanity_filter', checked === true)}
-                    disabled={isLoading}
-                  />
-                  <Label htmlFor="profanity_filter">Profanity Filter</Label>
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-slate-400" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Removes or masks profane words and expressions in the transcript.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="paragraphs" 
-                    onCheckedChange={(checked) => onOptionsChange('paragraphs', checked === true)}
+                    checked={options.paragraphs}
+                    onCheckedChange={(checked) => handleOptionChange('paragraphs', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="paragraphs">Paragraphs</Label>
@@ -168,7 +120,29 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Splits audio into paragraphs to improve transcript readability. When enabled, punctuation will also be turned on.</p>
+                      <p>Splits audio into paragraphs to improve transcript readability. Also enables punctuation.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="diarize" 
+                    checked={options.diarize}
+                    onCheckedChange={(checked) => handleOptionChange('diarize', checked === true)}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="diarize">Speaker Diarization</Label>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-slate-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Identifies and labels different speakers in the audio, making it easier to follow conversations.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -178,7 +152,8 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="utterances" 
-                    onCheckedChange={(checked) => onOptionsChange('utterances', checked === true)}
+                    checked={options.utterances}
+                    onCheckedChange={(checked) => handleOptionChange('utterances', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="utterances">Utterances</Label>
@@ -189,17 +164,18 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Segments speech into meaningful semantic units. By default, creates a new utterance after 0.8s of silence.</p>
+                      <p>Segments speech into meaningful semantic units, typically starting a new utterance after 0.8s of silence.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="filler_words" 
-                    onCheckedChange={(checked) => onOptionsChange('filler_words', checked === true)}
+                    checked={options.filler_words}
+                    onCheckedChange={(checked) => handleOptionChange('filler_words', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="filler_words">Filler Words</Label>
@@ -210,7 +186,51 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Transcribes disfluencies in your audio, like "uh" and "um".</p>
+                      <p>Includes disfluencies like "uh" and "um" in the transcript.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="profanity_filter" 
+                    checked={options.profanity_filter}
+                    onCheckedChange={(checked) => handleOptionChange('profanity_filter', checked === true)}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="profanity_filter">Profanity Filter</Label>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-slate-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Removes profanity from the transcript. Not available for Nova 3 model.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <div className="flex items-start space-x-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="detect_language" 
+                    checked={options.detect_language}
+                    onCheckedChange={(checked) => handleOptionChange('detect_language', checked === true)}
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="detect_language">Detect Language</Label>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-slate-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Automatically detects the language spoken in the audio.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -218,18 +238,21 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
             </div>
           </AccordionContent>
         </AccordionItem>
-
-        <AccordionItem value="ai-features">
-          <AccordionTrigger className="text-base font-medium">
-            AI Features
-          </AccordionTrigger>
+        
+        <AccordionItem value="intelligence">
+          <AccordionTrigger>Audio Intelligence Features</AccordionTrigger>
           <AccordionContent>
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
+            <p className="text-xs text-slate-500 mb-4">
+              Audio intelligence features are powered by task-specific language models. When enabled, Punctuation will also be enabled.
+            </p>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="summarize" 
-                    onCheckedChange={(checked) => onOptionsChange('summarize', checked === true)}
+                    checked={options.summarize}
+                    onCheckedChange={(checked) => handleOptionChange('summarize', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="summarize">Summarization</Label>
@@ -240,17 +263,18 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Automatically generates summaries for sections of content.</p>
+                      <p>Provides summaries for sections of content.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="topics" 
-                    onCheckedChange={(checked) => onOptionsChange('topics', checked === true)}
+                    checked={options.topics}
+                    onCheckedChange={(checked) => handleOptionChange('topics', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="topics">Topic Detection</Label>
@@ -266,12 +290,13 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="intents" 
-                    onCheckedChange={(checked) => onOptionsChange('intents', checked === true)}
+                    checked={options.intents}
+                    onCheckedChange={(checked) => handleOptionChange('intents', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="intents">Intent Recognition</Label>
@@ -282,17 +307,18 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Recognizes the intentions behind spoken phrases.</p>
+                      <p>Recognizes intents in the audio content.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="detect_entities" 
-                    onCheckedChange={(checked) => onOptionsChange('detect_entities', checked === true)}
+                    checked={options.detect_entities}
+                    onCheckedChange={(checked) => handleOptionChange('detect_entities', checked === true)}
                     disabled={isLoading}
                   />
                   <Label htmlFor="detect_entities">Entity Detection</Label>
@@ -303,20 +329,21 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Identifies and extracts key entities from the spoken content.</p>
+                      <p>Identifies and extracts key entities for sections of content.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-
+              
               <div className="flex items-start space-x-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="sentiment" 
-                    onCheckedChange={(checked) => onOptionsChange('sentiment', checked === true)}
+                    checked={options.sentiment}
+                    onCheckedChange={(checked) => handleOptionChange('sentiment', checked === true)}
                     disabled={isLoading}
                   />
-                  <Label htmlFor="sentiment">Sentiment Analysis</Label>
+                  <Label htmlFor="sentiment">Sentiment</Label>
                 </div>
                 <TooltipProvider>
                   <Tooltip>
@@ -324,7 +351,7 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
                       <HelpCircle className="h-4 w-4 text-slate-400" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Identifies sentiment (positive, neutral, or negative) and provides a sentiment score at word, sentence, paragraph, and segment levels.</p>
+                      <p>Identifies sentiment (positive, neutral, or negative) with a sentiment score at word, sentence, paragraph, and segment levels.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -332,40 +359,29 @@ export const DeepgramTranscriptionOptions: React.FC<DeepgramTranscriptionOptions
             </div>
           </AccordionContent>
         </AccordionItem>
-
-        <AccordionItem value="model">
-          <AccordionTrigger className="text-base font-medium">
-            Model Selection
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="pt-2">
-              <Label htmlFor="model" className="block mb-1 text-sm">Transcription Model</Label>
-              <Select 
-                defaultValue="nova-2"
-                onValueChange={(value) => onOptionsChange('model', value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="model" className="w-full">
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nova-2">Nova 2 (Latest & Most Accurate)</SelectItem>
-                  <SelectItem value="nova">Nova (Fast & Accurate)</SelectItem>
-                  <SelectItem value="enhanced">Enhanced (Balanced)</SelectItem>
-                  <SelectItem value="base">Base (Fastest)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-2">
-                Select the Deepgram model that best fits your needs. Nova 2 offers the highest accuracy but may take longer to process.
-              </p>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
       
-      <div className="text-xs text-slate-500 pt-2">
-        <p>These options control how Deepgram processes your audio during transcription.</p>
-        <p>Hover over the help icons for more information about each option.</p>
+      <div className="pt-2">
+        <Label htmlFor="model" className="block mb-1 text-sm">Transcription Model</Label>
+        <Select 
+          value={options.model || "nova-2"}
+          onValueChange={(value) => handleOptionChange('model', value)}
+          disabled={isLoading}
+        >
+          <SelectTrigger id="model" className="w-full">
+            <SelectValue placeholder="Select a model" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="nova-3">Nova 3 (Best Overall)</SelectItem>
+            <SelectItem value="nova-2">Nova 2 (High Accuracy)</SelectItem>
+            <SelectItem value="nova">Nova (Fast & Accurate)</SelectItem>
+            <SelectItem value="enhanced">Enhanced (Balanced)</SelectItem>
+            <SelectItem value="base">Base (Fastest)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-slate-500 mt-2">
+          Select the Deepgram model that best fits your needs. Nova 3 offers the highest accuracy but may take longer to process.
+        </p>
       </div>
     </div>
   );
