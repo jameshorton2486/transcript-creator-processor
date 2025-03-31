@@ -7,6 +7,8 @@ import {
 } from '@/lib/deepgram/apiHelpers';
 import { TranscriptionResult, DeepgramAPIResponse, DeepgramRequestOptions } from '@/lib/deepgram/types';
 import { DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
+import { useApiKeyManager } from './useApiKeyManager';
+import { useTranscriptionState } from './useTranscriptionState';
 
 export interface UseDeepgramTranscriptionProps {
   initialApiKey?: string;
@@ -41,107 +43,34 @@ export const useDeepgramService = ({
   initialApiKey = '',
   autoValidateKey = true,
 }: UseDeepgramTranscriptionProps = {}): UseDeepgramTranscriptionReturn => {
-  // API key state
-  const [apiKey, setApiKeyState] = useState<string>(initialApiKey || apiKeyStorage.get() || '');
-  const [isApiKeyValid, setIsApiKeyValid] = useState<boolean>(false);
-  const [isValidatingApiKey, setIsValidatingApiKey] = useState<boolean>(false);
-  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  // Use the extracted hooks for API key and transcription state management
+  const {
+    apiKey,
+    setApiKey,
+    isApiKeyValid,
+    isValidatingApiKey,
+    apiKeyError,
+    validateKeyManually,
+    clearApiKey
+  } = useApiKeyManager({
+    initialApiKey,
+    autoValidateKey
+  });
 
-  // File and transcription state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [rawResponse, setRawResponse] = useState<DeepgramAPIResponse | null>(null);
-  const [transcription, setTranscription] = useState<TranscriptionResult | null>(null);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
-  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [isProcessingComplete, setIsProcessingComplete] = useState<boolean>(false);
+  const {
+    selectedFile,
+    setSelectedFile,
+    transcription,
+    rawResponse,
+    transcriptionError,
+    isTranscribing,
+    isProcessingComplete,
+    requestOptions,
+    updateRequestOptions,
+    resetTranscription
+  } = useTranscriptionState();
   
-  // Request options
-  const [requestOptions, setRequestOptions] = useState<DeepgramRequestOptions>(DEFAULT_OPTIONS);
-  
-  // Update API key and save to storage
-  const setApiKey = useCallback((key: string) => {
-    console.log("[DEEPGRAM SERVICE] Setting API key:", { 
-      keyLength: key?.length, 
-      keyChanged: key !== apiKey 
-    });
-    setApiKeyState(key);
-    apiKeyStorage.save(key);
-    
-    // Reset validation state when key changes
-    setIsApiKeyValid(false);
-    setApiKeyError(null);
-  }, [apiKey]);
-  
-  // Clear API key from state and storage
-  const clearApiKey = useCallback(() => {
-    setApiKeyState('');
-    apiKeyStorage.clear();
-    setIsApiKeyValid(false);
-  }, []);
-  
-  // Update transcription request options
-  const updateRequestOptions = useCallback((options: Partial<DeepgramRequestOptions>) => {
-    setRequestOptions(prev => ({
-      ...prev,
-      ...options
-    }));
-  }, []);
-  
-  // Validate API key
-  const validateKeyManually = useCallback(async (): Promise<boolean> => {
-    if (!apiKey) {
-      console.log("[DEEPGRAM SERVICE] No API key provided for validation");
-      setApiKeyError('API key is required');
-      setIsApiKeyValid(false);
-      return false;
-    }
-    
-    console.log("[DEEPGRAM SERVICE] Starting API key validation...");
-    setIsValidatingApiKey(true);
-    setApiKeyError(null);
-    
-    try {
-      console.log('[DEEPGRAM SERVICE] Calling validateApiKey function...');
-      const result = await validateApiKey(apiKey);
-      
-      console.log('[DEEPGRAM SERVICE] API key validation result:', result);
-      setIsApiKeyValid(result.valid);
-      
-      if (!result.valid) {
-        setApiKeyError(result.message || 'Invalid API key');
-        console.error('[DEEPGRAM SERVICE] API validation failed:', result.message);
-      } else {
-        console.log('[DEEPGRAM SERVICE] API key is valid');
-      }
-      
-      return result.valid;
-    } catch (error: any) {
-      console.error('[DEEPGRAM SERVICE] API validation error:', error);
-      setIsApiKeyValid(false);
-      setApiKeyError(error.message || 'Failed to validate API key');
-      return false;
-    } finally {
-      setIsValidatingApiKey(false);
-    }
-  }, [apiKey]);
-  
-  // Automatically validate API key if enabled and key exists
-  useEffect(() => {
-    if (apiKey && autoValidateKey && !isApiKeyValid) {
-      validateKeyManually();
-    }
-  }, [apiKey, autoValidateKey, isApiKeyValid, validateKeyManually]);
-  
-  // Reset transcription state
-  const resetTranscription = useCallback(() => {
-    setRawResponse(null);
-    setTranscription(null);
-    setTranscriptionError(null);
-    setIsTranscribing(false);
-    setIsProcessingComplete(false);
-  }, []);
-  
-  // Transcribe the selected file
+  // Handle the transcription process
   const transcribeSelectedFile = useCallback(async (): Promise<void> => {
     if (!selectedFile) {
       console.log("[DEEPGRAM SERVICE] Transcription attempted with no file selected");

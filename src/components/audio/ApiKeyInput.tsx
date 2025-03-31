@@ -57,21 +57,18 @@ export const ApiKeyInput = ({
     try {
       // Test the API key with improved validation
       const result = await testApiKey(apiKey);
+      console.log("[API_KEY_INPUT] Validation result:", result);
       
       // Call the onVerify callback if provided
       if (onVerify) {
         onVerify(result.isValid);
       }
       
-      // Show detailed toast notification
+      // Show detailed toast notification - removing references to non-existent properties
       if (result.isValid) {
         toast({
           title: "API Key Valid",
-          description: result.statusCode === 429 
-            ? `Your ${provider} API key is valid but rate limited.` 
-            : result.skipApiValidation 
-              ? `Your ${provider} API key format looks valid, but API validation was skipped.`
-              : `Your ${provider} API key is valid.`,
+          description: `Your ${provider} API key is valid.`,
           variant: "default"
         });
       } else {
