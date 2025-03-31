@@ -1,7 +1,7 @@
 
 import { formatDeepgramTranscript } from "../transcriptProcessor";
 import { formatTranscriptionResult } from "./formatter";
-import { TranscriptionResult, DeepgramAPIResponse } from "@/lib/deepgram/types";
+import { TranscriptionResult, DeepgramAPIResponse, DeepgramRequestOptions } from "./types";
 import { DEFAULT_OPTIONS } from "./deepgramConfig";
 
 export interface DeepgramResponse {
@@ -67,7 +67,6 @@ function convertToTranscriptionResult(response: DeepgramAPIResponse, deepgramRes
     transcript: deepgramResponse.transcript,
     confidence: deepgramResponse.confidenceScore,
     words: words,
-    text: deepgramResponse.transcript,
     formattedResult: formattedResult.formattedResult,
     rawResponse: response,
     language: response?.results?.channels?.[0]?.detected_language || 'en',
@@ -86,7 +85,7 @@ function convertToTranscriptionResult(response: DeepgramAPIResponse, deepgramRes
 export async function transcribeAudioFile(
   file: File,
   apiKey: string,
-  options: any = {}
+  options: DeepgramRequestOptions = {}
 ): Promise<TranscriptionResult> {
   if (!file) {
     throw new Error("No file provided for transcription");

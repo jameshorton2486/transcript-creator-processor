@@ -4,9 +4,6 @@
  */
 import { 
   TranscriptionResult, 
-  DeepgramWord, 
-  DeepgramParagraph, 
-  DeepgramUtterance, 
   DeepgramAPIResponse,
   DeepgramRequestOptions
 } from '@/lib/deepgram/types';
@@ -14,11 +11,8 @@ import {
 // Re-export the core types for backwards compatibility
 export type {
   DeepgramRequestOptions,
-  DeepgramWord,
-  DeepgramParagraph,
-  DeepgramUtterance,
-  DeepgramAPIResponse,
-  TranscriptionResult
+  TranscriptionResult,
+  DeepgramAPIResponse
 };
 
 /**

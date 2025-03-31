@@ -1,4 +1,3 @@
-
 /**
  * React hook for managing audio transcription with Deepgram API
  */
@@ -6,7 +5,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { transcribeAudioFile } from '../../lib/deepgram/transcriber';
 import { retrieveStoredApiKey, storeApiKey, testApiKey } from '../../lib/deepgram/auth';
 import { useToast } from "@/hooks/use-toast";
-import { TranscriptionResult } from '@/lib/deepgram/types';
+import { TranscriptionResult, DeepgramRequestOptions } from '@/lib/deepgram/types';
 import {
   DeepgramTranscriptionOptions,
   DeepgramTranscriptionHookState,
@@ -22,10 +21,6 @@ export type {
 
 // Re-export types from deepgramService with 'export type'
 export type { 
-  DeepgramWord,
-  DeepgramParagraph,
-  DeepgramUtterance,
-  DeepgramAPIResponse,
   TranscriptionResult,
   DeepgramRequestOptions
 } from '@/lib/deepgram/types';
