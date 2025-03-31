@@ -5,6 +5,16 @@
 
 import { DeepgramRequestOptions } from './types';
 
+// Base URL for the proxy server
+export const PROXY_SERVER_URL = 'http://localhost:4000';
+
+// Endpoints for the proxy server
+export const PROXY_ENDPOINTS = {
+  validateKey: '/validate-key',
+  transcribe: '/transcribe',
+  checkStatus: '/check-status'
+};
+
 /**
  * Default options for Deepgram transcription requests
  */
@@ -14,17 +24,6 @@ export const DEFAULT_OPTIONS: DeepgramRequestOptions = {
   punctuate: true,
   smart_format: true,
   diarize: false
-};
-
-/**
- * Server proxy configuration
- */
-export const PROXY_SERVER_URL = 'http://localhost:4000'; // Express proxy server
-
-export const PROXY_ENDPOINTS = {
-  validateKey: '/validate-key',
-  transcribe: '/transcribe',
-  checkStatus: '/check-status'
 };
 
 /**
@@ -52,7 +51,7 @@ export const createQueryParams = (options: DeepgramRequestOptions): string => {
 };
 
 /**
- * Supported audio/video file types for Deepgram
+ * Supported audio/video file MIME types for Deepgram
  */
 export const SUPPORTED_MIME_TYPES = [
   // Audio types
@@ -67,9 +66,15 @@ export const SUPPORTED_MIME_TYPES = [
   'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'
 ];
 
+/**
+ * Supported file extensions for Deepgram
+ */
 export const SUPPORTED_EXTENSIONS = [
   'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus',
   'mp4', 'mov', 'webm', 'avi'
 ];
 
-export const MAX_FILE_SIZE = 250 * 1024 * 1024; // 250MB (Deepgram's limit)
+/**
+ * Maximum file size (250MB - Deepgram's limit)
+ */
+export const MAX_FILE_SIZE = 250 * 1024 * 1024;

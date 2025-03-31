@@ -13,8 +13,9 @@ import {
   TranscriptionJobStatus,
   FormattedTranscript
 } from './types';
-import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS, createQueryParams } from './deepgramConfig';
+import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS, createQueryParams, SUPPORTED_MIME_TYPES, SUPPORTED_EXTENSIONS } from './deepgramConfig';
 import { mockValidateApiKey, mockTranscribeFile, safeApiCall } from './mockDeepgramService';
+import { formatTranscriptionResult } from './formatter';
 
 // Re-export types
 export type { 
@@ -73,7 +74,7 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
         return { 
           valid: false, 
           message: 'API key is required' 
-        };
+        } as const;
       }
 
       const response = await fetchWithProxyFallback(
@@ -93,14 +94,52 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
         return { 
           valid: false, 
           message: data.error || data.message || 'Invalid API key' 
-        };
+        } as const;
       }
 
-      return { valid: true };
+      return { valid: true } as const;
     },
     // Mock response
     () => mockValidateApiKey(apiKey)
   );
+};
+
+/**
+ * Validate if a file is supported by Deepgram
+ * @param file File to validate
+ * @returns Object with validation result and error message if any
+ */
+export const validateAudioFile = (file: File): { valid: boolean; message?: string } => {
+  if (!file) {
+    return { 
+      valid: false, 
+      message: 'No file provided' 
+    };
+  }
+
+  // Check file size - Deepgram limit is 250MB
+  if (file.size > 250 * 1024 * 1024) {
+    return { 
+      valid: false, 
+      message: `File size exceeds Deepgram's 250MB limit. Please choose a smaller file.` 
+    };
+  }
+
+  // Check file type by MIME type
+  if (SUPPORTED_MIME_TYPES.includes(file.type)) {
+    return { valid: true };
+  }
+  
+  // If MIME type check fails, try file extension
+  const fileExtension = file.name.split('.').pop()?.toLowerCase();
+  if (fileExtension && SUPPORTED_EXTENSIONS.includes(fileExtension)) {
+    return { valid: true };
+  }
+
+  return { 
+    valid: false, 
+    message: `File type not supported. Supported formats include: ${SUPPORTED_EXTENSIONS.join(', ')}` 
+  };
 };
 
 /**
@@ -114,6 +153,12 @@ export const transcribeFile = async (
   return safeApiCall(
     // Real API call
     async () => {
+      // Validate file first
+      const fileValidation = validateAudioFile(file);
+      if (!fileValidation.valid) {
+        throw new Error(fileValidation.message);
+      }
+
       // Create form data with file and options
       const formData = new FormData();
       formData.append('file', file);
@@ -127,61 +172,47 @@ export const transcribeFile = async (
       });
 
       // Send request to server-side proxy with fallback
-      const response = await fetchWithProxyFallback(
-        PROXY_ENDPOINTS.transcribe,
-        {
-          method: 'POST',
-          body: formData,
+      try {
+        const response = await fetchWithProxyFallback(
+          PROXY_ENDPOINTS.transcribe,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            errorData = { error: 'Failed to parse error response' };
+          }
+
+          // Handle specific Deepgram error codes
+          if (errorData.err_code === "Bad Request" && errorData.err_msg?.includes("corrupt or unsupported data")) {
+            throw new Error(`Audio file format not supported or corrupt: ${errorData.err_msg}`);
+          } else if (errorData.err_code === "INVALID_AUTH") {
+            throw new Error(`Authentication failed: Invalid API key`);
+          } else if (errorData.err_code === "INSUFFICIENT_PERMISSIONS") {
+            throw new Error(`Insufficient permissions: Your API key does not have access to this feature`);
+          }
+
+          throw new Error(errorData.error || errorData.err_msg || `Failed to transcribe file (Status: ${response.status})`);
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to transcribe file');
+        return await response.json();
+      } catch (error) {
+        if (error instanceof Error) {
+          // Re-throw if it's our custom error with proper message
+          throw error;
+        }
+        throw new Error(`Failed to transcribe file: ${error}`);
       }
-
-      return await response.json();
     },
     // Mock response
     () => mockTranscribeFile(file, options)
   );
-};
-
-/**
- * Format transcript data for display with speaker segments
- */
-export const formatTranscriptionResult = (response: DeepgramAPIResponse): {
-  formattedResult: FormattedTranscript | string
-} => {
-  // If no utterances, just return the plain text
-  if (!response.results?.utterances || response.results.utterances.length === 0) {
-    const transcript = response.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-    return { formattedResult: transcript };
-  }
-
-  // Otherwise, create structured segments by speaker
-  const speakerSegments = response.results.utterances.map(utterance => ({
-    speaker: `Speaker ${utterance.speaker !== undefined ? utterance.speaker : 0}`,
-    text: utterance.transcript,
-    start: utterance.start,
-    end: utterance.end
-  }));
-
-  // Create word timestamps with speaker info
-  const wordTimestamps = response.results.channels[0].alternatives[0].words.map(word => ({
-    word: word.word,
-    start: word.start,
-    end: word.end,
-    speaker: word.speaker !== undefined ? `Speaker ${word.speaker}` : undefined
-  }));
-
-  return {
-    formattedResult: {
-      plainText: response.results.channels[0].alternatives[0].transcript,
-      wordTimestamps,
-      speakerSegments
-    }
-  };
 };
 
 /**
@@ -220,37 +251,6 @@ export const extractTranscriptionResult = (response: DeepgramAPIResponse): Trans
     utterances: response.results.utterances,
     language: channel.detected_language
   };
-};
-
-/**
- * Check the status of a transcription job
- */
-export const checkTranscriptionStatus = async (
-  jobId: string,
-  apiKey: string
-): Promise<TranscriptionJobStatus> => {
-  try {
-    const response = await fetchWithProxyFallback(
-      `${PROXY_ENDPOINTS.checkStatus}?id=${jobId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Token ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to check transcription status');
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    console.error('Status check error:', error);
-    throw error;
-  }
 };
 
 /**
