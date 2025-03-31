@@ -20,7 +20,15 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
   showTranscription,
   error
 }) => {
-  const isMockData = shouldUseMockResponses();
+  // Safely check for mock data by wrapping in try/catch to handle potential errors
+  const isMockData = React.useMemo(() => {
+    try {
+      return shouldUseMockResponses();
+    } catch (err) {
+      console.error('Error checking mock response status:', err);
+      return false;
+    }
+  }, []);
 
   if (!showTranscription) {
     return null;

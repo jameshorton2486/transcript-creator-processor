@@ -56,20 +56,22 @@ export interface DeepgramAPIResponse {
   };
 }
 
+export interface SpeakerSegment {
+  speaker: string;
+  text: string;
+  start: number;
+  end: number;
+}
+
 export interface FormattedTranscript {
   plainText: string;
-  wordTimestamps: {
+  wordTimestamps?: {
     word: string;
     start: number;
     end: number;
     speaker?: string;
   }[];
-  speakerSegments: {
-    speaker: string;
-    text: string;
-    start: number;
-    end: number;
-  }[];
+  speakerSegments?: SpeakerSegment[];
 }
 
 export interface TranscriptionResult {

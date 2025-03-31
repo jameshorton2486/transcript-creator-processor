@@ -8,44 +8,32 @@ import {
   SpeakerSegment,
   TranscriptionResult,
   DeepgramWord
-} from '../deepgram/types';
+} from './types';
 
 /**
  * Format a Deepgram response into a consistent structure
  * @param response Raw response from Deepgram API
  * @returns Formatted transcription result
  */
-export function formatTranscriptionResult(response: DeepgramAPIResponse): TranscriptionResult {
+export function formatTranscriptionResult(response: DeepgramAPIResponse): { formattedResult: FormattedTranscript | string } {
   try {
     // Extract the main transcript from the first alternative of the first channel
     const mainTranscript = response.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-    const confidence = response.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0;
-    const words = response.results?.channels?.[0]?.alternatives?.[0]?.words || [];
     
     // Format the response
     const formattedResult = formatDeepgramResponse(response);
     
-    return {
-      transcript: mainTranscript,
-      confidence: confidence,
-      words: words,
-      text: mainTranscript, // For compatibility with existing code
-      formattedResult,
-      rawResponse: response
-    };
+    return { formattedResult };
   } catch (error) {
     console.error('Error formatting transcription result:', error);
     
     // Return a minimal valid result
     return {
-      transcript: '',
-      confidence: 0,
-      words: [],
-      text: '',
       formattedResult: {
-        plainText: ''
-      },
-      rawResponse: response
+        plainText: '',
+        wordTimestamps: [],
+        speakerSegments: []
+      }
     };
   }
 }
@@ -57,7 +45,9 @@ export function formatTranscriptionResult(response: DeepgramAPIResponse): Transc
  */
 function formatDeepgramResponse(response: DeepgramAPIResponse): FormattedTranscript {
   const formatted: FormattedTranscript = {
-    plainText: ''
+    plainText: '',
+    wordTimestamps: [],
+    speakerSegments: []
   };
   
   // Early return if no data

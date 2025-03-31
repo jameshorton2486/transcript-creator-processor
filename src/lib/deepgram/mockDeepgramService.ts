@@ -11,13 +11,13 @@ import { DeepgramAPIResponse, DeepgramRequestOptions } from './types';
  */
 export const shouldUseMockResponses = (): boolean => {
   // Check if we're in development mode
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = import.meta.env.DEV;
   
   // Check if we're in a test environment
-  const isTest = process.env.NODE_ENV === 'test';
+  const isTest = import.meta.env.MODE === 'test';
   
   // Check for environment variables that might indicate mock mode
-  const hasMockFlag = process.env.VITE_USE_MOCK_API === 'true';
+  const hasMockFlag = import.meta.env.VITE_USE_MOCK_API === 'true';
   
   return isDevelopment || isTest || hasMockFlag;
 };
