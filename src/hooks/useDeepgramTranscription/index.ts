@@ -1,4 +1,3 @@
-
 /**
  * React hook for managing audio transcription with Deepgram API
  */
@@ -230,7 +229,7 @@ export function useDeepgramTranscription(
       if (onTranscriptCreated && result) {
         onTranscriptCreated(
           result.transcript, 
-          result.rawResponse, 
+          result, 
           state.file
         );
       }
