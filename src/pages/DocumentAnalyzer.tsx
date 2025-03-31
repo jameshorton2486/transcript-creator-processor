@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileUploader } from "@/components/FileUploader";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,24 @@ import { Loader2, FileText, ArrowRight, Mic } from "lucide-react";
 import { DeepgramTranscriptionOptions } from "@/components/deepgram/DeepgramTranscriptionOptions";
 import { Separator } from "@/components/ui/separator";
 
+// Default Deepgram options
+const DEFAULT_OPTIONS = {
+  model: "nova-2",
+  punctuate: true,
+  smart_format: true,
+  diarize: false,
+  detect_language: false,
+  profanity_filter: false,
+  paragraphs: false,
+  utterances: false,
+  filler_words: false,
+  summarize: false,
+  topics: false,
+  intents: false,
+  detect_entities: false,
+  sentiment: false
+};
+
 const DocumentAnalyzer = () => {
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [extractedTerms, setExtractedTerms] = useState<string[]>([]);
@@ -19,15 +37,20 @@ const DocumentAnalyzer = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [openAIKey, setOpenAIKey] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [deepgramOptions, setDeepgramOptions] = useState({
-    model: "nova-2",
-    punctuate: true,
-    smart_format: true,
-    diarize: false,
-    detect_language: false,
-    profanity_filter: false
-  });
+  const [deepgramOptions, setDeepgramOptions] = useState(DEFAULT_OPTIONS);
   const { toast } = useToast();
+
+  // Load saved Deepgram options from session storage
+  useEffect(() => {
+    try {
+      const savedOptions = sessionStorage.getItem('deepgramOptions');
+      if (savedOptions) {
+        setDeepgramOptions(JSON.parse(savedOptions));
+      }
+    } catch (error) {
+      console.error('Error loading saved transcription options:', error);
+    }
+  }, []);
 
   const handleFilesChange = (files: File[]) => {
     setDocumentFiles(files);
@@ -44,7 +67,16 @@ const DocumentAnalyzer = () => {
       ...prev,
       [name]: value
     }));
-    console.log(`Updated Deepgram option: ${name} = ${value}`);
+    
+    // Save to session storage for persistence
+    try {
+      sessionStorage.setItem('deepgramOptions', JSON.stringify({
+        ...deepgramOptions,
+        [name]: value
+      }));
+    } catch (error) {
+      console.error('Error saving transcription options:', error);
+    }
   };
 
   const handleAIAnalysis = async () => {
@@ -274,6 +306,7 @@ const DocumentAnalyzer = () => {
           <DeepgramTranscriptionOptions 
             onOptionsChange={handleDeepgramOptionsChange}
             isLoading={isLoading || isAnalyzing}
+            initialOptions={deepgramOptions}
           />
           
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-6">

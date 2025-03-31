@@ -15,7 +15,15 @@ const DEFAULT_OPTIONS = {
   smart_format: true,
   diarize: false,
   detect_language: false,
-  profanity_filter: false
+  profanity_filter: false,
+  paragraphs: false,
+  utterances: false,
+  filler_words: false,
+  summarize: false,
+  topics: false,
+  intents: false,
+  detect_entities: false,
+  sentiment: false
 };
 
 const DeepgramTest = () => {
@@ -69,6 +77,7 @@ const DeepgramTest = () => {
         <Separator className="my-4" />
         <DeepgramTranscriptionOptions 
           onOptionsChange={handleOptionsChange}
+          initialOptions={transcriptionOptions}
         />
       </Card>
       

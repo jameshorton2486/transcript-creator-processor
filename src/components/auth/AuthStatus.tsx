@@ -1,29 +1,40 @@
 
-import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
+import { Badge } from "@/components/ui/badge";
 
-export const AuthStatus = () => {
-  const { currentUser, loading } = useAuth();
+interface AuthStatusProps {
+  authenticated: boolean;
+  emailVerified?: boolean;
+}
 
-  if (loading) {
+/**
+ * Component that displays the authentication status of the user
+ */
+const AuthStatus: React.FC<AuthStatusProps> = ({
+  authenticated,
+  emailVerified = false
+}) => {
+  if (!authenticated) {
     return (
-      <Badge variant="outline" className="animate-pulse">
-        Checking...
+      <Badge variant="destructive">
+        Not Authenticated
       </Badge>
     );
   }
 
-  if (!currentUser) {
+  if (!emailVerified) {
     return (
-      <Badge variant="outline" className="text-xs">
-        Not signed in
+      <Badge variant="outline">
+        Email Not Verified
       </Badge>
     );
   }
 
   return (
-    <Badge variant="success" className="text-xs">
-      Signed in
+    <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+      Authenticated
     </Badge>
   );
 };
+
+export default AuthStatus;
