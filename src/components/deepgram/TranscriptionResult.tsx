@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ErrorDisplay } from '@/components/audio/ErrorDisplay';
+import ErrorDisplay from '@/components/audio/ErrorDisplay';
 import { shouldUseMockResponses } from '@/lib/deepgram/mockDeepgramService';
 import type { TranscriptionResult } from '@/lib/deepgram/types';
 
