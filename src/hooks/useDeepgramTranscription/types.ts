@@ -65,6 +65,7 @@ export interface SpeakerSegment {
 
 /**
  * Final transcription result structure
+ * @deprecated Use TranscriptionResult from @/lib/deepgram/deepgramService instead
  */
 export interface TranscriptionResult {
   transcript: string;
@@ -103,7 +104,7 @@ export interface DeepgramTranscriptionHookState {
   testingKey: boolean;
   keyErrorMessage?: string;
   estimatedTimeRemaining?: string;
-  result?: TranscriptionResult;
+  result?: import('@/lib/deepgram/deepgramService').TranscriptionResult;
 }
 
 /**
@@ -111,7 +112,7 @@ export interface DeepgramTranscriptionHookState {
  */
 export interface UseDeepgramTranscriptionReturn extends DeepgramTranscriptionHookState {
   handleFileSelected: (file: File) => void;
-  transcribeAudioFile: () => Promise<TranscriptionResult | undefined>;
+  transcribeAudioFile: () => Promise<import('@/lib/deepgram/deepgramService').TranscriptionResult | undefined>;
   setApiKey: (key: string) => void;
   cancelTranscription: () => void;
   handleTestApiKey: (keyToTest?: string) => Promise<boolean>;

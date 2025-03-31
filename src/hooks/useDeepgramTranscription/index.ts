@@ -10,8 +10,8 @@ import {
   DeepgramTranscriptionOptions,
   DeepgramTranscriptionHookState,
   UseDeepgramTranscriptionReturn,
-  TranscriptionResult,
 } from './types';
+import type { TranscriptionResult } from '@/lib/deepgram/deepgramService';
 
 // Export the new service-based hook
 export { useDeepgramService } from './useDeepgramService';
