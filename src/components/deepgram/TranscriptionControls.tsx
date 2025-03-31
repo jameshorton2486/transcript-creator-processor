@@ -1,81 +1,52 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Mic, X, Clock } from "lucide-react";
-import { EnhancedProgressIndicator } from "@/components/audio/EnhancedProgressIndicator";
-import { AlertCircle } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { CardFooter } from '@/components/ui/card';
+import { Loader2, FileAudio } from 'lucide-react';
 
 interface TranscriptionControlsProps {
   handleTranscribe: () => Promise<void>;
-  cancelTranscription: () => void;
-  file: File | null;
-  isLoading: boolean;
-  keyStatus: 'untested' | 'valid' | 'invalid';
-  error: string | null;
-  progress: number;
-  estimatedTimeRemaining?: string;
+  resetTranscription: () => void;
+  selectedFile: File | null;
+  isTranscribing: boolean;
+  isApiKeyValid: boolean;
+  hasTranscription: boolean;
 }
 
-export const TranscriptionControls: React.FC<TranscriptionControlsProps> = ({
+export const TranscriptionControlsFooter: React.FC<TranscriptionControlsProps> = ({
   handleTranscribe,
-  cancelTranscription,
-  file,
-  isLoading,
-  keyStatus,
-  error,
-  progress,
-  estimatedTimeRemaining
+  resetTranscription,
+  selectedFile,
+  isTranscribing,
+  isApiKeyValid,
+  hasTranscription
 }) => {
   return (
-    <>
-      <div className="flex flex-wrap gap-4 items-center">
-        <Button
-          onClick={handleTranscribe}
-          disabled={!file || isLoading || keyStatus !== 'valid'}
-          className="gap-2"
-        >
-          {isLoading ? (
-            <span className="flex items-center">
-              <Mic className="h-4 w-4 mr-2 animate-pulse" />
-              Transcribing...
-            </span>
-          ) : (
-            <span className="flex items-center">
-              <Mic className="h-4 w-4 mr-2" />
-              Start Transcription
-            </span>
-          )}
-        </Button>
-
-        {isLoading && (
-          <Button variant="outline" onClick={cancelTranscription} className="gap-2">
-            <X className="h-4 w-4" />
-            Cancel
-          </Button>
+    <CardFooter className="flex justify-between">
+      <Button 
+        variant="outline" 
+        onClick={resetTranscription}
+        disabled={!hasTranscription}
+      >
+        Reset
+      </Button>
+      <Button
+        onClick={handleTranscribe}
+        disabled={!selectedFile || isTranscribing || !isApiKeyValid}
+        className="gap-2"
+      >
+        {isTranscribing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Transcribing...
+          </>
+        ) : (
+          <>
+            <FileAudio className="h-4 w-4" />
+            Transcribe
+          </>
         )}
-        
-        {estimatedTimeRemaining && (
-          <span className="text-xs text-slate-500 flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            {estimatedTimeRemaining}
-          </span>
-        )}
-      </div>
-
-      {isLoading && (
-        <EnhancedProgressIndicator
-          progress={progress}
-          isVisible={true}
-          label="Transcribing audio..."
-        />
-      )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-800 flex items-start">
-          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 text-red-500" />
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-    </>
+      </Button>
+    </CardFooter>
   );
 };
