@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   createBrowserRouter,
@@ -9,12 +10,17 @@ import {
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import DeepgramTest from "@/pages/DeepgramTest";
+import DocumentAnalyzer from "@/pages/DocumentAnalyzer";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Index />,
+    element: <DocumentAnalyzer />,
     errorElement: <NotFound />
+  },
+  {
+    path: "/index",
+    element: <Index />
   },
   {
     path: "/deepgram-test",
