@@ -1,30 +1,16 @@
 
 // Re-export audio utilities
+// Note: Only exporting the ones that actually exist in the audio module
 export {
-  isAudioSupported,
-  getAudioFromBlob,
-  sliceAudioBuffer,
-  decodeAudioData,
-  convertToWav,
-  downloadBlob,
-  mergeAudioBuffers
-} from './audio';
+  validateAudioFile as validateDeepgramAudioFile
+} from './deepgram/deepgramService';
 
-// Re-export Deepgram services
+// Re-export Deepgram configuration constants
 export {
-  formatTranscriptionResponse,
-  mockTranscription,
-  createDeepgramUrl,
-  shouldUseMockResponses
-} from './deepgram';
-
-// Re-export utility functions
-export { chunk, createQueryParams } from './utils';
-
-// Re-export audio validation (with different name to avoid naming conflicts)
-export {
-  validateAudioFile as validateDeepgramAudioFile,
   SUPPORTED_MIME_TYPES,
   SUPPORTED_EXTENSIONS,
   MAX_FILE_SIZE
-} from './deepgram/deepgramService';
+} from './deepgram/deepgramConfig';
+
+// Re-export utility functions
+export { createQueryParams } from './deepgram/deepgramConfig';

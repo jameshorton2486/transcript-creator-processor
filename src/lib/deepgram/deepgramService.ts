@@ -5,6 +5,10 @@
  * @param file - File to validate
  * @returns Object with valid status and optional message
  */
+
+// Import from config where the constants are defined
+import { SUPPORTED_MIME_TYPES, SUPPORTED_EXTENSIONS, MAX_FILE_SIZE } from './deepgramConfig';
+
 export const validateAudioFile = (file: File): { readonly valid: false; readonly message: any; } | { readonly valid: true; readonly message?: undefined; } => {
   if (!file) {
     return { valid: false, message: 'No file selected.' };

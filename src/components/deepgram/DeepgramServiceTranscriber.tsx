@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, FileAudio, Loader2, Info } from 'lucide-react';
 import { useDeepgramService } from '@/hooks/useDeepgramTranscription';
-import type { TranscriptionResult } from '@/lib/deepgram/deepgramService';
+import type { TranscriptionResult } from '@/lib/deepgram/types';
 import { DeepgramApiKeyInput } from './DeepgramApiKeyInput';
 import { EnhancedFileSelector } from '@/components/audio/EnhancedFileSelector';
 import { TranscriptionOptions } from './TranscriptionOptions';

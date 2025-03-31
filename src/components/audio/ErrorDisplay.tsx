@@ -1,7 +1,7 @@
 
 import { AlertCircle, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ErrorDisplayProps {
@@ -17,13 +17,16 @@ export const ErrorDisplay = ({
 }: ErrorDisplayProps) => {
   const [dismissed, setDismissed] = useState(false);
   
+  // Use useEffect to handle timeout-based dismissal
+  useEffect(() => {
+    if (timeout && error && !dismissed) {
+      const timer = setTimeout(() => setDismissed(true), timeout);
+      return () => clearTimeout(timer);
+    }
+  }, [error, dismissed, timeout]);
+  
   // Return null if no error or already dismissed
   if (!error || dismissed) return null;
-  
-  // Use timeout for auto-dismissal if specified
-  if (timeout && typeof window !== 'undefined') {
-    setTimeout(() => setDismissed(true), timeout);
-  }
   
   // Process the error message to provide helpful context
   let displayError = error;
@@ -67,8 +70,7 @@ export const ErrorDisplay = ({
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{displayError}</AlertTitle>
       <AlertDescription className="space-y-2 whitespace-pre-wrap">
-        {additionalMessage && <p>{additionalMessage}</p>}
-        {!additionalMessage && <p>{error}</p>}
+        <p>{additionalMessage || error}</p>
       </AlertDescription>
       
       {dismissable && (
