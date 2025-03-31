@@ -2,10 +2,18 @@
 /**
  * Type definitions for the Deepgram transcription hook
  */
-import { TranscriptionResult, DeepgramWord, DeepgramParagraph, DeepgramUtterance, DeepgramAPIResponse } from '@/lib/deepgram/types';
+import { 
+  TranscriptionResult, 
+  DeepgramWord, 
+  DeepgramParagraph, 
+  DeepgramUtterance, 
+  DeepgramAPIResponse,
+  DeepgramRequestOptions
+} from '@/lib/deepgram/types';
 
 // Re-export the core types for backwards compatibility
 export type {
+  DeepgramRequestOptions,
   DeepgramWord,
   DeepgramParagraph,
   DeepgramUtterance,

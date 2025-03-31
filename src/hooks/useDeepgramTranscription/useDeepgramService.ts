@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
   validateApiKey, 
@@ -5,7 +6,7 @@ import {
   extractTranscriptionResult,
   apiKeyStorage,
   TranscriptionResult,
-  DeepgramTranscriptionResponse
+  DeepgramAPIResponse
 } from '@/lib/deepgram/deepgramService';
 import { DeepgramRequestOptions, DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
 
@@ -21,7 +22,7 @@ export interface UseDeepgramTranscriptionReturn {
   isValidatingApiKey: boolean;
   apiKeyError: string | null;
   transcription: TranscriptionResult | null;
-  rawResponse: DeepgramTranscriptionResponse | null;
+  rawResponse: DeepgramAPIResponse | null;
   transcriptionError: string | null;
   isTranscribing: boolean;
   isProcessingComplete: boolean;
@@ -50,7 +51,7 @@ export const useDeepgramService = ({
 
   // File and transcription state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [rawResponse, setRawResponse] = useState<DeepgramTranscriptionResponse | null>(null);
+  const [rawResponse, setRawResponse] = useState<DeepgramAPIResponse | null>(null);
   const [transcription, setTranscription] = useState<TranscriptionResult | null>(null);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);

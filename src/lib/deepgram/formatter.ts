@@ -3,28 +3,32 @@
  * Format Deepgram API responses into a consistent structure
  */
 import {
-  DeepgramTranscriptionResponse,
+  DeepgramAPIResponse,
   FormattedTranscript,
   SpeakerSegment,
   TranscriptionResult,
   DeepgramWord
-} from '../../hooks/useDeepgramTranscription/types';
+} from '../deepgram/types';
 
 /**
  * Format a Deepgram response into a consistent structure
  * @param response Raw response from Deepgram API
  * @returns Formatted transcription result
  */
-export function formatTranscriptionResult(response: DeepgramTranscriptionResponse): TranscriptionResult {
+export function formatTranscriptionResult(response: DeepgramAPIResponse): TranscriptionResult {
   try {
     // Extract the main transcript from the first alternative of the first channel
     const mainTranscript = response.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    const confidence = response.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0;
+    const words = response.results?.channels?.[0]?.alternatives?.[0]?.words || [];
     
     // Format the response
     const formattedResult = formatDeepgramResponse(response);
     
     return {
       transcript: mainTranscript,
+      confidence: confidence,
+      words: words,
       text: mainTranscript, // For compatibility with existing code
       formattedResult,
       rawResponse: response
@@ -35,6 +39,8 @@ export function formatTranscriptionResult(response: DeepgramTranscriptionRespons
     // Return a minimal valid result
     return {
       transcript: '',
+      confidence: 0,
+      words: [],
       text: '',
       formattedResult: {
         plainText: ''
@@ -49,7 +55,7 @@ export function formatTranscriptionResult(response: DeepgramTranscriptionRespons
  * @param response Raw Deepgram response
  * @returns Formatted transcript with word timings and speaker segments
  */
-function formatDeepgramResponse(response: DeepgramTranscriptionResponse): FormattedTranscript {
+function formatDeepgramResponse(response: DeepgramAPIResponse): FormattedTranscript {
   const formatted: FormattedTranscript = {
     plainText: ''
   };

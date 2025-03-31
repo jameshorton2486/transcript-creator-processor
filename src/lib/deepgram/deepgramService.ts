@@ -1,8 +1,17 @@
+
 /**
  * Service for interacting with Deepgram API through server-side proxies
  */
 
-import { DeepgramRequestOptions, DeepgramWord, DeepgramParagraph, DeepgramUtterance, DeepgramAPIResponse, TranscriptionResult } from './types';
+import { 
+  DeepgramRequestOptions, 
+  DeepgramWord, 
+  DeepgramParagraph, 
+  DeepgramUtterance, 
+  DeepgramAPIResponse, 
+  TranscriptionResult,
+  TranscriptionJobStatus
+} from './types';
 import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS } from './deepgramConfig';
 
 // Re-export types
@@ -166,6 +175,37 @@ export const extractTranscriptionResult = (response: DeepgramAPIResponse): Trans
     utterances: response.results.utterances,
     language: channel.detected_language
   };
+};
+
+/**
+ * Check the status of a transcription job
+ */
+export const checkTranscriptionStatus = async (
+  jobId: string,
+  apiKey: string
+): Promise<TranscriptionJobStatus> => {
+  try {
+    const response = await fetchWithProxyFallback(
+      `${PROXY_ENDPOINTS.checkStatus}?id=${jobId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to check transcription status');
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('Status check error:', error);
+    throw error;
+  }
 };
 
 /**

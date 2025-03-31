@@ -2,6 +2,7 @@
 /**
  * Configuration for Deepgram API integration
  */
+import { DeepgramRequestOptions } from './types';
 
 // Base URL for Deepgram API
 export const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
@@ -13,28 +14,6 @@ export const PROXY_ENDPOINTS = {
   checkStatus: '/check-status',
   transcribe: '/transcribe'
 };
-
-// Request options for Deepgram API
-export interface DeepgramRequestOptions {
-  // Core transcription parameters
-  language?: string;
-  model?: string; 
-  punctuate?: boolean;
-  diarize?: boolean;
-  smart_format?: boolean;
-  
-  // Optional advanced parameters
-  detect_language?: boolean;
-  profanity_filter?: boolean;
-  redact?: string[];
-  multi_channel?: boolean;
-  alternatives?: number;
-  numerals?: boolean;
-  search?: string[];
-  keywords?: string[];
-  tag?: string;
-  version?: string;
-}
 
 /**
  * Default options for Deepgram transcription requests

@@ -1,7 +1,8 @@
 
 import { formatDeepgramTranscript } from "../transcriptProcessor";
 import { formatTranscriptionResult } from "./formatter";
-import { TranscriptionResult } from "@/hooks/useDeepgramTranscription/types";
+import { TranscriptionResult, DeepgramAPIResponse } from "@/lib/deepgram/types";
+import { DEFAULT_OPTIONS } from "./deepgramConfig";
 
 export interface DeepgramResponse {
   transcript: string;
@@ -55,15 +56,22 @@ export function processDeepgramResponse(response: any): DeepgramResponse {
 /**
  * Convert a DeepgramResponse to a TranscriptionResult
  */
-function convertToTranscriptionResult(response: any, deepgramResponse: DeepgramResponse): TranscriptionResult {
+function convertToTranscriptionResult(response: DeepgramAPIResponse, deepgramResponse: DeepgramResponse): TranscriptionResult {
+  // Get the words array from the response
+  const words = response?.results?.channels?.[0]?.alternatives?.[0]?.words || [];
+  
   // Use the formatter to create a properly formatted result
   const formattedResult = formatTranscriptionResult(response);
   
   return {
     transcript: deepgramResponse.transcript,
+    confidence: deepgramResponse.confidenceScore,
+    words: words,
     text: deepgramResponse.transcript,
     formattedResult: formattedResult.formattedResult,
-    rawResponse: response
+    rawResponse: response,
+    language: response?.results?.channels?.[0]?.detected_language || 'en',
+    duration: response?.metadata?.duration
   };
 }
 
@@ -96,8 +104,10 @@ export async function transcribeAudioFile(
     formData.append("apiKey", apiKey);
     
     // Add options to formData
-    Object.entries(options).forEach(([key, value]) => {
-      formData.append(key, String(value));
+    Object.entries({...DEFAULT_OPTIONS, ...options}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
     });
     
     // Try the Express proxy server
@@ -126,9 +136,9 @@ export async function transcribeAudioFile(
 
     // Set up options for the Deepgram API request
     const queryParams = new URLSearchParams({
-      model: options.model || "general",
-      version: options.version || "latest",
-      language: options.language || "en",
+      model: options.model || DEFAULT_OPTIONS.model || "general",
+      version: options.version || DEFAULT_OPTIONS.version || "latest",
+      language: options.language || DEFAULT_OPTIONS.language || "en",
       punctuate: options.punctuate !== false ? "true" : "false",
       diarize: options.diarize !== false ? "true" : "false",
       smart_format: options.smartFormat !== false ? "true" : "false",

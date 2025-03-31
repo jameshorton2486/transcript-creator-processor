@@ -30,6 +30,11 @@ export const TranscriptControls = ({
 }: TranscriptControlsProps) => {
   const hasTranscript = originalTranscript || processedTranscript;
   
+  const handleTranscriptionComplete = (result: TranscriptionResult) => {
+    // Extract the transcript string and pass it to the callback
+    onTranscriptCreated(result.transcript, result, null);
+  };
+  
   return (
     <div className="h-full flex flex-col space-y-5">
       <Card className="shadow-sm border-slate-200">
@@ -41,7 +46,7 @@ export const TranscriptControls = ({
         </CardHeader>
         <CardContent className="p-4">
           <DeepgramTranscriber 
-            onTranscriptionComplete={(result) => onTranscriptCreated(result, {}, null)}
+            onTranscriptionComplete={handleTranscriptionComplete}
           />
         </CardContent>
       </Card>

@@ -8,7 +8,7 @@
 export interface DeepgramRequestOptions {
   // Transcription parameters
   language?: string;
-  model?: 'nova' | 'enhanced' | 'base';
+  model?: string; // Changed from strict union type to string for more flexibility
   detect_language?: boolean;
   punctuate?: boolean;
   profanity_filter?: boolean;
@@ -23,6 +23,7 @@ export interface DeepgramRequestOptions {
   search?: string[];
   keywords?: string[];
   tag?: string;
+  version?: string; // Added for version specification
 }
 
 // Word-level data from transcription
@@ -82,6 +83,26 @@ export interface DeepgramAPIResponse {
   };
 }
 
+// Speaker segment for formatted results
+export interface SpeakerSegment {
+  speaker: string;
+  text: string;
+  start: number;
+  end: number;
+}
+
+// Formatted transcript with word timings and speaker segments
+export interface FormattedTranscript {
+  plainText: string;
+  wordTimestamps?: Array<{
+    word: string;
+    start: number;
+    end: number;
+    speaker?: string;
+  }>;
+  speakerSegments?: SpeakerSegment[];
+}
+
 // Compatible with your existing TranscriptionResult type
 export interface TranscriptionResult {
   // Original properties
@@ -91,7 +112,7 @@ export interface TranscriptionResult {
   
   // Properties needed for compatibility with your existing code
   text?: string;
-  formattedResult?: any;
+  formattedResult?: FormattedTranscript | string;
   rawResponse?: DeepgramAPIResponse;
   
   // Optional additional properties
