@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with Deepgram API through server-side proxies
  */
@@ -10,9 +9,10 @@ import {
   DeepgramUtterance, 
   DeepgramAPIResponse, 
   TranscriptionResult,
-  TranscriptionJobStatus
+  TranscriptionJobStatus,
+  FormattedTranscript
 } from './types';
-import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS } from './deepgramConfig';
+import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS, createQueryParams } from './deepgramConfig';
 
 // Re-export types
 export type { 
@@ -40,6 +40,10 @@ const fetchWithProxyFallback = async (endpoint: string, options: RequestInit): P
       // Increase timeout for proxy requests
       signal: options.signal || (AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined)
     });
+    
+    if (!response.ok) {
+      throw new Error(`Proxy server returned status ${response.status}`);
+    }
     
     return response;
   } catch (error) {
@@ -81,7 +85,7 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
 
     const data = await response.json();
 
-    if (!data.valid && !data.isValid) {
+    if (!(data.valid || data.isValid)) {
       return { 
         valid: false, 
         message: data.error || data.message || 'Invalid API key' 
@@ -141,6 +145,43 @@ export const transcribeFile = async (
 };
 
 /**
+ * Format transcript data for display with speaker segments
+ */
+export const formatTranscriptionResult = (response: DeepgramAPIResponse): {
+  formattedResult: FormattedTranscript | string
+} => {
+  // If no utterances, just return the plain text
+  if (!response.results?.utterances || response.results.utterances.length === 0) {
+    const transcript = response.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    return { formattedResult: transcript };
+  }
+
+  // Otherwise, create structured segments by speaker
+  const speakerSegments = response.results.utterances.map(utterance => ({
+    speaker: `Speaker ${utterance.speaker !== undefined ? utterance.speaker : 0}`,
+    text: utterance.transcript,
+    start: utterance.start,
+    end: utterance.end
+  }));
+
+  // Create word timestamps with speaker info
+  const wordTimestamps = response.results.channels[0].alternatives[0].words.map(word => ({
+    word: word.word,
+    start: word.start,
+    end: word.end,
+    speaker: word.speaker !== undefined ? `Speaker ${word.speaker}` : undefined
+  }));
+
+  return {
+    formattedResult: {
+      plainText: response.results.channels[0].alternatives[0].transcript,
+      wordTimestamps,
+      speakerSegments
+    }
+  };
+};
+
+/**
  * Extract the main transcription result from the Deepgram response
  */
 export const extractTranscriptionResult = (response: DeepgramAPIResponse): TranscriptionResult => {
@@ -162,14 +203,15 @@ export const extractTranscriptionResult = (response: DeepgramAPIResponse): Trans
     return defaultResult;
   }
 
+  // Get the formatted result with speaker segments if available
+  const { formattedResult } = formatTranscriptionResult(response);
+
   return {
     transcript: alternative.transcript,
     confidence: alternative.confidence,
     words: alternative.words,
     text: alternative.transcript,
-    formattedResult: {
-      plainText: alternative.transcript
-    },
+    formattedResult,
     rawResponse: response,
     paragraphs: alternative.paragraphs?.paragraphs,
     utterances: response.results.utterances,

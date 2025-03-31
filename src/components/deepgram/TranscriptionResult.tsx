@@ -3,8 +3,10 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { TranscriptionResult, FormattedTranscript } from "@/lib/deepgram/types";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Copy, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface TranscriptionResultDisplayProps {
   result: TranscriptionResult | null;
@@ -63,10 +65,66 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
     formattedResult?.speakerSegments && 
     formattedResult.speakerSegments.length > 0;
 
+  const copyTranscriptToClipboard = () => {
+    if (result?.transcript) {
+      navigator.clipboard.writeText(result.transcript)
+        .then(() => {
+          alert('Transcript copied to clipboard');
+        })
+        .catch(err => {
+          console.error('Failed to copy transcript:', err);
+        });
+    }
+  };
+
+  const downloadTranscriptAsText = () => {
+    if (!result?.transcript) return;
+    
+    const blob = new Blob([result.transcript], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Card className="p-4">
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">Transcription Result</h3>
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">Transcription Result</h3>
+          <div className="flex space-x-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={copyTranscriptToClipboard}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Copy transcript</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={downloadTranscriptAsText}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Download transcript</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+        
         <Separator />
         
         <div className="whitespace-pre-wrap bg-slate-50 p-3 rounded-md border border-slate-200 text-sm">
@@ -90,6 +148,12 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {result.confidence > 0 && (
+          <div className="text-sm text-slate-500 text-right">
+            Confidence: {(result.confidence * 100).toFixed(1)}%
           </div>
         )}
       </div>
