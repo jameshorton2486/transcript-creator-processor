@@ -2,66 +2,18 @@
  * Service for interacting with Deepgram API through server-side proxies
  */
 
-import { DeepgramRequestOptions, DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS } from './deepgramConfig';
+import { DeepgramRequestOptions, DeepgramWord, DeepgramParagraph, DeepgramUtterance, DeepgramAPIResponse, TranscriptionResult } from './types';
+import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS } from './deepgramConfig';
 
-// Types for API responses
-export interface DeepgramTranscriptionResponse {
-  id: string;
-  results: {
-    channels: DeepgramChannel[];
-    utterances?: DeepgramUtterance[];
-  };
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-}
-
-export interface DeepgramChannel {
-  alternatives: DeepgramAlternative[];
-  detected_language?: string;
-  language_confidence?: number;
-}
-
-export interface DeepgramAlternative {
-  transcript: string;
-  confidence: number;
-  words: DeepgramWord[];
-  paragraphs?: {
-    paragraphs: DeepgramParagraph[];
-  };
-}
-
-export interface DeepgramWord {
-  word: string;
-  start: number;
-  end: number;
-  confidence: number;
-  speaker?: number;
-  punctuated_word?: string;
-}
-
-export interface DeepgramParagraph {
-  start: number;
-  end: number;
-  text: string;
-}
-
-export interface DeepgramUtterance {
-  start: number;
-  end: number;
-  confidence: number;
-  channel: number;
-  transcript: string;
-  words: DeepgramWord[];
-  speaker?: number;
-  id?: string;
-}
-
-export interface TranscriptionResult {
-  transcript: string;
-  confidence: number;
-  words: DeepgramWord[];
-  paragraphs?: DeepgramParagraph[];
-  utterances?: DeepgramUtterance[];
-}
+// Re-export types
+export type { 
+  DeepgramRequestOptions,
+  DeepgramWord,
+  DeepgramParagraph,
+  DeepgramUtterance,
+  DeepgramAPIResponse,
+  TranscriptionResult
+};
 
 /**
  * Try to use the proxy server, fallback to direct API if necessary
@@ -144,7 +96,7 @@ export const transcribeFile = async (
   file: File, 
   apiKey: string,
   options: DeepgramRequestOptions = DEFAULT_OPTIONS
-): Promise<DeepgramTranscriptionResponse> => {
+): Promise<DeepgramAPIResponse> => {
   try {
     // Create form data with file and options
     const formData = new FormData();
@@ -182,7 +134,7 @@ export const transcribeFile = async (
 /**
  * Extract the main transcription result from the Deepgram response
  */
-export const extractTranscriptionResult = (response: DeepgramTranscriptionResponse): TranscriptionResult => {
+export const extractTranscriptionResult = (response: DeepgramAPIResponse): TranscriptionResult => {
   // Default values if structure is unexpected
   const defaultResult: TranscriptionResult = {
     transcript: '',
@@ -205,8 +157,14 @@ export const extractTranscriptionResult = (response: DeepgramTranscriptionRespon
     transcript: alternative.transcript,
     confidence: alternative.confidence,
     words: alternative.words,
+    text: alternative.transcript,
+    formattedResult: {
+      plainText: alternative.transcript
+    },
+    rawResponse: response,
     paragraphs: alternative.paragraphs?.paragraphs,
-    utterances: response.results.utterances
+    utterances: response.results.utterances,
+    language: channel.detected_language
   };
 };
 
@@ -239,6 +197,3 @@ export const apiKeyStorage = {
     }
   }
 };
-
-// Re-export DeepgramRequestOptions from deepgramConfig
-export type { DeepgramRequestOptions } from './deepgramConfig';

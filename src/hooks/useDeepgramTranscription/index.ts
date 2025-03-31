@@ -1,3 +1,4 @@
+
 /**
  * React hook for managing audio transcription with Deepgram API
  */
@@ -5,12 +6,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { transcribeAudioFile } from '../../lib/deepgram/transcriber';
 import { retrieveStoredApiKey, storeApiKey, testApiKey } from '../../lib/deepgram/auth';
 import { useToast } from "@/hooks/use-toast";
+import { TranscriptionResult } from '@/lib/deepgram/types';
 import {
   DeepgramTranscriptionOptions,
   DeepgramTranscriptionHookState,
   UseDeepgramTranscriptionReturn,
 } from './types';
-import type { TranscriptionResult } from '@/lib/deepgram/deepgramService';
 
 // Export the new service-based hook
 export { useDeepgramService } from './useDeepgramService';
@@ -21,14 +22,13 @@ export type {
 
 // Re-export types from deepgramService with 'export type'
 export type { 
-  DeepgramTranscriptionResponse,
-  DeepgramChannel,
-  DeepgramAlternative,
   DeepgramWord,
   DeepgramParagraph,
   DeepgramUtterance,
-  TranscriptionResult
-} from '@/lib/deepgram/deepgramService';
+  DeepgramAPIResponse,
+  TranscriptionResult,
+  DeepgramRequestOptions
+} from '@/lib/deepgram/types';
 
 export function useDeepgramTranscription(
   onTranscriptCreated?: (transcript: string, jsonData: any, file?: File) => void,
@@ -43,6 +43,7 @@ export function useDeepgramTranscription(
     apiKey: initialOptions?.apiKey || '',
     keyStatus: 'untested',
     testingKey: false,
+    result: null,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);

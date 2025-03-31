@@ -5,7 +5,7 @@ import { TranscriptReviewer } from "@/components/TranscriptReviewer";
 import { ClearTranscriptButton } from "@/components/transcript/ClearTranscriptButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AudioLines, Wand2, Sparkles } from "lucide-react";
-import type { TranscriptionResult } from "@/lib/deepgram/deepgramService";
+import { TranscriptionResult } from "@/lib/deepgram/types";
 
 interface TranscriptControlsProps {
   originalTranscript: string;
@@ -41,7 +41,7 @@ export const TranscriptControls = ({
         </CardHeader>
         <CardContent className="p-4">
           <DeepgramTranscriber 
-            onTranscriptionComplete={(result) => onTranscriptCreated(result.transcript, result, null)}
+            onTranscriptionComplete={(result) => onTranscriptCreated(result, {}, null)}
           />
         </CardContent>
       </Card>

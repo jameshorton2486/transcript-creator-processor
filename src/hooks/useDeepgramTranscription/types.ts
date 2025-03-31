@@ -2,77 +2,16 @@
 /**
  * Type definitions for the Deepgram transcription hook
  */
+import { TranscriptionResult, DeepgramWord, DeepgramParagraph, DeepgramUtterance, DeepgramAPIResponse } from '@/lib/deepgram/types';
 
-/**
- * Response structure from Deepgram API
- */
-export interface DeepgramTranscriptionResponse {
-  results?: {
-    channels: Array<{
-      alternatives: Array<{
-        transcript?: string;
-        confidence?: number;
-        words?: DeepgramWord[];
-      }>;
-    }>;
-    utterances?: Array<{
-      speaker: number;
-      transcript: string;
-      start: number;
-      end: number;
-    }>;
-  };
-  metadata?: {
-    request_id: string;
-    transaction_key: string;
-  };
-}
-
-/**
- * Word object from Deepgram API
- */
-export interface DeepgramWord {
-  word: string;
-  start: number;
-  end: number;
-  speaker?: number;
-  confidence?: number;
-}
-
-/**
- * Formatted transcript structure
- */
-export interface FormattedTranscript {
-  plainText: string;
-  wordTimestamps?: Array<{
-    word: string;
-    start: number;
-    end: number;
-    speaker?: string;
-  }>;
-  speakerSegments?: SpeakerSegment[];
-}
-
-/**
- * Speaker segment with timing information
- */
-export interface SpeakerSegment {
-  speaker: string;
-  text: string;
-  start: number;
-  end: number;
-}
-
-/**
- * Final transcription result structure
- * @deprecated Use TranscriptionResult from @/lib/deepgram/deepgramService instead
- */
-export interface TranscriptionResult {
-  transcript: string;
-  text: string;
-  formattedResult: FormattedTranscript;
-  rawResponse: DeepgramTranscriptionResponse;
-}
+// Re-export the core types for backwards compatibility
+export type {
+  DeepgramWord,
+  DeepgramParagraph,
+  DeepgramUtterance,
+  DeepgramAPIResponse,
+  TranscriptionResult
+};
 
 /**
  * Options for Deepgram transcription
@@ -104,7 +43,7 @@ export interface DeepgramTranscriptionHookState {
   testingKey: boolean;
   keyErrorMessage?: string;
   estimatedTimeRemaining?: string;
-  result?: import('@/lib/deepgram/deepgramService').TranscriptionResult;
+  result?: TranscriptionResult | null;
 }
 
 /**
@@ -112,7 +51,7 @@ export interface DeepgramTranscriptionHookState {
  */
 export interface UseDeepgramTranscriptionReturn extends DeepgramTranscriptionHookState {
   handleFileSelected: (file: File) => void;
-  transcribeAudioFile: () => Promise<import('@/lib/deepgram/deepgramService').TranscriptionResult | undefined>;
+  transcribeAudioFile: () => Promise<TranscriptionResult | undefined>;
   setApiKey: (key: string) => void;
   cancelTranscription: () => void;
   handleTestApiKey: (keyToTest?: string) => Promise<boolean>;
