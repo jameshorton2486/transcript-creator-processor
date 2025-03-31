@@ -13,6 +13,7 @@ import {
   FormattedTranscript
 } from './types';
 import { DEFAULT_OPTIONS, PROXY_SERVER_URL, PROXY_ENDPOINTS, createQueryParams } from './deepgramConfig';
+import { mockValidateApiKey, mockTranscribeFile, safeApiCall } from './mockDeepgramService';
 
 // Re-export types
 export type { 
@@ -64,42 +65,41 @@ const fetchWithProxyFallback = async (endpoint: string, options: RequestInit): P
  * Validate a Deepgram API key
  */
 export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; message?: string }> => {
-  try {
-    if (!apiKey || apiKey.trim() === '') {
-      return { 
-        valid: false, 
-        message: 'API key is required' 
-      };
-    }
-
-    const response = await fetchWithProxyFallback(
-      PROXY_ENDPOINTS.validateKey,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ apiKey }),
+  return safeApiCall(
+    // Real API call
+    async () => {
+      if (!apiKey || apiKey.trim() === '') {
+        return { 
+          valid: false, 
+          message: 'API key is required' 
+        };
       }
-    );
 
-    const data = await response.json();
+      const response = await fetchWithProxyFallback(
+        PROXY_ENDPOINTS.validateKey,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ apiKey }),
+        }
+      );
 
-    if (!(data.valid || data.isValid)) {
-      return { 
-        valid: false, 
-        message: data.error || data.message || 'Invalid API key' 
-      };
-    }
+      const data = await response.json();
 
-    return { valid: true };
-  } catch (error: any) {
-    console.error('API key validation error:', error);
-    return { 
-      valid: false, 
-      message: error.message || 'Failed to validate API key. Please check your network connection.' 
-    };
-  }
+      if (!(data.valid || data.isValid)) {
+        return { 
+          valid: false, 
+          message: data.error || data.message || 'Invalid API key' 
+        };
+      }
+
+      return { valid: true };
+    },
+    // Mock response
+    () => mockValidateApiKey(apiKey)
+  );
 };
 
 /**
@@ -110,38 +110,40 @@ export const transcribeFile = async (
   apiKey: string,
   options: DeepgramRequestOptions = DEFAULT_OPTIONS
 ): Promise<DeepgramAPIResponse> => {
-  try {
-    // Create form data with file and options
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('apiKey', apiKey);
-    
-    // Add all options to the form data
-    Object.entries(options).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, String(value));
+  return safeApiCall(
+    // Real API call
+    async () => {
+      // Create form data with file and options
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('apiKey', apiKey);
+      
+      // Add all options to the form data
+      Object.entries(options).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, String(value));
+        }
+      });
+
+      // Send request to server-side proxy with fallback
+      const response = await fetchWithProxyFallback(
+        PROXY_ENDPOINTS.transcribe,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to transcribe file');
       }
-    });
 
-    // Send request to server-side proxy with fallback
-    const response = await fetchWithProxyFallback(
-      PROXY_ENDPOINTS.transcribe,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to transcribe file');
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    console.error('Transcription error:', error);
-    throw error;
-  }
+      return await response.json();
+    },
+    // Mock response
+    () => mockTranscribeFile(file, options)
+  );
 };
 
 /**

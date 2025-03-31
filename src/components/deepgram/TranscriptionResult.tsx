@@ -3,10 +3,11 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { TranscriptionResult, FormattedTranscript } from "@/lib/deepgram/types";
-import { AlertCircle, Copy, Download } from "lucide-react";
+import { AlertCircle, Copy, Download, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { shouldUseMockResponses } from "@/lib/deepgram/mockDeepgramService";
 
 interface TranscriptionResultDisplayProps {
   result: TranscriptionResult | null;
@@ -19,6 +20,8 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
   showTranscription,
   error
 }) => {
+  const isMockData = shouldUseMockResponses();
+
   if (!showTranscription) {
     return null;
   }
@@ -126,6 +129,15 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
         </div>
         
         <Separator />
+        
+        {isMockData && (
+          <Alert variant="warning" className="bg-amber-50 border-amber-200 mb-3">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertDescription className="text-amber-800">
+              Using mock data for development. This is not a real transcription.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="whitespace-pre-wrap bg-slate-50 p-3 rounded-md border border-slate-200 text-sm">
           {result.transcript}
