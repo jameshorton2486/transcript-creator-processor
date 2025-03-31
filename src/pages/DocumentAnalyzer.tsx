@@ -8,7 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { DocumentTextExtractor } from "@/components/document/DocumentTextExtractor";
-import { Loader2, FileText, ArrowRight } from "lucide-react";
+import { Loader2, FileText, ArrowRight, Mic } from "lucide-react";
+import { DeepgramTranscriptionOptions } from "@/components/deepgram/DeepgramTranscriptionOptions";
+import { Separator } from "@/components/ui/separator";
 
 const DocumentAnalyzer = () => {
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
@@ -17,6 +19,14 @@ const DocumentAnalyzer = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [openAIKey, setOpenAIKey] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [deepgramOptions, setDeepgramOptions] = useState({
+    model: "nova-2",
+    punctuate: true,
+    smart_format: true,
+    diarize: false,
+    detect_language: false,
+    profanity_filter: false
+  });
   const { toast } = useToast();
 
   const handleFilesChange = (files: File[]) => {
@@ -27,6 +37,14 @@ const DocumentAnalyzer = () => {
   const handleTermsExtracted = (terms: string[]) => {
     setExtractedTerms(terms);
     setIsLoading(false);
+  };
+
+  const handleDeepgramOptionsChange = (name: string, value: any) => {
+    setDeepgramOptions(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    console.log(`Updated Deepgram option: ${name} = ${value}`);
   };
 
   const handleAIAnalysis = async () => {
@@ -241,6 +259,29 @@ const DocumentAnalyzer = () => {
             </div>
           </Card>
         )}
+
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <Mic className="mr-2 h-5 w-5 text-slate-700" />
+            Transcription Settings
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Configure how your audio will be processed during transcription with Deepgram
+          </p>
+          
+          <Separator className="my-4" />
+          
+          <DeepgramTranscriptionOptions 
+            onOptionsChange={handleDeepgramOptionsChange}
+            isLoading={isLoading || isAnalyzing}
+          />
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-6">
+            <p className="text-sm text-blue-800">
+              These settings will be applied when you proceed to the transcription page. They determine how Deepgram processes your audio files.
+            </p>
+          </div>
+        </Card>
 
         <div className="flex justify-between">
           <Button variant="outline">
