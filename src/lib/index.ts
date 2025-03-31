@@ -1,41 +1,30 @@
 
-// Main library exports
-export * from './config';
-export * from './transcriptProcessor';
-export * from './nlp/openAIReviewService';
-
-// Export audio utilities but rename the transcribeAudioFile function
-// to avoid naming conflicts with the Deepgram implementation
-import { transcribeAudioFile as audioTranscribeAudioFile } from './audio';
-export { audioTranscribeAudioFile };
-export * from './audio/audioValidation';
-export * from './audio/wavConverter';
-export * from './audio/audioContext';
-
-// Export transcriptionService but rename the transcribeAudioFile function
-// to avoid naming conflicts
-import { transcribeAudioFile as serviceTranscribeAudioFile } from './audio/transcriptionService';
-export { serviceTranscribeAudioFile };
-
-// Export Deepgram utilities
-export * from './deepgram';
-
-// Export the Deepgram API validator
-export * from './audio/deepgramApiValidator';
-
-// Export Deepgram auth service with renamed clearApiKey function
-import { 
-  validateApiKey,
-  mockValidateApiKey,
-  getSavedApiKey,
-  saveApiKey,
-  clearApiKey as clearDeepgramAuthApiKey 
-} from './deepgram/authService';
-
+// Re-export audio utilities
 export {
-  validateApiKey,
-  mockValidateApiKey,
-  getSavedApiKey,
-  saveApiKey,
-  clearDeepgramAuthApiKey
-};
+  isAudioSupported,
+  getAudioFromBlob,
+  sliceAudioBuffer,
+  decodeAudioData,
+  convertToWav,
+  downloadBlob,
+  mergeAudioBuffers
+} from './audio';
+
+// Re-export Deepgram services
+export {
+  formatTranscriptionResponse,
+  mockTranscription,
+  createDeepgramUrl,
+  shouldUseMockResponses
+} from './deepgram';
+
+// Re-export utility functions
+export { chunk, createQueryParams } from './utils';
+
+// Re-export audio validation (with different name to avoid naming conflicts)
+export {
+  validateAudioFile as validateDeepgramAudioFile,
+  SUPPORTED_MIME_TYPES,
+  SUPPORTED_EXTENSIONS,
+  MAX_FILE_SIZE
+} from './deepgram/deepgramService';
