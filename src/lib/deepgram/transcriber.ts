@@ -140,7 +140,7 @@ export async function transcribeAudioFile(
       language: options.language || DEFAULT_OPTIONS.language || "en",
       punctuate: options.punctuate !== false ? "true" : "false",
       diarize: options.diarize !== false ? "true" : "false",
-      smart_format: options.smartFormat !== false ? "true" : "false",
+      smart_format: options.smart_format !== false ? "true" : "false",
     });
 
     // Make the API request to Deepgram
