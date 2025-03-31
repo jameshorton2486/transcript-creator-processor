@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDeepgramTranscription } from '@/hooks/useDeepgramTranscription';
 import type { TranscriptionResult } from '@/lib/deepgram/types';
@@ -7,7 +6,7 @@ import { EnhancedFileSelector } from '@/components/audio/EnhancedFileSelector';
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { TranscriptionOptions } from '@/components/deepgram/TranscriptionOptions';
-import { TranscriptionControls } from '@/components/deepgram/TranscriptionControls';
+import { TranscriptionControlsFooter as TranscriptionControls } from '@/components/deepgram/TranscriptionControls';
 import { TranscriptionResultDisplay } from '@/components/deepgram/TranscriptionResult';
 
 interface DeepgramTranscriberProps {
@@ -54,7 +53,6 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
   );
 
   const handleTranscribe = useCallback(async () => {
-    // Reset previous errors and results
     setTranscriptionError(null);
     setTranscriptionResult(null);
     
@@ -154,9 +152,8 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
       />
 
       <TranscriptionResultDisplay
-        result={transcriptionResult}
-        error={transcriptionError || error}
-        showTranscription={showTranscription}
+        transcription={transcriptionResult}
+        selectedFile={file}
       />
     </div>
   );
