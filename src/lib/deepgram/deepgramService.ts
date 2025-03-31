@@ -1,4 +1,3 @@
-
 /**
  * Service for interacting with Deepgram API through server-side proxies
  */
