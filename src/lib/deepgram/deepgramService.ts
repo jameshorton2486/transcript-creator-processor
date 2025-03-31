@@ -1,3 +1,4 @@
+
 /**
  * Service for interacting with Deepgram API through server-side proxies
  */
@@ -72,7 +73,7 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
         return { 
           valid: false, 
           message: 'API key is required' 
-        } as const;
+        };
       }
 
       const response = await fetchWithProxyFallback(
@@ -92,10 +93,10 @@ export const validateApiKey = async (apiKey: string): Promise<{ valid: boolean; 
         return { 
           valid: false, 
           message: data.error || data.message || 'Invalid API key' 
-        } as const;
+        };
       }
 
-      return { valid: true } as const;
+      return { valid: true };
     },
     // Mock response
     () => mockValidateApiKey(apiKey)

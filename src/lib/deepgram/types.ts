@@ -1,32 +1,8 @@
 
 /**
- * Type definitions for Deepgram transcription service
- * Compatible with the existing TranscriptionResult type in the project
+ * Type definitions for Deepgram API integration
  */
 
-// API Request Options
-export interface DeepgramRequestOptions {
-  // Transcription parameters
-  language?: string;
-  model?: string; // Changed from strict union type to string for more flexibility
-  detect_language?: boolean;
-  punctuate?: boolean;
-  profanity_filter?: boolean;
-  redact?: string[];
-  diarize?: boolean;
-  multi_channel?: boolean;
-  alternatives?: number;
-  numerals?: boolean;
-  smart_format?: boolean;
-  
-  // Additional parameters for specific use cases
-  search?: string[];
-  keywords?: string[];
-  tag?: string;
-  version?: string; // Added for version specification
-}
-
-// Word-level data from transcription
 export interface DeepgramWord {
   word: string;
   start: number;
@@ -36,14 +12,12 @@ export interface DeepgramWord {
   punctuated_word?: string;
 }
 
-// Paragraph data from transcription
 export interface DeepgramParagraph {
   start: number;
   end: number;
   text: string;
 }
 
-// Utterance data for speaker diarization
 export interface DeepgramUtterance {
   start: number;
   end: number;
@@ -55,7 +29,6 @@ export interface DeepgramUtterance {
   id?: string;
 }
 
-// Main response from the API
 export interface DeepgramAPIResponse {
   results: {
     channels: Array<{
@@ -83,64 +56,57 @@ export interface DeepgramAPIResponse {
   };
 }
 
-// Speaker segment for formatted results
-export interface SpeakerSegment {
-  speaker: string;
-  text: string;
-  start: number;
-  end: number;
-}
-
-// Formatted transcript with word timings and speaker segments
 export interface FormattedTranscript {
   plainText: string;
-  wordTimestamps?: Array<{
+  wordTimestamps: {
     word: string;
     start: number;
     end: number;
     speaker?: string;
-  }>;
-  speakerSegments?: SpeakerSegment[];
+  }[];
+  speakerSegments: {
+    speaker: string;
+    text: string;
+    start: number;
+    end: number;
+  }[];
 }
 
-// Compatible with your existing TranscriptionResult type
 export interface TranscriptionResult {
-  // Original properties
   transcript: string;
   confidence: number;
   words: DeepgramWord[];
-  
-  // Properties needed for compatibility with your existing code
   text?: string;
   formattedResult?: FormattedTranscript | string;
   rawResponse?: DeepgramAPIResponse;
-  
-  // Optional additional properties
   paragraphs?: DeepgramParagraph[];
   utterances?: DeepgramUtterance[];
   language?: string;
   duration?: number;
 }
 
-// Job status response
 export interface TranscriptionJobStatus {
   id: string;
   status: 'queued' | 'processing' | 'completed' | 'failed';
-  progress: number;
+  created: string;
+  completed?: string;
   error?: string;
-  estimatedTimeRemaining?: string;
 }
 
-// Hook state interface
-export interface DeepgramTranscriptionHookState {
-  isLoading: boolean;
-  progress: number;
-  result: TranscriptionResult | null;
-  file: File | null;
-  error: string | null;
-  apiKey: string;
-  keyStatus: 'untested' | 'valid' | 'invalid';
-  testingKey: boolean;
-  keyErrorMessage?: string;
-  estimatedTimeRemaining?: string;
+export interface DeepgramRequestOptions {
+  language?: string;
+  model?: 'nova' | 'enhanced' | 'base';
+  detect_language?: boolean;
+  punctuate?: boolean;
+  profanity_filter?: boolean;
+  redact?: string[];
+  diarize?: boolean;
+  multi_channel?: boolean;
+  alternatives?: number;
+  numerals?: boolean;
+  smart_format?: boolean;
+  search?: string[];
+  keywords?: string[];
+  tag?: string;
+  version?: string;
 }

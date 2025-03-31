@@ -51,7 +51,7 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Transcription Result</h3>
           <Separator />
-          <Alert variant="default" className="bg-amber-50 border-amber-200">
+          <Alert>
             <AlertDescription>
               No transcript is available. Please ensure your audio file contains speech and try again.
             </AlertDescription>
@@ -131,7 +131,7 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
         <Separator />
         
         {isMockData && (
-          <Alert variant="default" className="bg-amber-50 border-amber-200 mb-3">
+          <Alert className="bg-amber-50 border-amber-200 mb-3">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <AlertDescription className="text-amber-800">
               Using mock data for development. This is not a real transcription.

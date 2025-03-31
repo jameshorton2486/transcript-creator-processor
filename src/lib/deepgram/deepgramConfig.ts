@@ -2,29 +2,29 @@
 /**
  * Configuration for Deepgram API integration
  */
+
 import { DeepgramRequestOptions } from './types';
-
-// Base URL for Deepgram API
-export const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1';
-
-// Proxy server endpoints
-export const PROXY_SERVER_URL = 'http://localhost:4000';
-export const PROXY_ENDPOINTS = {
-  validateKey: '/validate-key',
-  checkStatus: '/check-status',
-  transcribe: '/transcribe'
-};
 
 /**
  * Default options for Deepgram transcription requests
  */
 export const DEFAULT_OPTIONS: DeepgramRequestOptions = {
   language: 'en',
-  model: 'nova-2',
+  model: 'nova',
   punctuate: true,
   smart_format: true,
-  diarize: false,
-  version: 'latest'
+  diarize: false
+};
+
+/**
+ * Server proxy configuration
+ */
+export const PROXY_SERVER_URL = 'http://localhost:4000'; // Express proxy server
+
+export const PROXY_ENDPOINTS = {
+  validateKey: '/validate-key',
+  transcribe: '/transcribe',
+  checkStatus: '/check-status'
 };
 
 /**
