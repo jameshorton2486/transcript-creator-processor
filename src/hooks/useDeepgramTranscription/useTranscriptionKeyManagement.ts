@@ -1,13 +1,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { validateApiKey, getSavedApiKey, saveApiKey } from '@/lib/deepgram/authService';
-import { type Toast } from "@/hooks/use-toast";
+import { ToastProps } from "@/components/ui/toast";
 
 interface UseTranscriptionKeyManagementProps {
   initialApiKey?: string;
   autoValidateKey?: boolean;
   toast: {
-    toast: (props: Toast) => void;
+    toast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
   };
 }
 

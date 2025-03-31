@@ -55,7 +55,7 @@ export const useDeepgramTranscriptionService = ({
   } = useTranscriptionKeyManagement({
     initialApiKey,
     autoValidateKey,
-    toast
+    toast: { toast }
   });
 
   // Use the job manager hook
@@ -70,7 +70,7 @@ export const useDeepgramTranscriptionService = ({
     apiKey,
     isApiKeyValid,
     validateKey,
-    toast
+    toast: { toast }
   });
 
   return {

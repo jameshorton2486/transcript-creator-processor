@@ -6,7 +6,7 @@ import {
   getTranscriptionResult,
   TranscriptionResult
 } from '@/lib/audio/transcriptionService';
-import { type Toast } from "@/hooks/use-toast";
+import { ToastProps } from "@/components/ui/toast";
 
 export interface TranscriptionOptions {
   language?: string;
@@ -20,7 +20,7 @@ interface UseTranscriptionJobManagerProps {
   isApiKeyValid: boolean;
   validateKey: () => Promise<boolean>;
   toast: {
-    toast: (props: Toast) => void;
+    toast: (props: { title: string; description: string; variant?: "default" | "destructive" }) => void;
   };
 }
 

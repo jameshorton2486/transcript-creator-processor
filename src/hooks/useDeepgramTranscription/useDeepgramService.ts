@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
   validateApiKey, 
@@ -61,10 +62,15 @@ export const useDeepgramService = ({
     selectedFile,
     setSelectedFile,
     transcription,
+    setTranscription,
     rawResponse,
+    setRawResponse,
     transcriptionError,
+    setTranscriptionError,
     isTranscribing,
+    setIsTranscribing,
     isProcessingComplete,
+    setIsProcessingComplete,
     requestOptions,
     updateRequestOptions,
     resetTranscription
@@ -130,7 +136,7 @@ export const useDeepgramService = ({
     } finally {
       setIsTranscribing(false);
     }
-  }, [apiKey, isApiKeyValid, requestOptions, selectedFile, validateKeyManually, resetTranscription]);
+  }, [apiKey, isApiKeyValid, requestOptions, selectedFile, validateKeyManually, resetTranscription, setTranscriptionError, setIsTranscribing, setRawResponse, setTranscription, setIsProcessingComplete]);
   
   return {
     apiKey,
