@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { TranscriptionResult } from "@/hooks/useDeepgramTranscription/types";
+import { TranscriptionResult, FormattedTranscript } from "@/lib/deepgram/types";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -56,6 +56,13 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
     );
   }
 
+  // Get the formatted result if available
+  const formattedResult = result.formattedResult;
+  const hasSpeakerSegments = 
+    typeof formattedResult !== 'string' && 
+    formattedResult?.speakerSegments && 
+    formattedResult.speakerSegments.length > 0;
+
   return (
     <Card className="p-4">
       <div className="space-y-4">
@@ -66,12 +73,12 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
           {result.transcript}
         </div>
 
-        {result.formattedResult?.speakerSegments?.length > 0 && (
+        {hasSpeakerSegments && (
           <div className="space-y-3">
             <h4 className="text-md font-medium">Speaker Segments</h4>
             
             <div className="space-y-2">
-              {result.formattedResult.speakerSegments.map((seg, idx) => (
+              {typeof formattedResult !== 'string' && formattedResult?.speakerSegments?.map((seg, idx) => (
                 <div key={idx} className="bg-slate-50 p-3 rounded-md border border-slate-200">
                   <div className="flex justify-between mb-1">
                     <span className="font-medium text-slate-800">{seg.speaker}</span>

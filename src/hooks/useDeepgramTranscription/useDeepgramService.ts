@@ -8,7 +8,8 @@ import {
   TranscriptionResult,
   DeepgramAPIResponse
 } from '@/lib/deepgram/deepgramService';
-import { DeepgramRequestOptions, DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
+import { DeepgramRequestOptions } from '@/lib/deepgram/types';
+import { DEFAULT_OPTIONS } from '@/lib/deepgram/deepgramConfig';
 
 export interface UseDeepgramTranscriptionProps {
   initialApiKey?: string;
