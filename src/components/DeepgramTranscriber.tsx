@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useDeepgramTranscription } from '@/hooks/useDeepgramTranscription';
 import type { TranscriptionResult } from '@/lib/deepgram/types';
@@ -96,6 +97,12 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
     [setOptions]
   );
 
+  // Function to reset the transcription - needed for TranscriptionControls
+  const resetTranscription = useCallback(() => {
+    setTranscriptionResult(null);
+    setTranscriptionError(null);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -142,13 +149,11 @@ const DeepgramTranscriber: React.FC<DeepgramTranscriberProps> = ({
 
       <TranscriptionControls
         handleTranscribe={handleTranscribe}
-        cancelTranscription={cancelTranscription}
-        file={file}
-        isLoading={isLoading}
-        keyStatus={keyStatus}
-        error={error}
-        progress={progress}
-        estimatedTimeRemaining={estimatedTimeRemaining}
+        resetTranscription={resetTranscription}
+        selectedFile={file}
+        isTranscribing={isLoading}
+        isApiKeyValid={keyStatus === 'valid'}
+        hasTranscription={transcriptionResult !== null}
       />
 
       <TranscriptionResultDisplay
