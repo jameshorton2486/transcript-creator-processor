@@ -131,7 +131,7 @@ export const TranscriptionResultDisplay: React.FC<TranscriptionResultDisplayProp
         <Separator />
         
         {isMockData && (
-          <Alert variant="warning" className="bg-amber-50 border-amber-200 mb-3">
+          <Alert variant="default" className="bg-amber-50 border-amber-200 mb-3">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <AlertDescription className="text-amber-800">
               Using mock data for development. This is not a real transcription.
