@@ -9,6 +9,8 @@ This module handles audio transcription using the Deepgram API.
 import requests
 import os
 import json
+import time
+import base64
 
 def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
     """
@@ -82,33 +84,144 @@ def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
         params["alternatives"] = str(default_options["alternatives"])
     
     headers = {
-        "Authorization": f"Token {api_key}"
+        "Authorization": f"Token {api_key}",
+        "Content-Type": "audio/wav"  # Set appropriate content type based on file
     }
+    
+    # Determine content type based on file extension
+    file_extension = os.path.splitext(audio_file_path)[1].lower()
+    if file_extension == '.mp3':
+        headers["Content-Type"] = "audio/mpeg"
+    elif file_extension == '.wav':
+        headers["Content-Type"] = "audio/wav"
+    elif file_extension == '.flac':
+        headers["Content-Type"] = "audio/flac"
+    elif file_extension == '.ogg':
+        headers["Content-Type"] = "audio/ogg"
+    elif file_extension in ['.m4a', '.aac']:
+        headers["Content-Type"] = "audio/mp4"
     
     print(f"Sending transcription request to Deepgram API with options: {params}")
     
-    try:
-        # Send request to Deepgram API
-        with open(audio_file_path, 'rb') as audio:
-            response = requests.post(
-                url,
-                headers=headers,
-                params=params,
-                data=audio
-            )
-        
-        # Check response
-        if response.status_code == 200:
-            return response.json()
-        else:
-            error_message = f"Deepgram API error: {response.status_code} - {response.text}"
-            print(error_message)
-            raise Exception(error_message)
+    max_retries = 3
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Send request to Deepgram API
+            with open(audio_file_path, 'rb') as audio:
+                audio_data = audio.read()
+                
+                # Build the URL with query parameters
+                query_params = "&".join([f"{k}={v}" for k, v in params.items()])
+                full_url = f"{url}?{query_params}"
+                
+                # Send the request with retries
+                response = requests.post(
+                    full_url,
+                    headers=headers,
+                    data=audio_data
+                )
             
-    except requests.RequestException as e:
-        error_message = f"Network error: {str(e)}"
-        print(error_message)
-        raise
+            # Check response
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 429:  # Rate limiting
+                if attempt < max_retries - 1:
+                    print(f"Rate limit hit. Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    error_message = f"Rate limit exceeded. Please try again later. Response: {response.text}"
+                    print(error_message)
+                    raise Exception(error_message)
+            else:
+                error_message = f"Deepgram API error: {response.status_code} - {response.text}"
+                print(error_message)
+                raise Exception(error_message)
+                
+        except requests.RequestException as e:
+            if attempt < max_retries - 1:
+                print(f"Network error: {str(e)}. Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+                continue
+            
+            error_message = f"Network error: {str(e)}"
+            print(error_message)
+            raise
+        except Exception as e:
+            print(f"Error in transcribe_audio_with_deepgram: {str(e)}")
+            raise
+
+def validate_deepgram_key(api_key):
+    """
+    Validate a Deepgram API key
+    
+    Parameters:
+    - api_key: Deepgram API key to validate
+    
+    Returns:
+    - Dict with validity status and message
+    """
+    if not api_key:
+        return {"valid": False, "message": "API key is required"}
+    
+    url = "https://api.deepgram.com/v1/projects"
+    headers = {
+        "Authorization": f"Token {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return {"valid": True, "message": "API key is valid"}
+        else:
+            return {
+                "valid": False, 
+                "message": f"Invalid API key (Status: {response.status_code})"
+            }
     except Exception as e:
-        print(f"Error in transcribe_audio_with_deepgram: {str(e)}")
-        raise
+        return {"valid": False, "message": f"Error validating API key: {str(e)}"}
+
+# Command line interface for testing
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Transcribe audio using Deepgram API")
+    parser.add_argument("--file", required=True, help="Path to audio file")
+    parser.add_argument("--key", required=True, help="Deepgram API key")
+    parser.add_argument("--model", default="nova-2", help="Deepgram model to use")
+    parser.add_argument("--diarize", action="store_true", help="Enable speaker diarization")
+    
+    args = parser.parse_args()
+    
+    # Test the API key first
+    key_status = validate_deepgram_key(args.key)
+    if not key_status["valid"]:
+        print(f"Error: {key_status['message']}")
+        exit(1)
+    
+    print(f"API key validated successfully")
+    
+    # Transcribe the file
+    try:
+        options = {
+            "model": args.model,
+            "diarize": args.diarize
+        }
+        
+        result = transcribe_audio_with_deepgram(args.file, args.key, options)
+        
+        # Pretty print the result
+        print(json.dumps(result, indent=2))
+        
+        # Display the transcript
+        transcript = result["results"]["channels"][0]["alternatives"][0]["transcript"]
+        print("\n--- Transcript ---")
+        print(transcript)
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
