@@ -1,17 +1,10 @@
 
-import React from 'react';
-import { Checkbox } from "@/components/ui/checkbox";
+import React, { useState } from 'react';
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { HelpCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from 'lucide-react';
 
 interface TranscriptionOptionsProps {
   onOptionsChange: (name: string, value: any) => void;
@@ -20,106 +13,132 @@ interface TranscriptionOptionsProps {
 
 export const TranscriptionOptions: React.FC<TranscriptionOptionsProps> = ({
   onOptionsChange,
-  isLoading = false,
+  isLoading = false
 }) => {
+  const [options, setOptions] = useState({
+    model: 'nova-2',
+    punctuate: true,
+    smart_format: true,
+    diarize: false
+  });
+
+  const handleOptionChange = (name: string, value: any) => {
+    setOptions(prev => ({ ...prev, [name]: value }));
+    onOptionsChange(name, value);
+  };
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">Transcription Options</h3>
-      <Separator />
-      
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-start space-x-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="diarize" 
-              onCheckedChange={(checked) => onOptionsChange('diarize', checked === true)}
-              disabled={isLoading}
-            />
-            <Label htmlFor="diarize">Speaker Diarization</Label>
-          </div>
+      <div>
+        <div className="flex justify-between items-center mb-1">
+          <Label htmlFor="model-select" className="text-sm font-medium">
+            Model
+          </Label>
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-slate-400" />
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>Identifies and labels different speakers in the audio, making it easier to follow conversations.</p>
+              <TooltipContent>
+                <p className="max-w-xs">
+                  Deepgram offers different models for various use cases. 
+                  Nova-2 offers the best accuracy for general transcription.
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
-        
-        <div className="flex items-start space-x-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="punctuate" 
-              defaultChecked
-              onCheckedChange={(checked) => onOptionsChange('punctuate', checked === true)}
-              disabled={isLoading}
-            />
-            <Label htmlFor="punctuate">Add Punctuation</Label>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-slate-400" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>Adds periods, commas, question marks, and other punctuation to make the transcript more readable.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        
-        <div className="flex items-start space-x-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="smart_format" 
-              defaultChecked
-              onCheckedChange={(checked) => onOptionsChange('smart_format', checked === true)}
-              disabled={isLoading}
-            />
-            <Label htmlFor="smart_format">Smart Format</Label>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <HelpCircle className="h-4 w-4 text-slate-400" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>Formats numbers, dates, and other entities in a human-readable way (e.g., "five hundred" becomes "500").</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
-      
-      <div className="pt-2">
-        <Label htmlFor="model" className="block mb-1 text-sm">Transcription Model</Label>
-        <Select 
-          defaultValue="nova-2"
-          onValueChange={(value) => onOptionsChange('model', value)}
+        <Select
           disabled={isLoading}
+          defaultValue={options.model}
+          onValueChange={(value) => handleOptionChange('model', value)}
         >
-          <SelectTrigger id="model" className="w-full">
-            <SelectValue placeholder="Select a model" />
+          <SelectTrigger id="model-select" className="w-full">
+            <SelectValue placeholder="Select model" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="nova-2">Nova 2 (Latest & Most Accurate)</SelectItem>
-            <SelectItem value="nova">Nova (Fast & Accurate)</SelectItem>
-            <SelectItem value="enhanced">Enhanced (Balanced)</SelectItem>
+            <SelectItem value="nova-2">Nova 2 (Best Accuracy)</SelectItem>
+            <SelectItem value="enhanced">Enhanced</SelectItem>
             <SelectItem value="base">Base (Fastest)</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-slate-500 mt-2">
-          Select the Deepgram model that best fits your needs. Nova 2 offers the highest accuracy but may take longer to process.
-        </p>
       </div>
-      
-      <div className="text-xs text-slate-500 pt-2">
-        <p>These options control how Deepgram processes your audio. More options are available in the Document Analysis page.</p>
-        <p>Hover over the help icons for more information about each option.</p>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="diarize" className="text-sm font-medium">Speaker Diarization</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-slate-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    Identifies different speakers in the audio and labels them separately.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Switch
+            id="diarize"
+            checked={options.diarize}
+            onCheckedChange={(checked) => handleOptionChange('diarize', checked)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="punctuate" className="text-sm font-medium">Punctuation</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-slate-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    Adds punctuation marks to the transcript.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Switch
+            id="punctuate"
+            checked={options.punctuate}
+            onCheckedChange={(checked) => handleOptionChange('punctuate', checked)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="smart_format" className="text-sm font-medium">Smart Format</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-slate-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">
+                    Formats numbers, dates, and other entities into their written form.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Switch
+            id="smart_format"
+            checked={options.smart_format}
+            onCheckedChange={(checked) => handleOptionChange('smart_format', checked)}
+            disabled={isLoading}
+          />
+        </div>
       </div>
     </div>
   );
 };
+
+export default TranscriptionOptions;
