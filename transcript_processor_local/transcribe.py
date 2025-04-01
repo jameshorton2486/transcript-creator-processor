@@ -33,7 +33,15 @@ def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
         "model": "nova-2",
         "punctuate": True,
         "diarize": False,
-        "smart_format": True
+        "smart_format": True,
+        "language": "auto",
+        "detect_language": True,
+        "summarize": False,
+        "detect_topics": False,
+        "utterances": False,
+        "profanity_filter": False,
+        "redact": None,
+        "alternatives": 1
     }
     
     # Merge with provided options
@@ -47,8 +55,31 @@ def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
         "model": default_options["model"],
         "punctuate": str(default_options["punctuate"]).lower(),
         "diarize": str(default_options["diarize"]).lower(),
-        "smart_format": str(default_options["smart_format"]).lower()
+        "smart_format": str(default_options["smart_format"]).lower(),
+        "utterances": str(default_options["utterances"]).lower()
     }
+    
+    # Add optional parameters only if they're enabled/specified
+    if default_options["language"] != "auto":
+        params["language"] = default_options["language"]
+    
+    if default_options["detect_language"]:
+        params["detect_language"] = "true"
+    
+    if default_options["summarize"]:
+        params["summarize"] = "true"
+    
+    if default_options["detect_topics"]:
+        params["detect_topics"] = "true"
+    
+    if default_options["profanity_filter"]:
+        params["profanity_filter"] = "true"
+    
+    if default_options["redact"]:
+        params["redact"] = default_options["redact"]
+    
+    if default_options["alternatives"] > 1:
+        params["alternatives"] = str(default_options["alternatives"])
     
     headers = {
         "Authorization": f"Token {api_key}"
@@ -74,6 +105,10 @@ def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
             print(error_message)
             raise Exception(error_message)
             
+    except requests.RequestException as e:
+        error_message = f"Network error: {str(e)}"
+        print(error_message)
+        raise
     except Exception as e:
         print(f"Error in transcribe_audio_with_deepgram: {str(e)}")
         raise
