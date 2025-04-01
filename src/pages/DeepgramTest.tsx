@@ -1,13 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DeepgramTranscriber from '@/components/DeepgramTranscriber';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, XCircle, Home, FileAudio } from 'lucide-react';
+import { ArrowLeft, Home, FileAudio } from 'lucide-react';
 import { DeepgramTranscriptionOptions } from '@/components/deepgram/DeepgramTranscriptionOptions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ExtractedTermsEditor } from '@/components/document/ExtractedTermsEditor';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FindAndReplaceEditor } from '@/components/deepgram/FindAndReplaceEditor';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -18,7 +18,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb';
-import { ProxyInfoAlert } from '@/components/deepgram/ProxyInfoAlert';
 
 const DEFAULT_OPTIONS = {
   model: "nova-2",
@@ -45,7 +44,6 @@ const DeepgramTest = () => {
   const [extractedTerms, setExtractedTerms] = useState<string[]>([]);
   const [findReplaceEntries, setFindReplaceEntries] = useState<Array<{find: string; replace: string}>>([]);
   const [proxyServerAvailable, setProxyServerAvailable] = useState<boolean | null>(null);
-  const [showServerAlert, setShowServerAlert] = useState(true);
   const [proxyTestInProgress, setProxyTestInProgress] = useState(false);
   
   useEffect(() => {
@@ -194,13 +192,6 @@ const DeepgramTest = () => {
       </div>
       
       <h1 className="text-3xl font-bold mb-6">Deepgram Audio Transcription</h1>
-      
-      {showServerAlert && (
-        <ProxyInfoAlert
-          showProxyInfo={showServerAlert}
-          setShowProxyInfo={setShowServerAlert}
-        />
-      )}
       
       {extractedTerms.length > 0 && (
         <ExtractedTermsEditor 
