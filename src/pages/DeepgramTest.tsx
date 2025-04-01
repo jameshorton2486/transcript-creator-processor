@@ -177,7 +177,7 @@ const DeepgramTest = () => {
       <h1 className="text-3xl font-bold mb-6">Deepgram Transcription</h1>
       
       {showServerAlert && (
-        <Alert variant={proxyServerAvailable === false ? "destructive" : proxyServerAvailable === true ? "default" : "warning"} className="mb-6">
+        <Alert variant={proxyServerAvailable === false ? "destructive" : proxyServerAvailable === true ? "default" : "destructive"} className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>
             {proxyTestInProgress 
