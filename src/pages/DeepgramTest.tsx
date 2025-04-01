@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DeepgramTranscriber from '@/components/DeepgramTranscriber';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, XCircle, Home, FileAudio } from 'lucide-react';
 import { DeepgramTranscriptionOptions } from '@/components/deepgram/DeepgramTranscriptionOptions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -11,8 +10,16 @@ import { ExtractedTermsEditor } from '@/components/document/ExtractedTermsEditor
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FindAndReplaceEditor } from '@/components/deepgram/FindAndReplaceEditor';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
+} from '@/components/ui/breadcrumb';
+import { ProxyInfoAlert } from '@/components/deepgram/ProxyInfoAlert';
 
-// The default options in case none were saved
 const DEFAULT_OPTIONS = {
   model: "nova-2",
   punctuate: true,
@@ -41,7 +48,6 @@ const DeepgramTest = () => {
   const [showServerAlert, setShowServerAlert] = useState(true);
   const [proxyTestInProgress, setProxyTestInProgress] = useState(false);
   
-  // Load any saved options and terms from session storage
   useEffect(() => {
     try {
       const savedOptions = sessionStorage.getItem('deepgramOptions');
@@ -63,7 +69,6 @@ const DeepgramTest = () => {
     }
   }, []);
 
-  // Check if proxy server is available
   useEffect(() => {
     const checkProxyServer = async () => {
       setProxyTestInProgress(true);
@@ -104,7 +109,6 @@ const DeepgramTest = () => {
     };
     setTranscriptionOptions(updatedOptions);
     
-    // Save to session storage for persistence
     try {
       sessionStorage.setItem('deepgramOptions', JSON.stringify(updatedOptions));
     } catch (error) {
@@ -115,10 +119,8 @@ const DeepgramTest = () => {
   const handleTermsUpdate = (updatedTerms: string[]) => {
     setExtractedTerms(updatedTerms);
     
-    // Update keyterm option with the new terms
     handleOptionsChange('keyterm', updatedTerms);
     
-    // Save to session storage for persistence
     try {
       sessionStorage.setItem('extractedTerms', JSON.stringify(updatedTerms));
     } catch (error) {
@@ -129,10 +131,8 @@ const DeepgramTest = () => {
   const handleFindReplaceUpdate = (entries: Array<{find: string; replace: string}>) => {
     setFindReplaceEntries(entries);
     
-    // Update replace option with the new entries
     handleOptionsChange('replace', entries);
     
-    // Save to session storage for persistence
     try {
       sessionStorage.setItem('findReplaceEntries', JSON.stringify(entries));
     } catch (error) {
@@ -143,7 +143,6 @@ const DeepgramTest = () => {
   const retryProxyCheck = () => {
     setProxyServerAvailable(null);
     
-    // Re-run the proxy server check
     const checkProxyServer = async () => {
       setProxyTestInProgress(true);
       try {
@@ -165,64 +164,42 @@ const DeepgramTest = () => {
 
   return (
     <div className="container py-8 max-w-4xl mx-auto">
-      <div className="mb-4">
+      <div className="mb-6 space-y-4">
         <Link to="/">
-          <Button variant="outline" className="flex items-center">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button variant="default" size="lg" className="flex items-center gap-2 shadow-sm">
+            <ArrowLeft className="h-5 w-5" />
             Back to Document Analysis
           </Button>
         </Link>
+        
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/" className="flex items-center">
+                  <Home className="h-4 w-4 mr-1" />
+                  Home
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="flex items-center">
+                <FileAudio className="h-4 w-4 mr-1" />
+                Deepgram Transcription
+              </BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
       </div>
       
-      <h1 className="text-3xl font-bold mb-6">Deepgram Transcription</h1>
+      <h1 className="text-3xl font-bold mb-6">Deepgram Audio Transcription</h1>
       
       {showServerAlert && (
-        <Alert variant={proxyServerAvailable === false ? "destructive" : proxyServerAvailable === true ? "default" : "destructive"} className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>
-            {proxyTestInProgress 
-              ? "Checking proxy server status..." 
-              : proxyServerAvailable 
-                ? "Proxy server is running" 
-                : "Proxy server is not running"}
-          </AlertTitle>
-          <AlertDescription>
-            {proxyTestInProgress ? (
-              "Checking if the proxy server is available..."
-            ) : proxyServerAvailable ? (
-              "The proxy server is running correctly. CORS issues will be avoided."
-            ) : (
-              <div className="space-y-2">
-                <p>
-                  The proxy server at localhost:4000 is not running. You may encounter CORS errors when 
-                  using Deepgram services.
-                </p>
-                <p>
-                  To fix this, start the Express proxy server from the <code className="bg-slate-100 px-1 rounded">server/</code> directory 
-                  by running <code className="bg-slate-100 px-1 rounded">node server.js</code>. 
-                  See <code className="bg-slate-100 px-1 rounded">server/README.md</code> for more details.
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <Button 
-                    size="sm" 
-                    onClick={retryProxyCheck}
-                    disabled={proxyTestInProgress}
-                  >
-                    Retry Connection
-                  </Button>
-                </div>
-              </div>
-            )}
-          </AlertDescription>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowServerAlert(false)}
-            className="absolute top-2 right-2"
-          >
-            <XCircle className="h-4 w-4" />
-          </Button>
-        </Alert>
+        <ProxyInfoAlert
+          showProxyInfo={showServerAlert}
+          setShowProxyInfo={setShowServerAlert}
+        />
       )}
       
       {extractedTerms.length > 0 && (
