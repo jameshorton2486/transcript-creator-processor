@@ -9,18 +9,23 @@ This module handles transcript correction using OpenAI's API.
 import time
 import openai
 import json
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class TranscriptionCorrectionError(Exception):
     """Custom exception for transcription correction errors"""
     pass
 
-def correct_transcript_with_openai(transcript, api_key, options=None):
+def correct_transcript_with_openai(transcript, api_key=None, options=None):
     """
     Correct a transcript using OpenAI's API
     
     Parameters:
     - transcript: The raw transcript text to correct
-    - api_key: OpenAI API key
+    - api_key: OpenAI API key (defaults to OPENAI_API_KEY environment variable)
     - options: Dictionary containing correction options
         - model: OpenAI model to use (default: gpt-4o)
         - temperature: Creativity level (default: 0.2)
@@ -28,7 +33,7 @@ def correct_transcript_with_openai(transcript, api_key, options=None):
         - format_output: Format output as JSON (default: False)
         - extract_speakers: Try to identify speakers (default: False) 
         - extract_topics: Extract main topics (default: False)
-        - clean_filler_words: Remove filler words (default: False)
+        - clean_filler_words: Remove filler words (default: True)
     
     Returns:
     - Dictionary containing original and corrected transcript
@@ -36,8 +41,12 @@ def correct_transcript_with_openai(transcript, api_key, options=None):
     if not transcript:
         raise ValueError("No transcript provided for correction")
     
+    # Get API key from environment if not provided
     if not api_key:
-        raise ValueError("OpenAI API key is required")
+        api_key = os.getenv("OPENAI_API_KEY")
+    
+    if not api_key:
+        raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY in .env file or provide it as parameter.")
     
     # Default options
     default_options = {
@@ -149,3 +158,54 @@ def correct_transcript_with_openai(transcript, api_key, options=None):
             error_msg = f"Error in correct_transcript_with_openai: {str(e)}"
             print(error_msg)
             raise TranscriptionCorrectionError(error_msg) from e
+
+# Command line interface for testing
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Correct transcript using OpenAI")
+    parser.add_argument("--input", required=True, help="Path to input transcript file")
+    parser.add_argument("--output", help="Path to output file (defaults to input_corrected.txt)")
+    parser.add_argument("--key", help="OpenAI API key (defaults to OPENAI_API_KEY in .env)")
+    parser.add_argument("--model", default="gpt-4o", help="OpenAI model to use")
+    parser.add_argument("--clean-filler", action="store_true", help="Clean filler words")
+    parser.add_argument("--extract-speakers", action="store_true", help="Extract speakers")
+    
+    args = parser.parse_args()
+    
+    # Read transcript from file
+    try:
+        with open(args.input, 'r') as file:
+            transcript = file.read()
+    except Exception as e:
+        print(f"Error reading file: {str(e)}")
+        exit(1)
+    
+    # Use API key from args or environment
+    api_key = args.key if args.key else os.getenv("OPENAI_API_KEY")
+    
+    # Set options
+    options = {
+        "model": args.model,
+        "clean_filler_words": args.clean_filler,
+        "extract_speakers": args.extract_speakers
+    }
+    
+    # Generate output filename if not provided
+    if not args.output:
+        base_name = os.path.splitext(args.input)[0]
+        args.output = f"{base_name}_corrected.txt"
+    
+    # Correct transcript
+    try:
+        print(f"Correcting transcript with OpenAI {args.model}...")
+        result = correct_transcript_with_openai(transcript, api_key, options)
+        
+        # Save corrected transcript
+        with open(args.output, 'w') as file:
+            file.write(result["corrected_transcript"])
+        
+        print(f"Corrected transcript saved to: {args.output}")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")

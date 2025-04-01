@@ -11,14 +11,18 @@ import os
 import json
 import time
 import base64
+from dotenv import load_dotenv
 
-def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
+# Load environment variables
+load_dotenv()
+
+def transcribe_audio_with_deepgram(audio_file_path, api_key=None, options=None):
     """
     Transcribe an audio file using the Deepgram API
     
     Parameters:
     - audio_file_path: Path to the audio file to transcribe
-    - api_key: Deepgram API key
+    - api_key: Deepgram API key (defaults to DEEPGRAM_API_KEY environment variable)
     - options: Dictionary of transcription options
     
     Returns:
@@ -27,8 +31,12 @@ def transcribe_audio_with_deepgram(audio_file_path, api_key, options=None):
     if not os.path.exists(audio_file_path):
         raise FileNotFoundError(f"Audio file not found: {audio_file_path}")
     
+    # Get API key from environment if not provided
     if not api_key:
-        raise ValueError("Deepgram API key is required")
+        api_key = os.getenv("DEEPGRAM_API_KEY")
+    
+    if not api_key:
+        raise ValueError("Deepgram API key is required. Set DEEPGRAM_API_KEY in .env file or provide it as parameter.")
     
     # Default options
     default_options = {
@@ -192,14 +200,17 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Transcribe audio using Deepgram API")
     parser.add_argument("--file", required=True, help="Path to audio file")
-    parser.add_argument("--key", required=True, help="Deepgram API key")
+    parser.add_argument("--key", help="Deepgram API key (defaults to DEEPGRAM_API_KEY in .env)")
     parser.add_argument("--model", default="nova-2", help="Deepgram model to use")
     parser.add_argument("--diarize", action="store_true", help="Enable speaker diarization")
     
     args = parser.parse_args()
     
+    # Use API key from args or environment
+    api_key = args.key if args.key else os.getenv("DEEPGRAM_API_KEY")
+    
     # Test the API key first
-    key_status = validate_deepgram_key(args.key)
+    key_status = validate_deepgram_key(api_key)
     if not key_status["valid"]:
         print(f"Error: {key_status['message']}")
         exit(1)
@@ -213,7 +224,7 @@ if __name__ == "__main__":
             "diarize": args.diarize
         }
         
-        result = transcribe_audio_with_deepgram(args.file, args.key, options)
+        result = transcribe_audio_with_deepgram(args.file, api_key, options)
         
         # Pretty print the result
         print(json.dumps(result, indent=2))

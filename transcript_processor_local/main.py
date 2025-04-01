@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Local Audio Transcription Tool - Main Application
@@ -23,10 +22,10 @@ import time
 from datetime import datetime
 import re
 import glob
-
-# Import local modules
-from transcribe import transcribe_audio_with_deepgram
+from transcribe import transcribe_audio_with_deepgram, validate_deepgram_key
 from correct import correct_transcript_with_openai, TranscriptionCorrectionError
+from tqdm import tqdm
+from rich import print
 
 class TranscriptionApp:
     def __init__(self, root):
@@ -1204,7 +1203,7 @@ def main():
     except ImportError:
         print("Missing required packages. Installing...")
         import subprocess
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests", "openai", "python-dotenv"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests", "openai", "python-dotenv", "tqdm", "rich"])
         import requests
         import openai
     
