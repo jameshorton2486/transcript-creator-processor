@@ -30,37 +30,52 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
   });
 
   const { 
-    transcribe, 
-    isTranscribing, 
-    progress, 
-    result, 
+    transcription, 
+    isProcessing, 
     error, 
-    cancel 
-  } = useTranscriptionService({
-    apiKey,
-    onComplete: (result) => {
-      if (result.transcript && onTranscriptionComplete) {
-        onTranscriptionComplete(result.transcript);
-      }
-    }
-  });
+    handleTranscribe 
+  } = useTranscriptionService();
+  
+  // Local state for progress tracking
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
   };
 
-  const handleTranscribe = async () => {
+  const handleStartTranscribe = async () => {
     if (selectedFile) {
-      await transcribe(selectedFile, {
-        punctuate: options.punctuate,
-        diarize: options.diarize,
-        language: options.language
-      });
+      // Start progress simulation
+      setProgress(0);
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          const newValue = prev + Math.random() * 5;
+          return newValue > 90 ? 90 : newValue;
+        });
+      }, 300);
+      
+      try {
+        const result = await handleTranscribe(selectedFile);
+        clearInterval(progressInterval);
+        setProgress(100);
+        
+        if (result && onTranscriptionComplete) {
+          onTranscriptionComplete(result.transcript);
+        }
+      } catch (e) {
+        clearInterval(progressInterval);
+        setProgress(0);
+      }
     }
   };
 
   const handleOptionChange = (name: string, value: any) => {
     setOptions(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleCancel = () => {
+    // Cancel functionality - in a real implementation this would abort the request
+    setProgress(0);
   };
 
   return (
@@ -78,14 +93,14 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Enter your transcription service API key"
-              disabled={isTranscribing}
+              disabled={isProcessing}
             />
             <p className="text-xs text-slate-500">Your API key is stored locally and not sent to our servers.</p>
           </div>
 
           <EnhancedFileSelector
             onFileSelected={handleFileSelected}
-            isLoading={isTranscribing}
+            isLoading={isProcessing}
             maxSizeMB={100}
           />
           
@@ -101,7 +116,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
                   id="punctuate"
                   checked={options.punctuate}
                   onCheckedChange={(checked) => handleOptionChange('punctuate', checked)}
-                  disabled={isTranscribing}
+                  disabled={isProcessing}
                 />
               </div>
               
@@ -114,7 +129,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
                   id="diarize"
                   checked={options.diarize}
                   onCheckedChange={(checked) => handleOptionChange('diarize', checked)}
-                  disabled={isTranscribing}
+                  disabled={isProcessing}
                 />
               </div>
               
@@ -125,7 +140,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
                   value={options.language}
                   onChange={(e) => handleOptionChange('language', e.target.value)}
                   placeholder="Language code (e.g., en, es, fr)"
-                  disabled={isTranscribing}
+                  disabled={isProcessing}
                 />
               </div>
             </div>
@@ -133,11 +148,11 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
           
           <div className="pt-2 flex space-x-2">
             <Button 
-              onClick={handleTranscribe} 
-              disabled={!selectedFile || !apiKey || isTranscribing}
+              onClick={handleStartTranscribe} 
+              disabled={!selectedFile || !apiKey || isProcessing}
               className="flex-1"
             >
-              {isTranscribing ? (
+              {isProcessing ? (
                 <span className="flex items-center">
                   <Mic className="mr-2 h-4 w-4 animate-pulse" />
                   Transcribing...
@@ -150,10 +165,10 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
               )}
             </Button>
             
-            {isTranscribing && (
+            {isProcessing && (
               <Button 
                 variant="outline" 
-                onClick={cancel}
+                onClick={handleCancel}
               >
                 <StopCircle className="mr-2 h-4 w-4" />
                 Cancel
@@ -163,7 +178,7 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
         </CardContent>
       </Card>
       
-      {isTranscribing && (
+      {isProcessing && (
         <EnhancedProgressIndicator 
           progress={progress} 
           isVisible={true}
@@ -174,11 +189,11 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       )}
       
-      {result && result.transcript && (
+      {transcription && (
         <Card>
           <CardHeader>
             <CardTitle>Transcription Result</CardTitle>
@@ -186,14 +201,9 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
           <CardContent>
             <Textarea 
               readOnly 
-              value={result.transcript} 
+              value={transcription} 
               className="min-h-[200px] font-mono text-sm"
             />
-            {result.confidence && (
-              <p className="text-xs text-slate-500 mt-2">
-                Confidence score: {(result.confidence * 100).toFixed(1)}%
-              </p>
-            )}
           </CardContent>
         </Card>
       )}

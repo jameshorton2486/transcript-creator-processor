@@ -1,8 +1,35 @@
 
 import { useState, useCallback } from "react";
-import { DeepgramOptions, DeepgramResponse } from "./types";
-import { validateDeepgramApiKey } from "@/lib/audio/deepgramKeyValidator";
 import { useToast } from "@/hooks/use-toast";
+import { validateDeepgramApiKey } from "@/lib/audio/deepgramKeyValidator";
+
+export interface DeepgramOptions {
+  model?: string;
+  language?: string;
+  punctuate?: boolean;
+  diarize?: boolean;
+}
+
+export interface DeepgramResponse {
+  transcript: string;
+  words?: any[];
+  confidence?: number;
+}
+
+export interface UseDeepgramTranscriptionProps {
+  apiKey?: string;
+  onComplete?: (result: DeepgramResponse) => void;
+}
+
+export interface UseDeepgramTranscriptionReturn {
+  transcribe: (audioFile: File, options?: DeepgramOptions) => Promise<DeepgramResponse>;
+  isTranscribing: boolean;
+  transcriptionError: Error | null;
+  progressPercent: number;
+  validateApiKey: (apiKey: string) => Promise<{isValid: boolean, message: string}>;
+  getStoredApiKey: () => string;
+  storeApiKey: (apiKey: string) => void;
+}
 
 // Function to handle API key validation
 export const useDeepgramService = () => {
@@ -39,8 +66,8 @@ export const useDeepgramService = () => {
   }, []);
 
   // Transcribe audio with deepgram
-  const transcribeAudio = useCallback(
-    async (audioFile: File, options: DeepgramOptions): Promise<DeepgramResponse> => {
+  const transcribe = useCallback(
+    async (audioFile: File, options: DeepgramOptions = {}): Promise<DeepgramResponse> => {
       if (!audioFile) {
         throw new Error("No audio file provided");
       }
@@ -87,7 +114,7 @@ export const useDeepgramService = () => {
   );
 
   return {
-    transcribeAudio,
+    transcribe,
     isTranscribing,
     transcriptionError,
     progressPercent,

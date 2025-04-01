@@ -7,7 +7,7 @@ export const useTranscriptionService = () => {
   const [transcription, setTranscription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const { transcribeAudio } = useDeepgramTranscription();
+  const { transcribeAudioFile } = useDeepgramTranscription();
   const { toast } = useToast();
 
   const handleTranscribe = useCallback(async (file: File) => {
@@ -24,8 +24,10 @@ export const useTranscriptionService = () => {
     setError(null);
     
     try {
-      const result = await transcribeAudio(file);
-      setTranscription(result.transcript);
+      const result = await transcribeAudioFile(file);
+      if (result?.transcript) {
+        setTranscription(result.transcript);
+      }
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -38,7 +40,7 @@ export const useTranscriptionService = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [transcribeAudio, toast]);
+  }, [transcribeAudioFile, toast]);
 
   return {
     transcription,
