@@ -1,16 +1,13 @@
 
 import React, { useState } from 'react';
-import { EnhancedFileSelector } from "@/components/audio/EnhancedFileSelector";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useTranscriptionService } from "@/hooks/useTranscriptionService";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, StopCircle, AlertCircle } from "lucide-react";
+import { EnhancedFileSelector } from "@/components/audio/EnhancedFileSelector";
 import { EnhancedProgressIndicator } from "@/components/audio/EnhancedProgressIndicator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
+import { ApiKeySection } from "@/components/audio/ApiKeySection";
+import { TranscriptionOptionsSection } from "@/components/audio/TranscriptionOptionsSection";
+import { TranscriptionControls } from "@/components/audio/TranscriptionControls";
+import { TranscriptionResult } from "@/components/audio/TranscriptionResult";
 
 interface TranscriptionProviderProps {
   onTranscriptionComplete?: (transcript: string) => void;
@@ -83,20 +80,14 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>Audio Transcription</CardTitle>
+          <CardDescription>Upload an audio file to create a transcript</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="api-key">API Key</Label>
-            <Input 
-              id="api-key" 
-              type="password" 
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your transcription service API key"
-              disabled={isProcessing}
-            />
-            <p className="text-xs text-slate-500">Your API key is stored locally and not sent to our servers.</p>
-          </div>
+          <ApiKeySection 
+            apiKey={apiKey} 
+            setApiKey={setApiKey} 
+            isProcessing={isProcessing} 
+          />
 
           <EnhancedFileSelector
             onFileSelected={handleFileSelected}
@@ -104,77 +95,18 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
             maxSizeMB={100}
           />
           
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Transcription Options</h3>
-            <div className="flex flex-col space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="punctuate">Auto-punctuation</Label>
-                  <p className="text-xs text-slate-500">Add punctuation and capitalization</p>
-                </div>
-                <Switch
-                  id="punctuate"
-                  checked={options.punctuate}
-                  onCheckedChange={(checked) => handleOptionChange('punctuate', checked)}
-                  disabled={isProcessing}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="diarize">Speaker Identification</Label>
-                  <p className="text-xs text-slate-500">Identify different speakers</p>
-                </div>
-                <Switch
-                  id="diarize"
-                  checked={options.diarize}
-                  onCheckedChange={(checked) => handleOptionChange('diarize', checked)}
-                  disabled={isProcessing}
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <Label htmlFor="language">Language</Label>
-                <Input
-                  id="language"
-                  value={options.language}
-                  onChange={(e) => handleOptionChange('language', e.target.value)}
-                  placeholder="Language code (e.g., en, es, fr)"
-                  disabled={isProcessing}
-                />
-              </div>
-            </div>
-          </div>
+          <TranscriptionOptionsSection
+            options={options}
+            onOptionChange={handleOptionChange}
+            isProcessing={isProcessing}
+          />
           
-          <div className="pt-2 flex space-x-2">
-            <Button 
-              onClick={handleStartTranscribe} 
-              disabled={!selectedFile || !apiKey || isProcessing}
-              className="flex-1"
-            >
-              {isProcessing ? (
-                <span className="flex items-center">
-                  <Mic className="mr-2 h-4 w-4 animate-pulse" />
-                  Transcribing...
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <Mic className="mr-2 h-4 w-4" />
-                  Start Transcription
-                </span>
-              )}
-            </Button>
-            
-            {isProcessing && (
-              <Button 
-                variant="outline" 
-                onClick={handleCancel}
-              >
-                <StopCircle className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            )}
-          </div>
+          <TranscriptionControls
+            onStartTranscribe={handleStartTranscribe}
+            onCancel={handleCancel}
+            isProcessing={isProcessing}
+            isDisabled={!selectedFile || !apiKey || isProcessing}
+          />
         </CardContent>
       </Card>
       
@@ -186,27 +118,10 @@ export const TranscriptionProvider: React.FC<TranscriptionProviderProps> = ({
         />
       )}
       
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )}
-      
-      {transcription && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transcription Result</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea 
-              readOnly 
-              value={transcription} 
-              className="min-h-[200px] font-mono text-sm"
-            />
-          </CardContent>
-        </Card>
-      )}
+      <TranscriptionResult
+        transcription={transcription}
+        error={error}
+      />
     </div>
   );
 };
