@@ -1,85 +1,63 @@
 
-# Legal Transcript Creator & Processor
+# Local Audio Transcription Tool
 
-This application helps with processing and creating legal transcripts from audio recordings.
+A simple Python application that allows you to transcribe audio files locally using Deepgram and OpenAI APIs.
 
-## Quick Setup
+## Features
 
-1. **Clone the repository**:
-   ```
-   git clone https://github.com/jameshorton2486/transcript-creator-processor.git
-   cd transcript-creator-processor
-   ```
+- Select audio files from your local filesystem
+- Transcribe audio using the Deepgram API
+- Automatically correct and improve transcriptions using OpenAI's API
+- Save all files locally (original audio, raw transcripts, AI-corrected transcripts)
+- Simple graphical user interface
 
-2. **Install dependencies**:
-   ```
-   npm install
-   ```
+## Requirements
 
-3. **Start the development server**:
-   ```
-   npm run dev
-   ```
+- Python 3.7 or higher
+- Required Python packages (automatically installed if missing):
+  - requests
+  - openai
+  - tkinter (usually comes with Python)
 
-4. **Access the application**:
-   Open your browser and go to `http://localhost:5173`
+## Setup
 
-## Required API Keys
+1. Clone or download this repository
+2. Run the script:
 
-### Deepgram API
+```
+python transcribe_audio.py
+```
 
-This application uses Deepgram's AI speech-to-text API for high-quality transcription:
+3. Enter your API keys:
+   - Deepgram API key: Get one from [Deepgram Console](https://console.deepgram.com/)
+   - OpenAI API key: Get one from [OpenAI Dashboard](https://platform.openai.com/api-keys)
 
-1. Go to the [Deepgram Dashboard](https://console.deepgram.com/)
-2. Create a free account if you don't have one
-3. Create a new project and navigate to the API Keys section
-4. Create a new API key with appropriate permissions (at minimum, "Usage" scoped key)
-5. Enter this API key in the application when prompted
+4. Your API keys will be saved locally in `config.ini` for future use
 
-**Note**: Your Deepgram API key is stored securely in your browser's local storage and is only used for making API requests. It is not transmitted elsewhere.
+## Usage
 
-## How to Use
+1. Enter your API keys and save them
+2. Click "Browse Files..." to select an audio file
+3. Configure transcription options (model, punctuation, etc.)
+4. Click "Transcribe Audio" to send the file to Deepgram
+5. Optionally, click "Correct Transcript" to improve the transcript with OpenAI
+6. The results are automatically saved to the "output" folder
 
-1. **Transcribe Audio**:
-   - Enter your Deepgram API key
-   - Upload an audio file (supports MP3, WAV, FLAC, OGG, M4A)
-   - Configure transcription options:
-     - Speaker Diarization: Identifies different speakers in the audio
-     - Add Punctuation: Automatically adds appropriate punctuation
-     - Smart Format: Intelligently formats numbers, dates, and other entities
-     - Model Selection: Choose between different accuracy levels
-   - Click "Start Transcription"
-   - For files larger than 10MB, the application will automatically process them in batches
+## File Outputs
 
-2. **Process Transcript**:
-   - After transcription, use the processing options to format and clean up the transcript
-   - Apply punctuation corrections, speaker formatting, and entity extraction
-   - The processed transcript will appear in the "Processed Transcript" tab
+For each transcription, the following files are created in the output folder:
 
-3. **Export Results**:
-   - Use the download button to save transcripts as text files
-   - JSON data is also available for export
+- `filename_raw_transcript.json` - Complete Deepgram API response
+- `filename_raw_transcript.txt` - Plain text transcript from Deepgram
+- `filename_corrected_transcript.json` - OpenAI correction details (if used)
+- `filename_corrected_transcript.txt` - Corrected transcript text from OpenAI
 
-## Accessibility Features
+## Security Note
 
-- Keyboard navigable interface
-- ARIA attributes for screen reader compatibility
-- Visual feedback that doesn't rely solely on color
-- Focus management for form elements
+API keys are stored locally in the `config.ini` file. While they are masked in the UI, they are stored as plain text in the config file. Ensure you keep this file secure.
 
 ## Troubleshooting
 
-- **API Key Issues**: Ensure your Deepgram API key has Speech-to-Text permissions enabled
-- **Large File Processing**: Large files are split into chunks. If processing fails, try a smaller file first
-- **Unsupported Format**: If your file isn't recognized, convert it to MP3 or WAV using a tool like Audacity
-- **Network Problems**: If API key validation fails due to network issues, the application can work in offline mode with format-valid API keys
-
-## Logs and Debugging
-
-The application logs important events to the browser console. Press F12 to open developer tools and select the Console tab to view logs.
-
-## File Size Limitations
-
-- Files under 10MB are processed directly
-- Files over 10MB are automatically split into chunks
-- Maximum recommended file size: 500MB (approximately 6 hours of audio)
+- If you encounter CORS errors (as might happen with a web app), this local application avoids those issues altogether
+- For large audio files, the processing might take some time; please be patient
+- If the Deepgram API returns errors, check your API key and ensure your audio file is in a supported format
