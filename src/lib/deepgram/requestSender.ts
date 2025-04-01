@@ -11,6 +11,11 @@ export async function sendTranscriptionRequest(
   apiKey: string, 
   options: DeepgramRequestOptions
 ) {
+  if (!apiKey || apiKey.trim() === '') {
+    console.error("[DEEPGRAM REQUEST] No API key provided");
+    throw new Error("Deepgram API key is required");
+  }
+
   // Try transcribing through the proxy server first
   try {
     console.log("[DEEPGRAM REQUEST] Attempting to transcribe via proxy server...");
@@ -61,22 +66,28 @@ export async function sendTranscriptionRequest(
   formData.append("file", file);
 
   // Set up query parameters
-  const queryParams = new URLSearchParams({
-    model: options.model || DEFAULT_OPTIONS.model || "general",
-    version: options.version || DEFAULT_OPTIONS.version || "latest",
-    language: options.language || DEFAULT_OPTIONS.language || "en",
-    punctuate: options.punctuate !== false ? "true" : "false",
-    diarize: options.diarize !== false ? "true" : "false",
-    smart_format: options.smart_format !== false ? "true" : "false",
-  });
-
+  const queryParams = new URLSearchParams();
+  
+  // Add all options to query parameters
+  if (options.model) queryParams.append("model", options.model);
+  if (options.version) queryParams.append("version", options.version || "latest");
+  if (options.language) queryParams.append("language", options.language || "en");
+  
+  // Handle boolean options correctly
+  queryParams.append("punctuate", options.punctuate !== false ? "true" : "false");
+  queryParams.append("diarize", options.diarize === true ? "true" : "false");
+  queryParams.append("smart_format", options.smart_format !== false ? "true" : "false");
+  
+  // Log the request URL and API key length for debugging
   console.log("[DEEPGRAM REQUEST] Direct API request URL:", 
     `https://api.deepgram.com/v1/listen?${queryParams.toString()}`);
+  console.log("[DEEPGRAM REQUEST] API Key provided:", 
+    apiKey ? `Length: ${apiKey.length}, First 4 chars: ${apiKey.substring(0, 4)}...` : "No API key");
 
-  // Make the direct API request
+  // Make the direct API request with proper headers
   console.log("[DEEPGRAM REQUEST] Sending direct request to Deepgram...");
   const response = await fetch(
-    `https://api.deepgram.com/v1/listen?${queryParams}`,
+    `https://api.deepgram.com/v1/listen?${queryParams.toString()}`,
     {
       method: "POST",
       headers: {
@@ -92,7 +103,7 @@ export async function sendTranscriptionRequest(
     let errorMessage = "";
     try {
       const errorData = await response.json();
-      errorMessage = errorData.error || response.statusText;
+      errorMessage = errorData.error || errorData.err_msg || response.statusText;
       console.error("[DEEPGRAM REQUEST] Deepgram API error response:", errorData);
     } catch (e) {
       errorMessage = await response.text().catch(() => response.statusText);

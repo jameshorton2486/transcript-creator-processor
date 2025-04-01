@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,18 +9,33 @@ import { Info } from 'lucide-react';
 interface TranscriptionOptionsProps {
   onOptionsChange: (name: string, value: any) => void;
   isLoading?: boolean;
+  initialOptions?: Record<string, any>;
 }
 
 export const TranscriptionOptions: React.FC<TranscriptionOptionsProps> = ({
   onOptionsChange,
-  isLoading = false
+  isLoading = false,
+  initialOptions = {}
 }) => {
   const [options, setOptions] = useState({
-    model: 'nova-2',
-    punctuate: true,
-    smart_format: true,
-    diarize: false
+    model: initialOptions.model || 'nova-2',
+    punctuate: initialOptions.punctuate !== false,
+    smart_format: initialOptions.smart_format !== false,
+    diarize: initialOptions.diarize === true
   });
+
+  useEffect(() => {
+    // Apply initial options when they change
+    if (initialOptions && Object.keys(initialOptions).length > 0) {
+      setOptions(prev => ({
+        ...prev,
+        model: initialOptions.model || prev.model,
+        punctuate: initialOptions.punctuate !== false,
+        smart_format: initialOptions.smart_format !== false,
+        diarize: initialOptions.diarize === true
+      }));
+    }
+  }, [initialOptions]);
 
   const handleOptionChange = (name: string, value: any) => {
     setOptions(prev => ({ ...prev, [name]: value }));
@@ -50,7 +65,7 @@ export const TranscriptionOptions: React.FC<TranscriptionOptionsProps> = ({
         </div>
         <Select
           disabled={isLoading}
-          defaultValue={options.model}
+          value={options.model}
           onValueChange={(value) => handleOptionChange('model', value)}
         >
           <SelectTrigger id="model-select" className="w-full">
@@ -58,6 +73,7 @@ export const TranscriptionOptions: React.FC<TranscriptionOptionsProps> = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="nova-2">Nova 2 (Best Accuracy)</SelectItem>
+            <SelectItem value="nova">Nova</SelectItem>
             <SelectItem value="enhanced">Enhanced</SelectItem>
             <SelectItem value="base">Base (Fastest)</SelectItem>
           </SelectContent>

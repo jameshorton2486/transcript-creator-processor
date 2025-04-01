@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DeepgramTranscriber from '@/components/DeepgramTranscriber';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react';
 import { DeepgramTranscriptionOptions } from '@/components/deepgram/DeepgramTranscriptionOptions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ExtractedTermsEditor } from '@/components/document/ExtractedTermsEditor';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FindAndReplaceEditor } from '@/components/deepgram/FindAndReplaceEditor';
+import { useToast } from '@/hooks/use-toast';
 
 // The default options in case none were saved
 const DEFAULT_OPTIONS = {
@@ -32,11 +33,13 @@ const DEFAULT_OPTIONS = {
 };
 
 const DeepgramTest = () => {
+  const { toast } = useToast();
   const [transcriptionOptions, setTranscriptionOptions] = useState(DEFAULT_OPTIONS);
   const [extractedTerms, setExtractedTerms] = useState<string[]>([]);
   const [findReplaceEntries, setFindReplaceEntries] = useState<Array<{find: string; replace: string}>>([]);
   const [proxyServerAvailable, setProxyServerAvailable] = useState<boolean | null>(null);
   const [showServerAlert, setShowServerAlert] = useState(true);
+  const [proxyTestInProgress, setProxyTestInProgress] = useState(false);
   
   // Load any saved options and terms from session storage
   useEffect(() => {
@@ -63,20 +66,36 @@ const DeepgramTest = () => {
   // Check if proxy server is available
   useEffect(() => {
     const checkProxyServer = async () => {
+      setProxyTestInProgress(true);
       try {
         const response = await fetch('http://localhost:4000/check-status', { 
           method: 'GET',
           signal: AbortSignal.timeout(3000) // Timeout after 3 seconds
         });
         setProxyServerAvailable(response.ok);
+        
+        if (response.ok) {
+          toast({
+            title: "Proxy Server Connected",
+            description: "Successfully connected to the proxy server. CORS issues will be avoided.",
+          });
+        }
       } catch (error) {
         console.log('Proxy server check failed:', error);
         setProxyServerAvailable(false);
+        
+        toast({
+          title: "Proxy Server Unavailable",
+          description: "Could not connect to the proxy server. Direct API calls may encounter CORS issues.",
+          variant: "destructive",
+        });
+      } finally {
+        setProxyTestInProgress(false);
       }
     };
 
     checkProxyServer();
-  }, []);
+  }, [toast]);
   
   const handleOptionsChange = (name: string, value: any) => {
     const updatedOptions = {
@@ -121,6 +140,29 @@ const DeepgramTest = () => {
     }
   };
 
+  const retryProxyCheck = () => {
+    setProxyServerAvailable(null);
+    
+    // Re-run the proxy server check
+    const checkProxyServer = async () => {
+      setProxyTestInProgress(true);
+      try {
+        const response = await fetch('http://localhost:4000/check-status', { 
+          method: 'GET',
+          signal: AbortSignal.timeout(3000) // Timeout after 3 seconds
+        });
+        setProxyServerAvailable(response.ok);
+      } catch (error) {
+        console.log('Proxy server check failed:', error);
+        setProxyServerAvailable(false);
+      } finally {
+        setProxyTestInProgress(false);
+      }
+    };
+
+    checkProxyServer();
+  };
+
   return (
     <div className="container py-8 max-w-4xl mx-auto">
       <div className="mb-4">
@@ -135,17 +177,17 @@ const DeepgramTest = () => {
       <h1 className="text-3xl font-bold mb-6">Deepgram Transcription</h1>
       
       {showServerAlert && (
-        <Alert variant={proxyServerAvailable === false ? "destructive" : "default"} className="mb-6">
+        <Alert variant={proxyServerAvailable === false ? "destructive" : proxyServerAvailable === true ? "default" : "warning"} className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>
-            {proxyServerAvailable === null 
+            {proxyTestInProgress 
               ? "Checking proxy server status..." 
               : proxyServerAvailable 
                 ? "Proxy server is running" 
                 : "Proxy server is not running"}
           </AlertTitle>
           <AlertDescription>
-            {proxyServerAvailable === null ? (
+            {proxyTestInProgress ? (
               "Checking if the proxy server is available..."
             ) : proxyServerAvailable ? (
               "The proxy server is running correctly. CORS issues will be avoided."
@@ -160,6 +202,15 @@ const DeepgramTest = () => {
                   by running <code className="bg-slate-100 px-1 rounded">node server.js</code>. 
                   See <code className="bg-slate-100 px-1 rounded">server/README.md</code> for more details.
                 </p>
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    size="sm" 
+                    onClick={retryProxyCheck}
+                    disabled={proxyTestInProgress}
+                  >
+                    Retry Connection
+                  </Button>
+                </div>
               </div>
             )}
           </AlertDescription>
@@ -169,7 +220,7 @@ const DeepgramTest = () => {
             onClick={() => setShowServerAlert(false)}
             className="absolute top-2 right-2"
           >
-            Dismiss
+            <XCircle className="h-4 w-4" />
           </Button>
         </Alert>
       )}
